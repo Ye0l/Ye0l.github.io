@@ -3,9 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>COLONY</title>
+    <script src="./jquery-3.5.1.min.js"></script>
+    <script>
+        $(document).ready(function() {
+        });
+    </script>
+    <style>
+        :root {
+            --height: 80%;
+            --width: 80%;
+        }
+        body {
+            background-image: url(./img/bg.jpg);
+            background-size: cover;
+            background-attachment: fixed;
+        }
+        .bgblur {
+            position: absolute;
+            background-image: url(./img/bg.jpg);
+            background-attachment: fixed;
+            background-size: inherit;
+            -webkit-filter: blur(5px);
+        }
+        .divcenter {
+            position: absolute;
+            min-height: 600px;
+            min-width: 800px;
+            top: calc(50% - var(--height)*0.5);
+            left: calc(50% - var(--width)*0.5);
+            width: var(--width);
+            height: var(--height);
+        }
+        .relativeCenter {
+            position: relative;
+            --cwidth: 98%;
+            --cheight: 98%;
+            width: var(--cwidth);
+            height: var(--cheight);
+            top: calc(50% - var(--cheight)*0.5);
+            left: calc(50% - var(--cwidth)*0.5);
+            border: solid 3px #ffffff70;
+        }
+        #banner {
+            display: block;
+            height: 100px;
+            width: var(--width);
+        }
+        #contents {
+            display: block;
+            position: relative;
+            color: white;
+            font-size: 40px;
+            text-align: center;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
 </head>
 <body>
-    <h1>test</h1>
+    <div id="bg" class="bgblur divcenter"></div>
+    <div id="container" class="divcenter">
+        <div id="whiteline" class="relativeCenter">
+            <div id="contents">TEST</div>
+        </div>
+    </div>
 </body>
 </html>
