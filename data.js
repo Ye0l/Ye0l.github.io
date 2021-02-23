@@ -105,5 +105,5 @@ function returnnumber(name, birth) {
             }
         }
     }
-    console.log('undefined.');
+    alert('찾을 수 없습니다. 이름과 생년월일을 확인해주세요.');
 }
