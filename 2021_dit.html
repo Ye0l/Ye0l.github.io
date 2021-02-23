@@ -7,12 +7,12 @@
     <title>기계계열 학번조회</title>
     <style>
         :root {
-            --width: 98%;
+            --width: 90%;
             --height: 50%;
         }
         .main {
             position: absolute;
-            padding-top: 40px;
+            padding-top: 60px;
             padding-bottom: 60px;
             top: calc(50% - var(--height)*0.5);
             left: calc(50% - var(--width)*0.5);
@@ -21,8 +21,9 @@
             border: solid 1px black;
         }
         #title {
-            font-size: 24px;
-            margin-bottom: 40px;
+            font-size: 23px;
+            font-weight: bold;
+            margin-bottom: 60px;
         }
         #contents {
             font-size: 16px;
@@ -50,11 +51,11 @@
 </head>
 <body ondragstart="return false" onselectstart="return false" oncontextmenu="return false"> <!-- 드래그 캔슬 -->
     <div class="main">
-        <div id="title">기계계열 학번조회</div>
+        <div id="title">동의과학대 기계계열 학번조회</div>
         <div id="contents">
             이름: <input type="text" id="name"><br>
             생년월일(8자리): <input type="text" id="birth"><br>
-            <div id="caption">ex: 20000505</div>
+            <div id="caption">ex: 19990505</div>
             <button id="commit">조회</button>
         </div>
     </div>
