@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.15.5/xlsx.full.min.js"></script>
+    <script src="./jquery-3.5.1.min.js"></script>
+    <script>
+        let output = null;
+        function readExcel() {
+            let input = event.target;
+            let reader = new FileReader();
+            reader.onload = function () {
+                let data = reader.result;
+                let workBook = XLSX.read(data, { type: 'binary' });
+                output = workBook;
+                console.log(workBook);
+                workBook.SheetNames.forEach(function (sheetName) {
+                    console.log(workBook.Sheets[sheetName]);
+                    $('#test').append(XLSX.utils.sheet_to_html(workBook.Sheets[sheetName]));
+                })
+            };
+            reader.readAsBinaryString(input.files[0]);
+        }
+    </script>
+</head>
+<body>
+    <input type="file" onchange="readExcel()">
+    <div id="test"></div>
+</body>
+</html>

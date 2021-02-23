@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>기계계열 학번조회</title>
+    <style>
+        :root {
+            --width: 50%;
+            --height: 40%;
+        }
+        .main {
+            position: absolute;
+            padding-top: 20px;
+            padding-bottom: 40px;
+            top: calc(50% - var(--height)*0.5);
+            left: calc(50% - var(--width)*0.5);
+            width: var(--width);
+            text-align: center;
+            border: solid 1px black;
+        }
+        #title {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        #contents {
+            font-size: 16px;
+            display: inline-block;
+            text-align: right;
+        }
+        #commit {
+            width: 100%;
+        }
+        #caption {
+            font-size: 12px;
+            color: darkblue;
+        }
+    </style>
+    <script src="./jquery-3.5.1.min.js"></script>
+    <script src="./data.js"></script>
+    <script>
+        $(document).ready(function() {
+            // $('#commit').click(returnnumber($('#name').val(), $('#birth').val()));
+            $('#commit').click(function() {
+                returnnumber($('#name').val(), $('#birth').val());
+            })
+        });
+    </script>
+</head>
+<body ondragstart="return false" onselectstart="return false" oncontextmenu="return false"> <!-- 드래그 캔슬 -->
+    <div class="main">
+        <div id="title">기계계열 학번조회</div>
+        <div id="contents">
+            이름: <input type="text" id="name"><br>
+            생년월일(8자리): <input type="text" id="birth"><br>
+            <div id="caption">ex: 20000505</div>
+            <button id="commit">조회</button>
+        </div>
+    </div>
+</body>
+</html>
