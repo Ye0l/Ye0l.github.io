@@ -9,9 +9,9 @@
     <hr>
     <h5><a href="https://teachablemachine.withgoogle.com/models/FJj4dMOGu/">Coffee machine model</a></h5>
     <div>Teachable Machine Image Model</div>
-<button type="button" onclick="init()">Start</button>
-<div id="webcam-container"></div>
-<div id="label-container"></div>
+<button type="button" onclick="init_coffee()">Start</button>
+<div id="webcam-container-coffee"></div>
+<div id="label-container-coffee"></div>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
 <script type="text/javascript">
@@ -24,7 +24,7 @@
     let model, webcam, labelContainer, maxPredictions;
 
     // Load the image model and setup the webcam
-    async function init() {
+    async function init_coffee() {
         const modelURL = URL + "model.json";
         const metadataURL = URL + "metadata.json";
 
@@ -43,8 +43,8 @@
         window.requestAnimationFrame(loop);
 
         // append elements to the DOM
-        document.getElementById("webcam-container").appendChild(webcam.canvas);
-        labelContainer = document.getElementById("label-container");
+        document.getElementById("webcam-container-coffee").appendChild(webcam.canvas);
+        labelContainer = document.getElementById("label-container-coffee");
         for (let i = 0; i < maxPredictions; i++) { // and class labels
             labelContainer.appendChild(document.createElement("div"));
         }
@@ -69,9 +69,9 @@
 </script>
     <h5><a href="https://teachablemachine.withgoogle.com/models/zc36pCqVW/">Left-Right hand</a></h5>
     <div>Teachable Machine Pose Model</div>
-<button type="button" onclick="init()">Start</button>
+<button type="button" onclick="init_hand()">Start</button>
 <div><canvas id="canvas"></canvas></div>
-<div id="label-container"></div>
+<div id="label-container-hand"></div>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
 <script type="text/javascript">
@@ -82,7 +82,7 @@
     const URL = "https://teachablemachine.withgoogle.com/models/zc36pCqVW/";
     let model, webcam, ctx, labelContainer, maxPredictions;
 
-    async function init() {
+    async function init_hand() {
         const modelURL = URL + "model.json";
         const metadataURL = URL + "metadata.json";
 
@@ -104,7 +104,7 @@
         const canvas = document.getElementById("canvas");
         canvas.width = size; canvas.height = size;
         ctx = canvas.getContext("2d");
-        labelContainer = document.getElementById("label-container");
+        labelContainer = document.getElementById("label-container-hand");
         for (let i = 0; i < maxPredictions; i++) { // and class labels
             labelContainer.appendChild(document.createElement("div"));
         }
