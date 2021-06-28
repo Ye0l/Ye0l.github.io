@@ -1,0 +1,68 @@
+<html>
+  <head>
+    <title>Colab Links</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous">
+    <style>
+      @font-face{
+        font-family:'CaviarDreams'; /*글꼴*/
+        src: local('CaviarDreams'),
+          url('CaviarDreams.ttf') format('truetype');
+      }
+      @font-face{
+        font-family:'CaviarDreamsBold'; /*글꼴*/
+        src: local('CaviarDreamsBold'),
+          url('CaviarDreams_Bold.ttf') format('truetype');
+      }
+      @font-face{
+        font-family:'CaviarDreamsItalic'; /*글꼴*/
+        src: local('CaviarDreamsItalic'),
+          url('CaviarDreams_Italic.ttf') format('truetype');
+      }
+      @font-face{
+        font-family:'CaviarDreamsBoldItalic'; /*글꼴*/
+        src: local('CaviarDreamsBoldItalic'),
+          url('CaviarDreams_BoldItalic.ttf') format('truetype');
+      }
+      h1{
+        font-family: CaviarDreamsBold;
+      }
+      td{
+        font-family: CaviarDreams;
+      }
+      h2{
+        font-family: CaviarDreamsBold;
+      }
+      a {
+        text-decoration : none;
+      }
+      a:link {
+        color : black;
+      }
+      a:visited {
+        color : black;
+      }
+      a:hover {
+        color : gray;
+      }
+      a:active {
+        color : black;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Google Colab Links</h1>
+    <hr>
+    <table class="table table-hover">
+      <tr>
+        <th>
+          <a href="https://docs.google.com/document/d/1ydVtEZYv79b_kfNQrOoVpVVPBZ2ZsAadSEMbNtHdHCM/edit"><h2>Link docs</h2></a>
+        </th>
+      </tr>
+      <tr>
+        <td>
+          <a href="https://teachablemachine.withgoogle.com/models/FJj4dMOGu/" target="_blank">Coffee machine model</a>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
