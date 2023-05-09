@@ -39,5 +39,6 @@ function getRandomImage() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    getRandomImage();
+    // getRandomImage();
+    showLoader();
 })
