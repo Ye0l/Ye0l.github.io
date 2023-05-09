@@ -1,0 +1,37 @@
+.main-view {
+    height: 100vh;
+}
+
+.loader-bg {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #0b171fa2;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    opacity: 85%;
+    transition: opacity 0.5s;
+}
+.loader {
+    width: 3rem;
+    height: 3rem;
+    background-color: #3498db;
+    animation: loading 1.5s ease-in-out infinite;
+    transform: rotate(45deg);
+}
+@keyframes loading {
+    0% {
+        transform: rotate(45deg);
+        filter: blur(0px);
+    }
+    50% {
+        filter: blur(3px);
+    }
+    100% {
+        transform: rotate(945deg);
+        filter: blur(0px);
+    }
+  }
