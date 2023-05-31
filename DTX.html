@@ -1,0 +1,122 @@
+<style>
+    .container {
+        display: flex;
+        height: 100%;
+        width: 100%;
+    }
+    .input {
+        padding: 2rem;
+    }
+    .chart {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        overflow-y: scroll;
+        display: flex;
+        flex-direction: column-reverse;
+    }
+    #chartData {
+        width: 100%;
+        height: 100%;
+    }
+    .bar {
+        height: 800px;
+        display: flex;
+    }
+    .rain {
+        flex: 1 1 0;
+        display: flex;
+        flex-direction: column-reverse;
+        border: 1px solid black;
+    }
+    .note-space {
+        flex: 1 0 10px;
+        padding: .25rem;
+        flex-direction: column-reverse;
+        display: flex;
+    }
+    .note-space > * {
+        height: 1rem;
+        text-align: center;
+    }
+    .note {
+        background-color: red;
+    }
+
+</style>
+
+<div class="container">
+    <div class="input">
+        <textarea id="chartData"></textarea>
+    </div>
+    <div style="position: relative; flex-grow: 1;">
+        <div class="chart"></div>
+    </div>
+</div>
+
+<script>
+    const rains = ['1A', '11', '1B', '12', '13', '14', '15', '17', '16'];
+
+    chartData.addEventListener('keyup', (e) => {
+        let dataArr = e.target.value.trim().split('\n').map(e => e.split(': '));
+        const chartData = {};
+        for(var e of dataArr) {
+            const barNumber = e[0].slice(1, 4);
+            const rainNumber = e[0].slice(4, 6);
+            if(chartData[barNumber] === undefined) {
+                chartData[barNumber] = {};
+            }
+            chartData[barNumber][rainNumber] = e[1];
+        }
+        console.log(chartData);
+        drawChart(chartData);
+    })
+
+    function drawChart(data) {
+        const chart = document.querySelector('.chart');
+        chart.innerHTML = '';
+        for(const e in data) {
+            const bar = document.createElement('div');
+            bar.classList.add('bar')
+            for(var r in rains) {
+                r = rains[r];
+                const rain = document.createElement('div');
+                rain.classList.add('rain');
+                bar.appendChild(rain);
+                if(data[e][r] === undefined) {
+                    console.log('continue');
+                    continue;
+                } else {
+                    console.log('rr')
+                }
+                for(const n of splitString(data[e][r])) {
+                    const noteSpace = document.createElement('div');
+                    const note = document.createElement('div');
+                    noteSpace.classList.add('note-space');
+                    noteSpace.appendChild(note);
+                    if(n != '00') {
+                        note.innerText = n;
+                        note.classList.add('note');
+                    }
+                    rain.appendChild(noteSpace);
+                }
+            }
+            chart.appendChild(bar);
+        }
+    }
+
+    function splitString(str) {
+        if (str.length % 2 !== 0) {
+        return [];
+        }
+
+        const result = [];
+        for (let i = 0; i < str.length; i += 2) {
+        result.push(str.slice(i, i + 2));
+        }
+
+        return result;
+    }
+</script>
