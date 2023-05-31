@@ -1,16 +1,19 @@
 <style>
-    .container {
+    .main {
         display: flex;
         height: 100%;
         width: 100%;
     }
-    .input {
+    .chartSelect {
         padding: 2rem;
+        display: flex;
+        flex-direction: column;
     }
     .chart {
         width: 100%;
         height: 100%;
         position: absolute;
+        padding-right: 2rem;
         top: 0;
         left: 0;
         overflow-y: scroll;
@@ -19,36 +22,155 @@
     }
     #chartData {
         width: 100%;
-        height: 100%;
+        flex-grow: 1;
+    }
+    #musicSelect {
+        margin-bottom: 1rem;
+    }
+    #heightSlider {
+        margin-bottom: 1rem;
+        color: white;
     }
     .bar {
-        height: 800px;
+        flex: 0 0 800px;
         display: flex;
+        border-top: 1px solid gray;
+        border-bottom: 1px solid gray;
+        position: relative;
     }
-    .rain {
+    .bar-line {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    .bar-line > .bar-mid-line:not(:last-child) {
+        border-bottom: 1px solid darkslategrey;
+    }
+    .bar-mid-line {
+        flex: 1 1 0;
+    }
+    .lane {
         flex: 1 1 0;
         display: flex;
         flex-direction: column-reverse;
-        border: 1px solid black;
+        border-left: 1px solid gray;
+        border-right: 1px solid gray;
     }
     .note-space {
         flex: 1 0 10px;
-        padding: .25rem;
+        padding: 0 .125rem;
         flex-direction: column-reverse;
         display: flex;
+        position: relative;
     }
     .note-space > * {
-        height: 1rem;
+        height: 0.75rem;
         text-align: center;
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 100%;
     }
     .note {
+        box-sizing: border-box;
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .lane-1A {
+        
+    }
+    .lane-1A .note {
+        background-color: palevioletred;
+        border: 1px solid black;
+    }
+    .lane-11 {
+        
+    }
+    .lane-11 .note {
+        background-color: skyblue;
+        border: 1px solid black;
+    }
+    .lane-1B {
+        
+    }
+    .lane-1B .note {
         background-color: red;
+        border: 1px solid black;
+    }
+    .lane-12 {
+        
+    }
+    .lane-12 .note {
+        background-color: yellow;
+        border: 1px solid black;
+    }
+    .lane-13 {
+        
+    }
+    .lane-13 .note {
+        background-color: slateblue;
+        border: 1px solid black;
+    }
+    .lane-14 {
+        
+    }
+    .lane-14 .note {
+        background-color: green;
+        border: 1px solid black;
+    }
+    .lane-15 {
+        
+    }
+    .lane-15 .note {
+        background-color: red;
+        border: 1px solid black;
+    }
+    .lane-17 {
+        
+    }
+    .lane-17 .note {
+        background-color: orange;
+        border: 1px solid black;
+    }
+    .lane-16 {
+        
+    }
+    .lane-16 .note {
+        background-color: skyblue;
+        border: 1px solid black;
+    }
+    .lane-1C {
+        
+    }
+    .lane-1C .note {
+        background-color: hotpink;
+        border: 1px solid black;
     }
 
 </style>
 
-<div class="container">
-    <div class="input">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+<script src="./dtx/mst.js"></script>
+<script src="./dtx/slash.js"></script>
+<link rel="stylesheet" href="./css/index.css">
+<div class="main bg-dark">
+    <div class="chartSelect">
+        <select id="musicSelect" class="form-select">
+            <option value="">SELECT SAMPLE MUSIC</option>
+            <option value="mst">mst</option>
+            <option value="slash">slash</option>
+        </select>
+        <div id="heightSlider">
+            <input class="height form-control" value="800">
+            <input type="range" class="slider form-range" min="200" max="2000" step="10">
+        </div>
         <textarea id="chartData"></textarea>
     </div>
     <div style="position: relative; flex-grow: 1;">
@@ -57,39 +179,84 @@
 </div>
 
 <script>
-    const rains = ['1A', '11', '1B', '12', '13', '14', '15', '17', '16'];
+    // 뺀거: 1B
+    const LANES_DRUM = ['1A', '11', '1C', '12', '14', '13', '15', '17', '16'];
+    const regExp = /#(?![0-9]|BPM).+/g;
+    const midLaneNum = 4;
+
+    document.addEventListener("DOMContentLoaded", () => {
+        musicSelect.addEventListener('change', (e) => {
+            switch(e.target.value) {
+                case 'mst':
+                    chartData.value = mst;
+                    break;
+                case 'slash':
+                    chartData.value = slash;
+                    break;
+            }
+            dataInit(chartData.value);
+        })
+
+        dataInit(mst);
+    })
+
+    heightSlider.querySelector('.slider').addEventListener('change', (e) => {
+        heightSliderHandler(e);
+    })
+    heightSlider.querySelector('.height').addEventListener('change', (e) => {
+        heightSliderHandler(e);
+    })
+    function heightSliderHandler(e) {
+        const height = e.target.value;
+        heightSlider.querySelector('.height').value = height;
+        for(const e of document.querySelectorAll('.bar')) {
+            console.log(e.style.flexBasis);
+            e.style.flexBasis = `${height}px`;
+        }
+    }
 
     chartData.addEventListener('keyup', (e) => {
-        let dataArr = e.target.value.trim().split('\n').map(e => e.split(': '));
+        dataInit(e.target.value);
+    })
+
+    function dataInit(data) {
+        let dataArr = data.trim().split('\n').map(e => e.split(': '));
         const chartData = {};
         for(var e of dataArr) {
             const barNumber = e[0].slice(1, 4);
-            const rainNumber = e[0].slice(4, 6);
+            const laneNumber = e[0].slice(4, 6);
             if(chartData[barNumber] === undefined) {
                 chartData[barNumber] = {};
             }
-            chartData[barNumber][rainNumber] = e[1];
+            chartData[barNumber][laneNumber] = e[1];
         }
         console.log(chartData);
         drawChart(chartData);
-    })
+    }
 
     function drawChart(data) {
         const chart = document.querySelector('.chart');
         chart.innerHTML = '';
         for(const e in data) {
+            if(isNaN(e)) continue;
             const bar = document.createElement('div');
             bar.classList.add('bar')
-            for(var r in rains) {
-                r = rains[r];
-                const rain = document.createElement('div');
-                rain.classList.add('rain');
-                bar.appendChild(rain);
+            const barLine = document.createElement('div');
+            barLine.classList.add('bar-line');
+            for(var i = 0; i < midLaneNum; i ++) {
+                const barMidLine = document.createElement('div');
+                barMidLine.classList.add('bar-mid-line');
+                barLine.appendChild(barMidLine);
+            }
+            bar.appendChild(barLine);
+            for(var r in LANES_DRUM) {
+                r = LANES_DRUM[r];
+                const lane = document.createElement('div');
+                lane.classList.add('lane');
+                lane.classList.add(`lane-${r}`);
+                bar.appendChild(lane);
                 if(data[e][r] === undefined) {
-                    console.log('continue');
                     continue;
-                } else {
-                    console.log('rr')
                 }
                 for(const n of splitString(data[e][r])) {
                     const noteSpace = document.createElement('div');
@@ -97,10 +264,10 @@
                     noteSpace.classList.add('note-space');
                     noteSpace.appendChild(note);
                     if(n != '00') {
-                        note.innerText = n;
+                        // note.innerText = n;
                         note.classList.add('note');
                     }
-                    rain.appendChild(noteSpace);
+                    lane.appendChild(noteSpace);
                 }
             }
             chart.appendChild(bar);
