@@ -12,43 +12,49 @@
             }
             return array;
           }
-          document.addEventListener('DOMContentLoaded', () => {
+          const jobs_source = [
+            {name: 'PLD', imagePos: '-90px 0', class: 'tank'},
+            {name: 'WAR', imagePos: '-135px 0', class: 'tank'},
+            {name: 'DRK', imagePos: '-180px 0', class: 'tank'},
+            {name: 'GNB', imagePos: '-225px 0', class: 'tank'},
+            {name: 'WHM', imagePos: '-90px -45px', class: 'heal'},
+            {name: 'SCH', imagePos: '-135px -45px', class: 'heal'},
+            {name: 'AST', imagePos: '-180px -45px', class: 'heal'},
+            {name: 'SGE', imagePos: '-225px -45px', class: 'heal'},
+            {name: 'MNK', imagePos: '-90px -90px', class: 'melee'},
+            {name: 'DRG', imagePos: '-135px -90px', class: 'melee'},
+            {name: 'NIN', imagePos: '-180px -90px', class: 'melee'},
+            {name: 'SAM', imagePos: '-225px -90px', class: 'melee'},
+            {name: 'RPR', imagePos: '-270px -90px', class: 'melee'},
+            {name: 'BRD', imagePos: '-90px -135px', class: 'range'},
+            {name: 'MCH', imagePos: '-135px -135px', class: 'range'},
+            {name: 'DNC', imagePos: '-180px -135px', class: 'range'},
+            {name: 'BLM', imagePos: '-90px -180px', class: 'magic'},
+            {name: 'SMN', imagePos: '-135px -180px', class: 'magic'},
+            {name: 'RDM', imagePos: '-180px -180px', class: 'magic'},
+          ];
+          let jobs = [
+          ];
+          const drawSpinner = () => {
             const spinnerDiv = document.getElementById('spinner');
-            // const itemCount = 10; // 변경 가능한 항목의 개수
-
-            let jobs = [
-              {name: 'PLD'},
-              {name: 'WAR'},
-              {name: 'DRK'},
-              {name: 'GNB'},
-              {name: 'WHM'},
-              {name: 'SCH'},
-              {name: 'AST'},
-              {name: 'SGE'},
-              {name: 'MNK'},
-              {name: 'DRG'},
-              {name: 'NIN'},
-              {name: 'SAM'},
-              {name: 'RPR'},
-              {name: 'BRD'},
-              {name: 'MCH'},
-              {name: 'DNC'},
-              {name: 'BLM'},
-              {name: 'SMN'},
-              {name: 'RDM'},
-            ];
-
+            spinnerDiv.innerHTML = '';
             jobs = shuffleArray(jobs);
-            
+
             for (let i = 0; i < jobs.length; i++) {
                 const span = document.createElement('span');
                 // span.innerText = jobs[i].name;
                 span.style.transform = `rotate(${(360 / jobs.length) * i}deg)`;
+                span.classList.add('d-flex', 'align-items-center', 'justify-content-start', 'flex-column')
                 spinnerDiv.appendChild(span);
 
                 const nameSpan = document.createElement('span');
                 nameSpan.innerText = jobs[i].name;
                 nameSpan.classList.add('name');
+
+                const imgSpan = document.createElement('span');
+                imgSpan.classList.add('icons');
+                imgSpan.style.backgroundPosition = jobs[i].imagePos;
+                nameSpan.appendChild(imgSpan);
 
                 span.appendChild(nameSpan);
                 
@@ -57,26 +63,56 @@
                 line.style.transform = `rotate(${(360 / jobs.length) * i + (360 / jobs.length / 2)}deg) translate(-50%, -880%)`;
                 spinnerDiv.appendChild(line);
             }
+          }
+          document.addEventListener('DOMContentLoaded', () => {
+            updateSpinner();
+            drawSpinner();
           });
           
           let deg = 0; // 회전시킬 각도
           const addSpin = () => {
             deg += 360 + (Math.random() * 360);
+            deg -= deg % (360 / jobs.length) - 90;
             document.getElementById('spinner').style.transform = `rotate(${deg}deg)`;
-            console.log(deg);
           }
 
+          const updateSelect = (e) => {
+            if(e.ariaChecked == 'true') {
+              e.classList.remove('selected');
+              e.ariaChecked = false;
+            }
+            else {
+              e.classList.add('selected');
+              e.ariaChecked = true;
+            }
+            updateSpinner();
+            drawSpinner();
+          }
 
-          // function rotateDiv() {
-          //   if (leftDeg <= 0) {
-          //     clearInterval(rotationInterval);
-          //   } else {
-          //     document.getElementById('spinner').style.transform = `rotate(${leftDeg}deg)`;
-          //     leftDeg -= 50; // 각도를 줄여서 회전 속도를 느리게 함
-          //   }
-          // }
+          const updateSpinner = () => {
+            jobs.length = 0;
+            const condition = {
+              tank: tank.ariaChecked == 'true',
+              heal: heal.ariaChecked == 'true',
+              melee: melee.ariaChecked == 'true',
+              range: range.ariaChecked == 'true',
+              magic: magic.ariaChecked == 'true'
+            };
 
-          // let rotationInterval = setInterval(rotateDiv, 100); // 1밀리초마다 회전
+            Object.keys(condition).map(e => {
+              if(condition[e]) {
+                console.log(jobs_source);
+                Object.keys(jobs_source).map(el => {
+                  console.log(el);
+                  el = jobs_source[el];
+                  console.log(el.class, e, el.class === e)
+                  if(el.class === e) {
+                    jobs.push(el)
+                  }
+                })
+              }
+            })
+          }
       </script>
       <style>
         body {
@@ -85,33 +121,56 @@
           background-repeat: no-repeat;
           background-position: center;
         }
-        .name {
-          z-index: 10;
-          font-size: 1.5em;
-          color: white;
-          position: relative;
+        .icons {
+          background-image: url('./img/job_icon2.png');
+          background-size: auto auto;
+          width: 40px;
+          height: 40px;
+          /* position: absolute;
+          top: 1rem; */
         }
-        .name::before {
-          content: '';
-          position: absolute;
-          top: 2rem;
-          left: 43%;
-          transform: rotate(-10deg);
-          height: .8rem;
-          border: 1px solid white;
+        .icons.icons-class {
+          width: 45px;
+          height: 45px;
+          opacity: .5;
+          transition: opacity .1s ease;
+        }
+        .icons.icons-class.selected {
+          opacity: 1;
+        }
+        .name {
+          z-index: 9;
           color: white;
+          position: absolute;
+          top: 1rem;
+          padding: 1rem;
+          opacity: .5;
+          transition: opacity .2s ease;
+          display: flex;
+          flex-direction: column-reverse;
+        }
+        .name:hover {
+          opacity: 1;
         }
         .spinner {
           position: relative;
           transition: transform 2s ease;
           backdrop-filter: blur(5px);
         }
-        .spinner span {
-          position: absolute; /* 원의 테두리에 배치하기 위해 */
-          inset: 0;
+        .hover {
+          transform: scale(1.025);
+          opacity: 1;
+        }
+        .spinner > span {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: 50%;
+          transform: translateX(-50%);
           display: inline-block;
           text-align: center;
           padding-top: 1rem;
+          cursor: pointer;
         }
         .line {
           display: none;
@@ -128,18 +187,33 @@
           border: .5rem solid transparent;
           border-left: 0;
           border-right: 2rem solid white;
-          position:relative
+          position:relative;
+          transition: transform .2s ease, margin .2s ease, opacity .1s ease;
+          z-index: 10;
+          opacity: .2;
+        }
+        .niddle.hover {
+          transform: scale(1.2);
+          margin-right: 2rem;
+          opacity: 1;
         }
       </style>
     </head>
     <body class="d-flex align-items-center justify-content-center h-100 overflow-hidden position-relative" onselectstart="return false;" ondragstart="return false;">
+      <div class="position-absolute mt-5 d-flex gap-2" style="top: 0; left: 50%; transform:translateX(-50%); z-index: 99;" >
+        <div id="tank" class="icons icons-class selected" onclick="updateSelect(this)" aria-checked="true" style="background-position: 0 0;"></div>
+        <div id="heal" class="icons icons-class selected" onclick="updateSelect(this)" aria-checked="true" style="background-position: 0 -45px;"></div>
+        <div id="melee" class="icons icons-class selected" onclick="updateSelect(this)" aria-checked="true" style="background-position: -45px -90px;"></div>
+        <div id="range" class="icons icons-class selected" onclick="updateSelect(this)" aria-checked="true" style="background-position: -45px -135px;"></div>
+        <div id="magic" class="icons icons-class selected" onclick="updateSelect(this)" aria-checked="true" style="background-position: -45px -180px;"></div>
+      </div>
       <div class="wrapper position-absolute d-flex align-items-center justify-content-end" style="max-width: 90vw; max-height: 90vh; width: 90vh; height: 90vw;">
-        <div class="niddle shadow"></div>
+        <div id="niddle" class="niddle shadow"></div>
       </div>
       <!-- <div class="rounded-pill p-4 position-absolute border border-3 border-black" style="background-color: white; z-index: 1; top: 50%; left: 50%; transform: translate(-50%, -50%);"></div> -->
-      <div class="shadow rounded-pill overflow-hidden">
-        <div id="spinner" onclick="addSpin()" 
-        class="spinner rounded-pill p-4 d-flex align-items-center justify-content-center shadow" 
+      <div class="shadow rounded-pill overflow-hidden" style="transition: transform .2s ease;" onmouseover="(e => { e.classList.add('hover'); niddle.classList.add('hover'); })(this)" onmouseleave="(e => { e.classList.remove('hover'); niddle.classList.remove('hover'); })(this)">
+        <div id="spinner" onclick="addSpin()"
+        class="spinner rounded-pill p-4 d-flex align-items-center justify-content-center shadow fs-5"
         style="max-width: 80vw; max-height: 80vh; width: 80vh; height: 80vw; transform: rotate(0deg); z-index: 1;">
         </div>
       </div>
