@@ -122,6 +122,33 @@
               }
             })
           }
+
+          function findRightmostElement() {
+            const container = document.getElementById('spinner');
+            const items = container.querySelectorAll('.name');
+
+            let rightmostElement = null;
+            let rightmostX = -Infinity;
+            let bottommostY = -Infinity;
+
+            items.forEach(item => {
+              const rect = item.getBoundingClientRect();
+              // 회전 각도를 라디안으로 변환
+              const rotationAngleRad = 45 * Math.PI / 180;
+              // 회전된 좌표 구하기
+              const rotatedX = rect.left * Math.cos(rotationAngleRad) + rect.top * Math.sin(rotationAngleRad);
+              const rotatedY = -rect.left * Math.sin(rotationAngleRad) + rect.top * Math.cos(rotationAngleRad);
+              
+              // 우측 하단의 좌표로 판단
+              if (rotatedX > rightmostX || (rotatedX === rightmostX && rotatedY > bottommostY)) {
+                rightmostX = rotatedX;
+                bottommostY = rotatedY;
+                rightmostElement = item;
+              }
+            });
+
+            return rightmostElement;
+          }
       </script>
       <style>
         @font-face {
@@ -170,6 +197,9 @@
         .name:hover {
           opacity: 1;
         }
+        .name.selected {
+          opacity: 1;
+        }
         .spinner {
           position: relative;
           transition: transform 2s ease;
@@ -204,7 +234,7 @@
           height: 0;
           border: .5rem solid transparent;
           border-left: 0;
-          border-right: 2rem solid white;
+          border-right: 1rem solid white;
           position:relative;
           transition: transform .2s ease, margin .2s ease, opacity .1s ease;
           z-index: 10;
