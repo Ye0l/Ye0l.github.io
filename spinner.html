@@ -35,6 +35,18 @@
           ];
           let jobs = [
           ];
+          const isGood = () => {
+            const good = Math.random();
+            console.log(good);
+            if(good < 0.01) { // 짱
+              jobs.length = 0;
+              for(var i = 0; i < jobs_source.length; i ++) {
+                jobs.push({name: 'RDM', imagePos: '-180px -180px', class: 'magic'});
+              }
+              console.log('YEAH');
+            }
+            drawSpinner();
+          }
           const drawSpinner = () => {
             const spinnerDiv = document.getElementById('spinner');
             spinnerDiv.innerHTML = '';
@@ -74,6 +86,7 @@
             deg += 360 + (Math.random() * 360);
             deg -= deg % (360 / jobs.length) - 90;
             document.getElementById('spinner').style.transform = `rotate(${deg}deg)`;
+            isGood();
           }
 
           const updateSelect = (e) => {
@@ -101,11 +114,8 @@
 
             Object.keys(condition).map(e => {
               if(condition[e]) {
-                console.log(jobs_source);
                 Object.keys(jobs_source).map(el => {
-                  console.log(el);
                   el = jobs_source[el];
-                  console.log(el.class, e, el.class === e)
                   if(el.class === e) {
                     jobs.push(el)
                   }
