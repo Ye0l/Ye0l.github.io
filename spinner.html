@@ -36,9 +36,8 @@
           let jobs = [
           ];
           const isGood = () => {
-            const good = Math.random();
-            console.log(good);
-            if(good < 0.01) { // 짱
+            const good = parseInt(Math.random() * 100);
+            if(good === 99) { // 짱
               jobs.length = 0;
               for(var i = 0; i < jobs_source.length; i ++) {
                 jobs.push({name: 'RDM', imagePos: '-180px -180px', class: 'magic'});
@@ -125,6 +124,15 @@
           }
       </script>
       <style>
+        @font-face {
+          font-family: 'Pretendard-Regular';
+          src: url('https://cdn.jsdelivr.net/gh/Project-Noonnu/noonfonts_2107@1.1/Pretendard-Regular.woff') format('woff');
+          font-weight: 400;
+          font-style: normal;
+        }
+        * {
+          font-family: 'Pretendard-Regular';
+        }
         body {
           background-image: url('./img/bg_ff.jpg');
           background-size: cover;
