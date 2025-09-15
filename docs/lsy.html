@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>세계 한이솔 페스티벌</title>
+  <meta name="description" content="리듬게임계의 떠오르는 별, 한이솔을 위한 최초의 페스티벌! 한이솔은 야구선수가 아닙니다." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* --- 커스텀 스타일 시작 --- */
+    body {
+      /* 동적인 느낌의 배경 이미지 추가 */
+      background-image: url('https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed; /* 스크롤 시 배경 고정 */
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+    .font-orbitron {
+      font-family: 'Orbitron', sans-serif;
+    }
+    /* 메인 타이틀에 네온사인처럼 깜빡이는 효과 */
+    .glow {
+      animation: pulse-glow 3s infinite ease-in-out;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { text-shadow: 0 0 20px rgba(167, 139, 250, 0.4), 0 0 30px rgba(124, 58, 237, 0.3); }
+      50% { text-shadow: 0 0 30px rgba(167, 139, 250, 0.7), 0 0 45px rgba(124, 58, 237, 0.5); }
+    }
+    /* 글래스모피즘 카드 스타일 */
+    .card {
+      background: rgba(15, 23, 42, 0.6); /* 반투명 배경 */
+      backdrop-filter: blur(12px); /* 배경 블러 처리 */
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.3s ease-in-out;
+    }
+    .card:hover {
+      transform: translateY(-6px);
+      background: rgba(30, 41, 59, 0.7);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    /* 버튼 호버 효과 강화 */
+    .btn-primary {
+      transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 25px rgba(139, 92, 246, 0.6);
+    }
+    /* --- 커스텀 스타일 끝 --- */
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased">
+  <div class="min-h-screen flex flex-col bg-slate-950/70">     <header class="max-w-5xl mx-auto w-full px-6 py-8 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center font-orbitron text-2xl">SI</div>
+        <div>
+                    <h1 class="text-xl font-orbitron">WORLD HAN YISOL FEST</h1>
+          <p class="text-sm text-slate-400">The Rhythm Master</p>
+        </div>
+      </div>
+      <nav class="hidden md:flex gap-4 text-sm text-slate-300 font-bold">
+        <a href="#about" class="hover:text-violet-300 transition">소개</a>
+        <a href="#lineup" class="hover:text-violet-300 transition">라인업</a>
+        <a href="#schedule" class="hover:text-violet-300 transition">일정</a>
+        <a href="#notice" class="hover:text-violet-300 transition">공지</a>
+      </nav>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-6 flex-1">
+            <section class="card rounded-2xl p-8 shadow-2xl flex flex-col md:flex-row gap-8 items-center">
+        <div class="flex-1">
+                    <h2 class="text-4xl md:text-5xl font-orbitron glow">THE RISING STAR</h2>
+          <p class="mt-4 text-slate-300 text-lg">전설적인 야구선수 이승엽의 이름보다, 리듬게임계에서는 <strong class="text-indigo-300">'한이솔' 세 글자가 먼저입니다.</strong></p>
+
+          <div class="mt-8 flex gap-4">
+                        <button id="ticket" class="btn-primary px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 font-bold">티켓 예매 (선착순)</button>
+            <button onclick="scrollToSection('lineup')" class="px-6 py-3 rounded-xl border border-white/20 hover:bg-white/10 transition font-medium">라인업 보기</button>
+          </div>
+        </div>
+
+                <div class="w-60 h-80 rounded-2xl bg-slate-900/50 flex items-center justify-center shadow-xl border border-white/10 p-4 relative overflow-hidden">
+          <svg class="absolute inset-0 w-full h-full text-white/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          <div class="text-center z-10 mt-auto bg-black/30 p-2 rounded-lg backdrop-blur-sm">
+            <div class="text-2xl font-bold font-orbitron">HAN YISOL</div>
+            <div class="text-sm text-white/80 mt-1">(Rhythm Gamer, NOT a Baseball Player)</div>
+          </div>
+        </div>
+      </section>
+      
+            <section id="about" class="mt-16">
+        <h3 class="text-3xl font-orbitron border-l-4 border-indigo-400 pl-4">ABOUT THE FESTIVAL</h3>
+        <p class="mt-4 text-slate-300 leading-relaxed">'세계 한이솔 페스티벌'은 리듬게임계의 아이콘, 한이솔의 업적을 기리고 그의 놀라운 재능을 팬들과 함께 축하하기 위해 만들어진 자리입니다. 그의 신들린 손놀림과 완벽한 박자 감각이 어떻게 하나의 전설이 되었는지, 그 역사의 현장으로 여러분을 초대합니다.</p>
+      </section>
+
+      <section id="lineup" class="mt-12">
+        <h3 class="text-3xl font-orbitron border-l-4 border-indigo-400 pl-4">LINEUP</h3>
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="card rounded-lg overflow-hidden text-center p-4">
+            <img src="https://images.unsplash.com/photo-1618998823355-a01b0bBF9946?q=80&w=1974&auto=format&fit=crop" class="w-24 h-24 rounded-full mx-auto object-cover border-2 border-violet-400">
+            <div class="mt-3 font-bold text-lg">노량진의 유령손</div>
+            <div class="text-sm text-slate-400 mt-2">Special Guest: 한이솔 (야구선수 아님)</div>
+          </div>
+          <div class="card rounded-lg overflow-hidden text-center p-4">
+            <img src="https://images.unsplash.com/photo-1585064722039-8a0321b8f8a7?q=80&w=1974&auto=format&fit=crop" class="w-24 h-24 rounded-full mx-auto object-cover border-2 border-violet-400">
+            <div class="mt-3 font-bold text-lg">Project: FULL COMBO</div>
+            <div class="text-sm text-slate-400 mt-2">Special Guest: 한이솔 (야구선수 아님)</div>
+          </div>
+          <div class="card rounded-lg overflow-hidden text-center p-4">
+            <img src="https://images.unsplash.com/photo-1598387993441-a364f854c3e1?q=80&w=1974&auto=format&fit=crop" class="w-24 h-24 rounded-full mx-auto object-cover border-2 border-violet-400">
+            <div class="mt-3 font-bold text-lg">폭타 마스터즈</div>
+            <div class="text-sm text-slate-400 mt-2">Special Guest: 한이솔 (야구선수 아님)</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="schedule" class="mt-12">
+        <h3 class="text-3xl font-orbitron border-l-4 border-indigo-400 pl-4">TIME TABLE</h3>
+        <ol class="mt-6 space-y-3 text-slate-300">
+                    <li class="card p-4 rounded-lg flex items-center gap-4"><span class="font-bold text-indigo-300 text-lg">14:00</span> 개막식: '전설의 시작' 특별 영상 상영</li>
+          <li class="card p-4 rounded-lg flex items-center gap-4"><span class="font-bold text-indigo-300 text-lg">15:00</span> 명예의 전당 챌린지 (아마추어 최강자전)</li>
+          <li class="card p-4 rounded-lg flex items-center gap-4"><span class="font-bold text-indigo-300 text-lg">18:00</span> 메인 이벤트: 한이솔과의 만남 '그는 야구선수가 아니었다'</li>
+        </ol>
+      </section>
+
+      <section id="notice" class="mt-12 mb-20">
+        <h3 class="text-3xl font-orbitron border-l-4 border-indigo-400 pl-4">NOTICE</h3>
+        <div class="mt-6 card p-6 rounded-lg text-slate-300 border-l-4 border-yellow-400">
+          <p class="font-bold text-lg mb-2 text-yellow-300">필독! 중요 공지</p>
+          <p>최근 문의가 많아 명확히 알려드립니다. 본 페스티벌의 주인공인 리듬게이머 한이솔은 동명이인의 <strong class="text-yellow-200 underline decoration-wavy">야구선수 한이솔과 다른 인물</strong>입니다. 혼동으로 인해 야구 배트나 글러브를 지참하시는 일이 없도록 각별히 유의해주시기 바랍니다.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="border-t border-white/10 py-6 mt-12 bg-slate-950/50 backdrop-blur-sm">
+      <div class="max-w-5xl mx-auto px-6 flex items-center justify-between text-sm text-slate-400">
+        <div class="font-orbitron">© WORLD HAN YISOL FESTIVAL</div>
+        <div>Created by @Kastre_T</div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    function scrollToSection(id) {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    document.getElementById('ticket').addEventListener('click', function(){
+      alert('농담입니다! 하지만 언젠가 정말 열릴지도? 한이솔은 야구선수가 아닙니다.');
+    });
+  </script>
+</body>
+</html>
