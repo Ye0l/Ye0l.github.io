@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>세계 하수봉 페스티벌</title>
+  <meta name="description" content="기타프릭스 & 기타도라의 살아있는 전설, 하수봉을 위한 최초의 페스티벌! 그의 기타에는 진짜 줄이 없습니다." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* --- 커스텀 스타일 시작 --- */
+    body {
+      /* 더욱 현란하고 사이버틱한 배경 이미지로 교체 */
+      background-image: url('https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed; /* 스크롤 시 배경 고정 */
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+    .font-orbitron {
+      font-family: 'Orbitron', sans-serif;
+    }
+    /* 메인 타이틀에 네온사인처럼 깜빡이는 효과 */
+    .glow {
+      animation: pulse-glow 3s infinite ease-in-out;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { text-shadow: 0 0 20px rgba(236, 72, 153, 0.5), 0 0 30px rgba(219, 39, 119, 0.4); }
+      50% { text-shadow: 0 0 30px rgba(236, 72, 153, 0.8), 0 0 45px rgba(219, 39, 119, 0.6); }
+    }
+    /* 글래스모피즘 카드 스타일 */
+    .card {
+      background: rgba(15, 23, 42, 0.65); /* 반투명 배경 */
+      backdrop-filter: blur(12px); /* 배경 블러 처리 */
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.3s ease-in-out;
+    }
+    .card:hover {
+      transform: translateY(-6px);
+      background: rgba(30, 41, 59, 0.75);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    /* 버튼 호버 효과 강화 */
+    .btn-primary {
+      transition: all 0.3s ease;
+      background: linear-gradient(to right, #ec4899, #d946ef); /* 핑크-마젠타 그라데이션으로 변경 */
+    }
+    .btn-primary:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 25px rgba(236, 72, 153, 0.6);
+    }
+    /* --- 커스텀 스타일 끝 --- */
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased">
+  <div class="min-h-screen flex flex-col bg-slate-950/75">
+    <header class="max-w-5xl mx-auto w-full px-6 py-8 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+          <div class="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center font-orbitron text-2xl">SB</div>
+        <div>
+          <h1 class="text-xl font-orbitron">WORLD HA SOOBONG FEST</h1>
+          <p class="text-sm text-slate-400">Master of GITADORA</p>
+        </div>
+      </div>
+      <nav class="hidden md:flex gap-4 text-sm text-slate-300 font-bold">
+        <a href="#about" class="hover:text-pink-300 transition">소개</a>
+        <a href="#lineup" class="hover:text-pink-300 transition">라인업</a>
+        <a href="#schedule" class="hover:text-pink-300 transition">일정</a>
+        <a href="#notice" class="hover:text-pink-300 transition">공지</a>
+      </nav>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-6 flex-1">
+      <section class="card rounded-2xl p-8 shadow-2xl flex flex-col md:flex-row gap-8 items-center">
+        <div class="flex-1">
+          <h2 class="text-4xl md:text-5xl font-orbitron glow">THE SKILL POINT PREDATOR</h2>
+          <p class="mt-4 text-slate-300 text-lg">전설적인 기타리스트 에릭 클랩튼보다, 5개의 넥버튼 위에서는 <strong class="text-pink-300">'하수봉' 세 글자가 먼저입니다.</strong></p>
+
+          <div class="mt-8 flex gap-4">
+            <button id="ticket" class="btn-primary px-6 py-3 rounded-xl font-bold">스킬 대상곡 도전 (선착순)</button>
+            <button onclick="scrollToSection('lineup')" class="px-6 py-3 rounded-xl border border-white/20 hover:bg-white/10 transition font-medium">라인업 보기</button>
+          </div>
+        </div>
+
+        <div class="w-60 h-80 rounded-2xl bg-slate-900/50 flex items-center justify-center shadow-xl border border-white/10 p-4 relative overflow-hidden">
+          <svg class="absolute inset-0 w-full h-full text-white/80 p-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.5,2H8.5C7.67,2,7,2.67,7,3.5V16.5C7,17.33,7.67,18,8.5,18H9v2.5C9,21.33,9.67,22,10.5,22H11c0.55,0,1-0.45,1-1V18h1v2.5c0,0.55,0.45,1,1,1h0.5c0.83,0,1.5-0.67,1.5-1.5V18h0.5c0.83,0,1.5-0.67,1.5-1.5V3.5C17,2.67,16.33,2,15.5,2z M15,12h-2v-2h2V12z M15,9h-2V7h2V9z M15,6h-2V4h2V6z M12,12H9v-2h3V12z"/>
+          </svg>
+          <div class="text-center z-10 mt-auto bg-black/30 p-2 rounded-lg backdrop-blur-sm">
+            <div class="text-2xl font-bold font-orbitron">HA SOOBONG</div>
+            <div class="text-sm text-white/80 mt-1">(GITADORA Player, NOT a Luthier)</div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="about" class="mt-16">
+        <h3 class="text-3xl font-orbitron border-l-4 border-pink-400 pl-4">ABOUT THE FESTIVAL</h3>
+        <p class="mt-4 text-slate-300 leading-relaxed">'세계 하수봉 페스티벌'은 기타프릭스 & 기타도라 시리즈의 아이콘, 하수봉의 업적을 기리고 그의 경이로운 넥버튼 운지 능력을 팬들과 함께 축하하기 위해 만들어진 자리입니다. 그의 신들린 와블링과 완벽한 칼타이밍이 어떻게 하나의 전설이 되었는지, 그 역사의 현장으로 여러분을 초대합니다.</p>
+      </section>
+
+      <section id="lineup" class="mt-12">
+        <h3 class="text-3xl font-orbitron border-l-4 border-pink-400 pl-4">SESSION MEMBERS</h3>
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="card rounded-lg overflow-hidden text-center p-4">
+            <img src="https://pbs.twimg.com/profile_images/667924733594173440/AmcQNJ9N_400x400.png" class="w-24 h-24 rounded-full mx-auto object-cover border-2 border-pink-400">
+            <div class="mt-3 font-bold text-lg">롱놋 장인 연합</div>
+            <div class="text-sm text-slate-400 mt-2">Special Guest: 하수봉 (오토넥 아님)</div>
+          </div>
+          <div class="card rounded-lg overflow-hidden text-center p-4">
+            <img src="https://pbs.twimg.com/profile_images/667924733594173440/AmcQNJ9N_400x400.png" class="w-24 h-24 rounded-full mx-auto object-cover border-2 border-pink-400">
+            <div class="mt-3 font-bold text-lg">Project: FULL COMBO</div>
+            <div class="text-sm text-slate-400 mt-2">Special Guest: 하수봉 (끊기면 퇴장)</div>
+          </div>
+          <div class="card rounded-lg overflow-hidden text-center p-4">
+            <img src="https://pbs.twimg.com/profile_images/667924733594173440/AmcQNJ9N_400x400.png" class="w-24 h-24 rounded-full mx-auto object-cover border-2 border-pink-400">
+            <div class="mt-3 font-bold text-lg">폭타 처리 전문가</div>
+            <div class="text-sm text-slate-400 mt-2">Special Guest: 하수봉 (슈랜 걸고 옴)</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="schedule" class="mt-12">
+        <h3 class="text-3xl font-orbitron border-l-4 border-pink-400 pl-4">TIME TABLE</h3>
+        <ol class="mt-6 space-y-3 text-slate-300">
+          <li class="card p-4 rounded-lg flex items-center gap-4"><span class="font-bold text-pink-300 text-lg">14:00</span> 오프닝: '一網打尽 (일망타진)' 엑설런트 영상 최초 공개</li>
+          <li class="card p-4 rounded-lg flex items-center gap-4"><span class="font-bold text-pink-300 text-lg">15:00</span> 스킬 챌린지: 'Obsidian' VS 'DAY DREAM'</li>
+          <li class="card p-4 rounded-lg flex items-center gap-4"><span class="font-bold text-pink-300 text-lg">18:00</span> 메인 이벤트: 하수봉과의 만남 '그래서 진짜 기타는 언제 사나요?'</li>
+        </ol>
+      </section>
+
+      <section id="notice" class="mt-12 mb-20">
+        <h3 class="text-3xl font-orbitron border-l-4 border-pink-400 pl-4">NOTICE</h3>
+        <div class="mt-6 card p-6 rounded-lg text-slate-300 border-l-4 border-yellow-400">
+          <p class="font-bold text-lg mb-2 text-yellow-300">경고! 장비 혼동 주의</p>
+          <p>최근 문의가 많아 명확히 알려드립니다. 본 페스티벌의 주인공은 실제 나무 기타가 아닌, <strong class="text-yellow-200 underline decoration-wavy">5개의 넥버튼과 피킹 레버로 세상을 평정한 인물</strong>입니다. 혼동으로 인해 깁슨이나 펜더 기타, 이펙터 페달 등을 지참하시는 일이 없도록 각별히 유의해주시기 바랍니다.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="border-t border-white/10 py-6 mt-12 bg-slate-950/50 backdrop-blur-sm">
+      <div class="max-w-5xl mx-auto px-6 flex items-center justify-between text-sm text-slate-400">
+        <div class="font-orbitron">© WORLD HA SOOBONG FESTIVAL</div>
+        <div>Created by @Kastre_T</div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    function scrollToSection(id) {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    document.getElementById('ticket').addEventListener('click', function(){
+      alert('농담입니다! 하지만 이 형의 스킬 포인트는 진짜입니다. 하수봉은 진짜 기타리스트가 아닙니다.');
+    });
+  </script>
+</body>
+</html>
