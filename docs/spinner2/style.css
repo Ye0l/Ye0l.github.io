@@ -11,7 +11,7 @@
 body {
     font-family: var(--font-family);
     background-color: var(--bg-color);
-    background-image: url('./img/bg_ff.jpg');
+    background-image: url('/img/bg_ff.jpg');
     background-size: cover;
     background-position: center;
     color: var(--text-color);
@@ -50,7 +50,7 @@ header h1 {
 .filter-btn {
     width: 45px;
     height: 45px;
-    background-image: url('./img/job_icon2.png');
+    background-image: url('/img/job_icon2.png');
     background-position: var(--bg-pos);
     border: 2px solid transparent;
     border-radius: 50%;
@@ -115,7 +115,7 @@ header h1 {
 .job-icon {
     width: 40px;
     height: 40px;
-    background-image: url('./img/job_icon2.png');
+    background-image: url('/img/job_icon2.png');
     background-position: var(--bg-pos);
     transform: rotate(90deg); /* 아이콘이 바깥쪽을 향하도록 회전 */
 }
