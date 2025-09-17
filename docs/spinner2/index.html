@@ -3,33 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FFXIV 직업 룰렛</title>
+    <title>FFXIV 직업 선택기</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="roulette-container">
-        <header>
-            <h1>FFXIV 직업 룰렛</h1>
-            <div class="filters" id="job-filters">
-                <button class="filter-btn selected" data-class="tank" style="--bg-pos: 0 0;"></button>
-                <button class="filter-btn selected" data-class="heal" style="--bg-pos: 0 -45px;"></button>
-                <button class="filter-btn selected" data-class="melee" style="--bg-pos: -45px -90px;"></button>
-                <button class="filter-btn selected" data-class="range" style="--bg-pos: -45px -135px;"></button>
-                <button class="filter-btn selected" data-class="magic" style="--bg-pos: -45px -180px;"></button>
+    <div class="selector-container">
+        <header class="selector-header">
+            <h2>SELECT YOUR ROLE</h2>
+            <div class="filters">
+                <button class="filter-btn selected" data-class="tank">TANK</button>
+                <button class="filter-btn selected" data-class="heal">HEALER</button>
+                <button class="filter-btn selected" data-class="melee">MELEE</button>
+                <button class="filter-btn selected" data-class="range">RANGED</button>
+                <button class="filter-btn selected" data-class="magic">CASTER</button>
             </div>
         </header>
-
-        <main>
-            <div class="spinner-wrapper">
-                <div class="pointer"></div>
-                <div class="spinner" id="spinner"></div>
+        
+        <main class="selector-main">
+            <div class="reels">
+                <div class="reel"></div>
+                <div class="reel"></div>
+                <div class="reel"></div>
             </div>
-            <div class="result" id="result-display">
-                <span class="job-icon"></span>
-                <span class="job-name"></span>
-            </div>
-            <button class="spin-button" id="spin-button">SPIN!</button>
         </main>
+
+        <footer class="selector-footer">
+            <button id="select-button">ALLOCATE</button>
+        </footer>
     </div>
 
     <script src="script.js"></script>
