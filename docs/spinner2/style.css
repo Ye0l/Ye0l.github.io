@@ -5,9 +5,11 @@
     --card-color: #16213e;
     --primary-color: #0f3460;
     --accent-color: #e94560;
-    --glow-color: #537895;
+    --glow-color: #537895; /* 텍스트 및 아이콘 글로우 색상 */
     --text-color: #e0e0e0;
     --font-family: 'Pretendard', sans-serif;
+    --job-icon-size: 40px;
+    --reel-item-height: 60px; /* 아이콘과 텍스트를 담을 높이 */
 }
 
 body {
@@ -65,6 +67,11 @@ body {
     opacity: 0.6;
 }
 
+.filter-btn:hover {
+    opacity: 1;
+    transform: translateY(-3px);
+}
+
 .filter-btn.selected {
     background-color: var(--accent-color);
     border-color: var(--accent-color);
@@ -74,7 +81,7 @@ body {
 
 .reels {
     display: flex;
-    height: 150px;
+    height: var(--reel-item-height); /* 릴 하나만 보이도록 높이 조정 */
     border: 2px solid var(--primary-color);
     border-radius: 10px;
     overflow: hidden;
@@ -83,24 +90,8 @@ body {
     box-shadow: inset 0 0 15px #00000080;
 }
 
-.reels::before, .reels::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 50px;
-    z-index: 2;
-}
-
-.reels::before {
-    top: 0;
-    background: linear-gradient(to bottom, var(--card-color) 0%, transparent 100%);
-}
-
-.reels::after {
-    bottom: 0;
-    background: linear-gradient(to top, var(--card-color) 0%, transparent 100%);
-}
+/* 상하 그라데이션 제거 (이제 1개만 보이므로 필요 없음) */
+/* .reels::before, .reels::after { display: none; } */
 
 .reel {
     flex: 1;
@@ -110,21 +101,38 @@ body {
     transition: transform 3s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-.reel > div {
-    height: 50px;
-    line-height: 50px;
+.reel-item { /* 기존 div에서 reel-item 클래스로 변경 */
+    height: var(--reel-item-height);
+    width: 100%;
+    display: flex; /* 아이콘과 텍스트를 가로로 배열 */
+    align-items: center;
+    justify-content: center;
+    gap: 10px; /* 아이콘과 텍스트 사이 간격 */
     font-size: 1.5rem;
     font-weight: 700;
-    width: 100%;
     color: var(--text-color);
-    text-shadow: 0 0 8px var(--glow-color);
+    text-shadow: 0 0 5px var(--glow-color); /* 글로우 효과 약화 */
+    white-space: nowrap; /* 텍스트 줄바꿈 방지 */
 }
 
-.reel > div.winner {
+.job-icon {
+    width: var(--job-icon-size);
+    height: var(--job-icon-size);
+    background-image: url('/img/job_icon2.png'); /* 경로 수정 */
+    background-position: var(--bg-pos);
+    background-size: auto;
+    flex-shrink: 0; /* 아이콘이 줄어들지 않도록 */
+}
+
+.reel-item.winner {
     color: var(--accent-color);
     text-shadow: 0 0 10px var(--accent-color);
     transform: scale(1.1);
     transition: all 0.3s ease-in-out;
+}
+
+.reel-item.winner .job-icon {
+    filter: drop-shadow(0 0 8px var(--accent-color));
 }
 
 #select-button {
