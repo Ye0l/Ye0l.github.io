@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FFXIV 직업 룰렛</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="roulette-container">
+        <header>
+            <h1>FFXIV 직업 룰렛</h1>
+            <div class="filters" id="job-filters">
+                <button class="filter-btn selected" data-class="tank" style="--bg-pos: 0 0;"></button>
+                <button class="filter-btn selected" data-class="heal" style="--bg-pos: 0 -45px;"></button>
+                <button class="filter-btn selected" data-class="melee" style="--bg-pos: -45px -90px;"></button>
+                <button class="filter-btn selected" data-class="range" style="--bg-pos: -45px -135px;"></button>
+                <button class="filter-btn selected" data-class="magic" style="--bg-pos: -45px -180px;"></button>
+            </div>
+        </header>
+
+        <main>
+            <div class="spinner-wrapper">
+                <div class="pointer"></div>
+                <div class="spinner" id="spinner"></div>
+            </div>
+            <div class="result" id="result-display">
+                <span class="job-icon"></span>
+                <span class="job-name"></span>
+            </div>
+            <button class="spin-button" id="spin-button">SPIN!</button>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
