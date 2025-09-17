@@ -8,16 +8,12 @@
     --glow-color: #537895;
     --text-color: #e0e0e0;
     --font-family: 'Pretendard', sans-serif;
-    --job-icon-size: 38px; /* 아이콘 크기 미세 조정 */
     --reel-item-height: 60px;
 }
 
-/* --- ▼▼▼ 추가 ▼▼▼ --- */
 * {
     box-sizing: border-box;
 }
-/* --- ▲▲▲ 추가 ▲▲▲ --- */
-
 
 body {
     font-family: var(--font-family);
@@ -34,12 +30,12 @@ body {
 
 .selector-container {
     width: 90%;
-    max-width: 550px; /* --- ▼▼▼ 수정 ▼▼▼ --- */
+    max-width: 550px;
     background: rgba(22, 33, 62, 0.7);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
-    padding: 2rem 2.5rem; /* --- ▼▼▼ 수정 ▼▼▼ --- */
+    padding: 2rem 2.5rem;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
     text-align: center;
 }
@@ -97,8 +93,6 @@ body {
     box-shadow: inset 0 0 15px #00000080;
 }
 
-
-/* --- ▼▼▼ '선택 라인' 추가 ▼▼▼ --- */
 .reels::before {
     content: '';
     position: absolute;
@@ -118,10 +112,9 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    transition: transform 4s cubic-bezier(0.23, 1, 0.32, 1); /* --- ▼▼▼ 애니메이션 수정 ▼▼▼ --- */
+    transition: transform 4s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-/* --- ▼▼▼ 슬롯 구분선 추가 ▼▼▼ --- */
 .reel:not(:last-child) {
     border-right: 2px solid var(--primary-color);
 }
@@ -132,32 +125,18 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 15px; /* --- ▼▼▼ 수정 ▼▼▼ --- */
-    font-size: 1.4rem; /* --- ▼▼▼ 수정 ▼▼▼ --- */
+    font-size: 1.8rem; /* 텍스트 크기 증가 */
     font-weight: 700;
     color: var(--text-color);
     text-shadow: 0 0 5px var(--glow-color);
     white-space: nowrap;
-    transition: all 0.3s ease; /* --- ▼▼▼ 추가 ▼▼▼ --- */
-}
-
-.job-icon {
-    width: var(--job-icon-size);
-    height: var(--job-icon-size);
-    background-image: url('/img/job_icon2.png');
-    background-position: var(--bg-pos);
-    background-size: auto;
-    flex-shrink: 0;
+    transition: all 0.3s ease;
 }
 
 .reel-item.winner {
     color: var(--accent-color);
     text-shadow: 0 0 10px var(--accent-color);
     transform: scale(1.1);
-}
-
-.reel-item.winner .job-icon {
-    filter: drop-shadow(0 0 8px var(--accent-color));
 }
 
 #select-button {
