@@ -24,10 +24,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let availableJobs = [];
     let isSpinning = false;
     
+    const reelsContainer = document.querySelector('.reels');
     const reels = document.querySelectorAll('.reel');
     const filters = document.querySelectorAll('.filter-btn');
     const selectButton = document.getElementById('select-button');
     const reelItemHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--reel-item-height'));
+    
+    // --- ▼▼▼ 수정 ▼▼▼ ---
+    const WINNER_INDEX = 25; // 중앙에 위치할 아이템의 인덱스 (0부터 시작)
+    const REEL_ITEM_COUNT = 50; // 각 릴에 생성할 총 아이템 수
 
     const shuffleArray = (array) => {
         for (let i = array.length - 1; i > 0; i--) {
@@ -45,12 +50,10 @@ document.addEventListener('DOMContentLoaded', () => {
         availableJobs = jobs_source.filter(job => selectedClasses.includes(job.class));
         selectButton.disabled = availableJobs.length === 0;
 
-        // 필터가 변경될 때마다 릴을 초기화하고 다시 채움
         reels.forEach(reel => {
             reel.innerHTML = '';
             if (availableJobs.length > 0) {
-                const jobPool = shuffleArray([...availableJobs, ...availableJobs]); // 초기 화면용
-                const initialItem = createReelItem(jobPool[0]);
+                const initialItem = createReelItem(availableJobs[Math.floor(Math.random() * availableJobs.length)]);
                 reel.appendChild(initialItem);
             }
         });
@@ -76,21 +79,15 @@ document.addEventListener('DOMContentLoaded', () => {
         reel.innerHTML = '';
         const scrollItems = [];
         
-        // 스크롤 시작 전 몇 개의 무작위 아이템
-        for (let i = 0; i < 10; i++) {
-            scrollItems.push(createReelItem(allJobs[Math.floor(Math.random() * allJobs.length)]));
-        }
-
-        // 중앙에 최종 당첨될 아이템 (winnerJob은 중앙 릴에서만 사용)
-        scrollItems.push(createReelItem(winnerJob));
-
-        // 스크롤 끝난 후 몇 개의 무작위 아이템
-        for (let i = 0; i < 10; i++) {
-            scrollItems.push(createReelItem(allJobs[Math.floor(Math.random() * allJobs.length)]));
+        for (let i = 0; i < REEL_ITEM_COUNT; i++) {
+            if (i === WINNER_INDEX) {
+                scrollItems.push(createReelItem(winnerJob));
+            } else {
+                scrollItems.push(createReelItem(allJobs[Math.floor(Math.random() * allJobs.length)]));
+            }
         }
         
         reel.append(...scrollItems);
-        return scrollItems.length; // 총 아이템 개수 반환
     };
 
     const selectJob = () => {
@@ -100,40 +97,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.querySelectorAll('.winner').forEach(el => el.classList.remove('winner'));
         
-        // --- ▼▼▼ RDM 이스터에그 로직 (중앙 릴에만 적용) ▼▼▼ ---
         let mainWinnerJob;
-        if (Math.random() < 0.01) { // 1% 확률
+        if (Math.random() < 0.01) {
             console.log('SPECIAL ALLOCATION: RDM PROTOCOL ACTIVATED');
-            const rdmJob = jobs_source.find(job => job.name === 'RDM');
-            mainWinnerJob = rdmJob || availableJobs[Math.floor(Math.random() * availableJobs.length)];
+            mainWinnerJob = jobs_source.find(job => job.name === 'RDM') || availableJobs[0];
         } else {
             mainWinnerJob = availableJobs[Math.floor(Math.random() * availableJobs.length)];
         }
-        // --- ▲▲▲ RDM 이스터에그 로직 ▲▲▲ ---
-
-        let maxItems = 0;
 
         reels.forEach((reel, index) => {
-            let reelWinnerJob;
-            if (index === 1) { // 중앙 릴은 RDM 이스터에그가 적용된 mainWinnerJob
-                reelWinnerJob = mainWinnerJob;
-            } else { // 나머지 릴은 해당 역할군 내에서 랜덤하게
-                const classJobs = jobs_source.filter(job => job.class === availableJobs[0].class); // 일단 첫 필터 클래스로 제한
-                reelWinnerJob = classJobs[Math.floor(Math.random() * classJobs.length)];
-            }
+            const reelWinnerJob = (index === 1) ? mainWinnerJob : availableJobs[Math.floor(Math.random() * availableJobs.length)];
             
-            const numItems = populateReelWithScrollItems(reel, reelWinnerJob, availableJobs);
-            maxItems = Math.max(maxItems, numItems);
+            populateReelWithScrollItems(reel, reelWinnerJob, availableJobs);
 
             reel.style.transition = 'none';
-            reel.style.transform = 'translateY(0)';
-            reel.offsetHeight; // Force reflow
+            // 시작 위치를 살짝 위로 조정하여 부드러운 출발 효과
+            reel.style.transform = `translateY(${reelItemHeight}px)`;
+            reel.offsetHeight; 
 
-            const delay = index * 150; // 릴마다 약간의 시간차
+            const delay = index * 200;
             setTimeout(() => {
-                reel.style.transition = `transform 3s cubic-bezier(0.25, 1, 0.5, 1)`;
-                // 목표 위치: 10개의 프리 스크롤 아이템 + 최종 당첨 아이템이 중앙에 오도록 (인덱스 10)
-                const targetPosition = -10 * reelItemHeight; 
+                reel.style.transition = `transform 4s cubic-bezier(0.23, 1, 0.32, 1)`;
+                // --- ▼▼▼ 중앙 정렬 계산 수정 ▼▼▼ ---
+                // 목표: WINNER_INDEX에 있는 아이템이 중앙에 오도록 함.
+                // translateY 값은 (전체 아이템 높이 중 목표 아이템의 시작점)을 0으로 만드는 값.
+                const targetPosition = -(WINNER_INDEX * reelItemHeight);
                 reel.style.transform = `translateY(${targetPosition}px)`;
             }, delay);
         });
@@ -141,15 +129,13 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             isSpinning = false;
             selectButton.disabled = false;
-            // 각 릴의 중앙 아이템에 winner 클래스 추가
             reels.forEach(reel => {
-                // 중앙에 오는 아이템은 10번째 인덱스 (0부터 시작)
-                const winnerItem = reel.children[10]; 
+                const winnerItem = reel.children[WINNER_INDEX]; 
                 if (winnerItem) {
                     winnerItem.classList.add('winner');
                 }
             });
-        }, 3500 + reels.length * 150); // 모든 릴의 애니메이션이 끝난 후
+        }, 4000 + reels.length * 200);
     };
 
     filters.forEach(button => {
@@ -161,6 +147,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     selectButton.addEventListener('click', selectJob);
 
-    // 초기화
     updateAvailableJobs();
 });
