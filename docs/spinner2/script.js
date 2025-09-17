@@ -1,142 +1,111 @@
 document.addEventListener('DOMContentLoaded', () => {
     const jobs_source = [
-        { name: 'PLD', imagePos: '-90px 0', class: 'tank' },
-        { name: 'WAR', imagePos: '-135px 0', class: 'tank' },
-        { name: 'DRK', imagePos: '-180px 0', class: 'tank' },
-        { name: 'GNB', imagePos: '-225px 0', class: 'tank' },
-        { name: 'WHM', imagePos: '-90px -45px', class: 'heal' },
-        { name: 'SCH', imagePos: '-135px -45px', class: 'heal' },
-        { name: 'AST', imagePos: '-180px -45px', class: 'heal' },
-        { name: 'SGE', imagePos: '-225px -45px', class: 'heal' },
-        { name: 'MNK', imagePos: '-90px -90px', class: 'melee' },
-        { name: 'DRG', imagePos: '-135px -90px', class: 'melee' },
-        { name: 'NIN', imagePos: '-180px -90px', class: 'melee' },
-        { name: 'SAM', imagePos: '-225px -90px', class: 'melee' },
-        { name: 'RPR', imagePos: '-270px -90px', class: 'melee' },
-        { name: 'BRD', imagePos: '-90px -135px', class: 'range' },
-        { name: 'MCH', imagePos: '-135px -135px', class: 'range' },
-        { name: 'DNC', imagePos: '-180px -135px', class: 'range' },
-        { name: 'BLM', imagePos: '-90px -180px', class: 'magic' },
-        { name: 'SMN', imagePos: '-135px -180px', class: 'magic' },
-        { name: 'RDM', imagePos: '-180px -180px', class: 'magic' },
+        { name: 'PLD', class: 'tank' }, { name: 'WAR', class: 'tank' },
+        { name: 'DRK', class: 'tank' }, { name: 'GNB', class: 'tank' },
+        { name: 'WHM', class: 'heal' }, { name: 'SCH', class: 'heal' },
+        { name: 'AST', class: 'heal' }, { name: 'SGE', class: 'heal' },
+        { name: 'MNK', class: 'melee' }, { name: 'DRG', class: 'melee' },
+        { name: 'NIN', class: 'melee' }, { name: 'SAM', class: 'melee' },
+        { name: 'RPR', class: 'melee' },
+        { name: 'BRD', class: 'range' }, { name: 'MCH', class: 'range' },
+        { name: 'DNC', class: 'range' },
+        { name: 'BLM', class: 'magic' }, { name: 'SMN', class: 'magic' },
+        { name: 'RDM', class: 'magic' },
     ];
-    
-    let jobs = [];
-    let currentRotation = 0;
+
+    let availableJobs = [];
     let isSpinning = false;
-
-    const spinner = document.getElementById('spinner');
-    const spinButton = document.getElementById('spin-button');
+    
+    const reels = document.querySelectorAll('.reel');
     const filters = document.querySelectorAll('.filter-btn');
-    const resultDisplay = document.getElementById('result-display');
+    const selectButton = document.getElementById('select-button');
 
-    const updateSpinner = () => {
+    const shuffleArray = (array) => {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    };
+
+    const updateAvailableJobs = () => {
         const selectedClasses = [...filters]
             .filter(btn => btn.classList.contains('selected'))
             .map(btn => btn.dataset.class);
-
-        jobs = jobs_source.filter(job => selectedClasses.includes(job.class));
-        drawSpinner();
+        
+        availableJobs = jobs_source.filter(job => selectedClasses.includes(job.class));
+        selectButton.disabled = availableJobs.length === 0;
     };
 
-    const drawSpinner = () => {
-        spinner.innerHTML = '';
-        if (jobs.length === 0) {
-            spinButton.disabled = true;
-            return;
-        }
-        spinButton.disabled = false;
-
-        const sliceAngle = 360 / jobs.length;
-
-        jobs.forEach((job, i) => {
-            const itemAngle = sliceAngle * i;
-            const item = document.createElement('div');
-            item.className = 'spinner-item';
+    const populateReels = (winner) => {
+        reels.forEach((reel, index) => {
+            reel.innerHTML = '';
+            // 릴 목록 생성 (더 길게 만들어 스크롤 효과 보장)
+            const jobPool = shuffleArray([...availableJobs, ...availableJobs, ...availableJobs]);
+            const reelItems = [];
             
-            const icon = document.createElement('span');
-            icon.className = 'job-icon';
-            icon.style.setProperty('--bg-pos', job.imagePos);
-            // 아이콘이 항상 정면을 보도록 역회전 각도를 변수로 전달
-            icon.style.setProperty('--reverse-angle', `-${itemAngle}deg`);
-            
-            item.appendChild(icon);
-            item.style.transform = `rotate(${itemAngle}deg)`;
-            spinner.appendChild(item);
+            // 릴 중앙에 올 아이템 설정
+            const targetItem = (index === 1) ? winner : jobPool[Math.floor(Math.random() * jobPool.length)];
+
+            // 릴 목록 채우기
+            for (let i = 0; i < 30; i++) { // 총 30개 아이템으로 릴 구성
+                const item = document.createElement('div');
+                if (i === 15) { // 중앙 위치
+                    item.textContent = targetItem.name;
+                } else {
+                    item.textContent = jobPool[i % jobPool.length].name;
+                }
+                reelItems.push(item);
+            }
+            reel.append(...reelItems);
         });
     };
-    
-    // 이전에 당첨된 아이템의 하이라이트를 제거하는 함수
-    const clearWinnerHighlight = () => {
-        const previousWinner = spinner.querySelector('.winner');
-        if (previousWinner) {
-            previousWinner.classList.remove('winner');
-        }
-    };
 
-    const spin = () => {
-        if (isSpinning || jobs.length === 0) return;
+    const selectJob = () => {
+        if (isSpinning || availableJobs.length === 0) return;
         isSpinning = true;
-        spinButton.disabled = true;
-        resultDisplay.classList.remove('visible');
-        clearWinnerHighlight();
-        
-        // 이스터에그: 1% 확률
-        if (Math.random() < 0.01) {
-             console.log('YEAH');
-             const rdm = jobs_source.find(j => j.name === 'RDM');
-             if(rdm) jobs = Array(jobs_source.length).fill(rdm);
-             drawSpinner();
-        }
+        selectButton.disabled = true;
 
-        const sliceAngle = 360 / jobs.length;
-        const winnerIndex = Math.floor(Math.random() * jobs.length);
-        const winner = jobs[winnerIndex];
+        // 기존 winner 효과 제거
+        document.querySelectorAll('.winner').forEach(el => el.classList.remove('winner'));
+        
+        const winner = availableJobs[Math.floor(Math.random() * availableJobs.length)];
+        populateReels(winner);
 
-        // 목표 각도 계산 (포인터가 12시 방향 기준)
-        const targetRotation = -(winnerIndex * sliceAngle);
-        
-        // 추가 회전 (최소 5바퀴 ~ 10바퀴)
-        const extraRotations = 360 * (5 + Math.floor(Math.random() * 5));
-        
-        // 회전값 누적 방식 대신, 최종 각도를 계산하여 초기화 문제 방지
-        const finalRotation = currentRotation - (currentRotation % 360) + extraRotations + targetRotation;
-        currentRotation = finalRotation;
-        
-        spinner.style.transform = `rotate(${currentRotation}deg)`;
+        reels.forEach((reel, index) => {
+            // 초기 위치로 리셋
+            reel.style.transition = 'none';
+            reel.style.transform = 'translateY(0)';
+            
+            // 강제 리플로우
+            reel.offsetHeight; 
+
+            // 애니메이션 시작
+            const delay = index * 100; // 릴마다 약간의 시간차
+            setTimeout(() => {
+                reel.style.transition = `transform 3s cubic-bezier(0.25, 1, 0.5, 1)`;
+                const targetPosition = -15 * 50 + 50; // 중앙(15번째) 아이템 위치로 이동 (50px = 아이템 높이)
+                reel.style.transform = `translateY(${targetPosition}px)`;
+            }, delay);
+        });
 
         setTimeout(() => {
             isSpinning = false;
-            spinButton.disabled = false;
-            
-            // 당첨 아이템에 winner 클래스 추가
-            const winnerElement = spinner.children[winnerIndex];
-            if(winnerElement) {
-                winnerElement.classList.add('winner');
-            }
-            
-            showResult(winner);
-        }, 5000); // CSS transition 시간과 동일하게 설정
-    };
-    
-    const showResult = (job) => {
-        const resultIcon = resultDisplay.querySelector('.job-icon');
-        const resultName = resultDisplay.querySelector('.job-name');
-        
-        resultIcon.style.setProperty('--bg-pos', job.imagePos);
-        resultName.textContent = job.name;
-        resultDisplay.classList.add('visible');
+            selectButton.disabled = false;
+            // 중앙 릴의 당첨 아이템에 하이라이트 효과 추가
+            reels[1].children[15].classList.add('winner');
+        }, 3500); // 전체 애니메이션 시간
     };
 
     filters.forEach(button => {
         button.addEventListener('click', () => {
             button.classList.toggle('selected');
-            updateSpinner();
+            updateAvailableJobs();
         });
     });
 
-    spinButton.addEventListener('click', spin);
+    selectButton.addEventListener('click', selectJob);
 
     // 초기화
-    updateSpinner();
+    updateAvailableJobs();
 });
