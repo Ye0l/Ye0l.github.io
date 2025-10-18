@@ -41,7 +41,7 @@ body, html {
     position: relative;
 }
 
-.terminal-window::after { /* Scanline Effect - Inset to not cover border */
+.scanline::after { /* Scanline Effect - Inset to not cover border */
     content: ' ';
     display: block;
     position: absolute;

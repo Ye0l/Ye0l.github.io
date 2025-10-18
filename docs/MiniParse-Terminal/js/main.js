@@ -19,12 +19,23 @@ function update(data) {
     updateCombatantViews(dpsSorted, hpsSorted);
 }
 
+function toggleScanline() {
+    const div = document.getElementsByClassName('terminal-window')[0];
+    if(div.classList.contains('scanline')) {
+        div.classList.remove('scanline');
+    } else {
+        div.classList.add('scanline');
+    }
+}
+
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
     const sampleBtn = document.getElementById('sample-data-btn');
     if (sampleBtn) {
         sampleBtn.addEventListener('click', () => update(sampleData));
     }
+    const scanlienBtn = document.getElementById('scanline-btn');
+    scanlienBtn.addEventListener('click', () => toggleScanline())
     // Initial load with sample data
     update(sampleData);
 });
