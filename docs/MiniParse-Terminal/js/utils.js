@@ -1,5 +1,3 @@
-import { formatNumber, parseActFormat } from './utils.js';
-
 export function formatNumber(num) {
     if (num === undefined || num === null) return '0';
     const n = parseFloat(num);
