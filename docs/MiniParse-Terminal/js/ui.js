@@ -50,7 +50,7 @@ function renderDpsMeter(container, combatants) {
 
         textRow.appendChild(createCell(c.Job, { isIcon: true, job: c.Job }));
         textRow.appendChild(createCell(c.name));
-        textRow.appendChild(createCell(c.encdps));
+        textRow.appendChild(createCell(formatNumber(c.encdps)));
         textRow.appendChild(createCell(c['damage%']));
         textRow.appendChild(createCell(formatNumber(c.damage)));
         textRow.appendChild(createCell(c.swings));
@@ -110,7 +110,7 @@ function renderHpsMeter(container, combatants) {
 
         row.appendChild(createCell(c.Job, { isIcon: true, job: c.Job }));
         row.appendChild(createCell(c.name));
-        row.appendChild(createCell(c.enchps));
+        row.appendChild(createCell(formatNumber(c.enchps)));
         row.appendChild(createCell(c['healed%']));
         row.appendChild(createCell(formatNumber(c.healed)));
         row.appendChild(createCell(formatNumber(effHeal.toFixed(0))));
