@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>MiniParse-Terminal</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/job-colors.css">
+</head>
+<body>
+
+    <div class="terminal-window">
+        <div class="title-bar">MiniParse-Terminal</div>
+        <div id="controls">
+            <span id="sample-data-btn">[SAMPLE]</span>
+        </div>
+        <div id="encounter">
+            <div id="encounter-title"></div>
+            <div id="encounter-stats">
+                <span class="stat-item">ENCDPS: <span id="enc-dps"></span></span>
+                <span class="stat-item">TIME: <span id="enc-time"></span></span>
+            </div>
+        </div>
+        <div id="terminal-output"></div>
+    </div>
+
+    <script src="https://overlayplugin.github.io/OverlayPlugin/assets/shared/common.min.js"></script>
+    <script type="module" src="js/main.js"></script>
+
+</body>
+</html>

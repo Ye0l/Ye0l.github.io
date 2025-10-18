@@ -1,0 +1,50 @@
+
+/* Job Colors */
+[data-job="PLD"] .percent-bar { background: rgba(133, 155, 162, 0.7)!important; }
+[data-job="WAR"] .percent-bar { background: rgba(204, 73, 64, 0.7)!important; }
+[data-job="DRK"] .percent-bar { background: rgba(154, 75, 87, 0.7)!important; }
+[data-job="GNB"] .percent-bar { background: rgba(146, 131, 65, 0.7)!important; }
+[data-job="WHM"] .percent-bar { background: rgba(193, 193, 193, 0.7)!important; }
+[data-job="SCH"] .percent-bar { background: rgba(98, 93, 172, 0.7)!important; }
+[data-job="AST"] .percent-bar { background: rgba(201, 117, 65, 0.7)!important; }
+[data-job="SGE"] .percent-bar { background: rgba(137, 196, 211, 0.7)!important; }
+[data-job="MNK"] .percent-bar { background: rgba(202, 156, 49, 0.7)!important; }
+[data-job="DRG"] .percent-bar { background: rgba(91, 111, 232, 0.7)!important; }
+[data-job="NIN"] .percent-bar { background: rgba(240, 89, 110, 0.7)!important; }
+[data-job="SAM"] .percent-bar { background: rgba(232, 119, 57, 0.7)!important; }
+[data-job="RPR"] .percent-bar { background: rgba(234, 221, 111, 0.7)!important; }
+[data-job="VPR"] .percent-bar { background: rgba(165, 93, 67, 0.7)!important; }
+[data-job="BRD"] .percent-bar { background: rgba(181, 201, 95, 0.7)!important; }
+[data-job="MCH"] .percent-bar { background: rgba(69, 172, 196, 0.7)!important; }
+[data-job="DNC"] .percent-bar { background: rgba(228, 178, 177, 0.7)!important; }
+[data-job="BLM"] .percent-bar { background: rgba(138, 106, 189, 0.7)!important; }
+[data-job="SMN"] .percent-bar { background: rgba(96, 133, 49, 0.7)!important; }
+[data-job="RDM"] .percent-bar { background: rgba(200, 84, 176, 0.7)!important; }
+[data-job="PCT"] .percent-bar { background: rgba(214, 113, 116, 0.7)!important; }
+[data-job="BLU"] .percent-bar { background: rgba(65, 99, 189, 0.7)!important; }
+[data-job="LMB"] .percent-bar { background: rgba(255, 187, 0, 0.7)!important; }
+
+/* Hover Effects */
+[data-job="PLD"]:hover { background: rgba(133, 155, 162, 0.1)!important; }
+[data-job="WAR"]:hover { background: rgba(204, 73, 64, 0.1)!important; }
+[data-job="DRK"]:hover { background: rgba(154, 75, 87, 0.1)!important; }
+[data-job="GNB"]:hover { background: rgba(146, 131, 65, 0.1)!important; }
+[data-job="WHM"]:hover { background: rgba(193, 193, 193, 0.1)!important; }
+[data-job="SCH"]:hover { background: rgba(98, 93, 172, 0.1)!important; }
+[data-job="AST"]:hover { background: rgba(201, 117, 65, 0.1)!important; }
+[data-job="SGE"]:hover { background: rgba(137, 196, 211, 0.1)!important; }
+[data-job="MNK"]:hover { background: rgba(202, 156, 49, 0.1)!important; }
+[data-job="DRG"]:hover { background: rgba(91, 111, 232, 0.1)!important; }
+[data-job="NIN"]:hover { background: rgba(240, 89, 110, 0.1)!important; }
+[data-job="SAM"]:hover { background: rgba(232, 119, 57, 0.1)!important; }
+[data-job="RPR"]:hover { background: rgba(234, 221, 111, 0.1)!important; }
+[data-job="VPR"]:hover { background: rgba(165, 93, 67, 0.1)!important; }
+[data-job="BRD"]:hover { background: rgba(181, 201, 95, 0.1)!important; }
+[data-job="MCH"]:hover { background: rgba(69, 172, 196, 0.1)!important; }
+[data-job="DNC"]:hover { background: rgba(228, 178, 177, 0.1)!important; }
+[data-job="BLM"]:hover { background: rgba(138, 106, 189, 0.1)!important; }
+[data-job="SMN"]:hover { background: rgba(96, 133, 49, 0.1)!important; }
+[data-job="RDM"]:hover { background: rgba(200, 84, 176, 0.1)!important; }
+[data-job="PCT"]:hover { background: rgba(214, 113, 116, 0.1)!important; }
+[data-job="BLU"]:hover { background: rgba(65, 99, 189, 0.1)!important; }
+[data-job="LMB"]:hover { background: rgba(255, 187, 0, 0.1)!important; }
