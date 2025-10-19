@@ -38,8 +38,8 @@ function initMeters() {
     output.appendChild(dpsMeterContainer);
     hpsMeterContainer = createMeterContainer(
         '[HEALING]',
-        '30px 1fr 70px 50px 80px 80px 80px',
-        ['Job', 'Name', 'HPS', 'H%', 'Healed', 'Eff.Heal', 'OverHeal']
+        '30px 1fr 70px 50px 80px 80px 80px 60px',
+        ['Job', 'Name', 'HPS', 'H%', 'Healed', 'Eff.Heal', 'OverHeal', 'OH%']
     );
     output.appendChild(hpsMeterContainer);
 }
@@ -48,7 +48,12 @@ function initMeters() {
 function createCell(content, { isIcon = false, job = '' } = {}) {
     const cell = document.createElement('span');
     if (isIcon) {
-        const iconName = JOB_ICON_MAP[job.toUpperCase()];
+        const upperJob = (job || '').toUpperCase();
+        if (upperJob === 'LIMIT BREAK') {
+            cell.textContent = ''; // Set to empty string
+            return cell;
+        }
+        const iconName = JOB_ICON_MAP[upperJob];
         if (iconName) {
             const img = document.createElement('img');
             img.className = 'job-icon';
@@ -116,14 +121,19 @@ function renderDpsMeter(combatants) {
         if (data.job !== prev.job) {
             const iconCell = entry.cells.job;
             iconCell.innerHTML = ''; // Clear previous content
-            const iconName = JOB_ICON_MAP[data.job.toUpperCase()];
-            if (iconName) {
-                const img = document.createElement('img');
-                img.className = 'job-icon';
-                img.src = `images/${iconName}`;
-                iconCell.appendChild(img);
+            const upperJob = (data.job || '').toUpperCase();
+            if (upperJob === 'LIMIT BREAK') {
+                iconCell.textContent = '';
             } else {
-                iconCell.textContent = data.job; // Fallback
+                const iconName = JOB_ICON_MAP[upperJob];
+                if (iconName) {
+                    const img = document.createElement('img');
+                    img.className = 'job-icon';
+                    img.src = `images/${iconName}`;
+                    iconCell.appendChild(img);
+                } else {
+                    iconCell.textContent = data.job; // Fallback
+                }
             }
         }
 
@@ -172,6 +182,7 @@ function renderHpsMeter(combatants) {
             job: c.Job, name: c.name, hps: parseFloat(c.enchps) || 0,
             healedPct: c['healed%'], healed: healed,
             effHeal: healed - overHeal, overHeal: overHeal,
+            overHealPct: c.OverHealPct || '0%' // New data point
         };
 
         if (!entry.hpsRow) {
@@ -197,7 +208,8 @@ function renderHpsMeter(combatants) {
             entry.cells.healed = createCell(formatNumber(data.healed.toFixed(0)));
             entry.cells.effHeal = createCell(formatNumber(data.effHeal.toFixed(0)));
             entry.cells.overHeal = createCell(formatNumber(data.overHeal.toFixed(0)));
-            [entry.cells.h_job, entry.cells.h_name, entry.cells.hps, entry.cells.healedPct, entry.cells.healed, entry.cells.effHeal, entry.cells.overHeal].forEach(cell => textRow.appendChild(cell));
+            entry.cells.h_overHealPct = createCell(data.overHealPct); // New cell
+            [entry.cells.h_job, entry.cells.h_name, entry.cells.hps, entry.cells.healedPct, entry.cells.healed, entry.cells.effHeal, entry.cells.overHeal, entry.cells.h_overHealPct].forEach(cell => textRow.appendChild(cell)); // Added to row
             combatantRegistry.set(id, entry);
         }
 
@@ -207,14 +219,19 @@ function renderHpsMeter(combatants) {
         if (data.job !== prev.job) {
             const iconCell = entry.cells.h_job;
             iconCell.innerHTML = ''; // Clear previous content
-            const iconName = JOB_ICON_MAP[data.job.toUpperCase()];
-            if (iconName) {
-                const img = document.createElement('img');
-                img.className = 'job-icon';
-                img.src = `images/${iconName}`;
-                iconCell.appendChild(img);
+            const upperJob = (data.job || '').toUpperCase();
+            if (upperJob === 'LIMIT BREAK') {
+                iconCell.textContent = '';
             } else {
-                iconCell.textContent = data.job; // Fallback
+                const iconName = JOB_ICON_MAP[upperJob];
+                if (iconName) {
+                    const img = document.createElement('img');
+                    img.className = 'job-icon';
+                    img.src = `images/${iconName}`;
+                    iconCell.appendChild(img);
+                } else {
+                    iconCell.textContent = data.job; // Fallback
+                }
             }
         }
 
@@ -223,6 +240,7 @@ function renderHpsMeter(combatants) {
         animateNumber(entry.cells.effHeal, prev.effHeal || 0, data.effHeal);
         animateNumber(entry.cells.overHeal, prev.overHeal || 0, data.overHeal);
         entry.cells.healedPct.textContent = data.healedPct;
+        entry.cells.h_overHealPct.textContent = data.overHealPct; // Update cell text
         entry.hpsGraph.dataset.job = (data.job || '').toUpperCase();
 
         const relativeHps = (maxHps > 0) ? (data.hps / maxHps) * 100 : 0;

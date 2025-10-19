@@ -23,3 +23,4 @@
 [data-job="PCT"] .percent-bar { background: rgba(214, 113, 116, 0.7)!important; }
 [data-job="BLU"] .percent-bar { background: rgba(65, 99, 189, 0.7)!important; }
 [data-job="LMB"] .percent-bar { background: rgba(255, 187, 0, 0.7)!important; }
+[data-job="LIMIT BREAK"] .percent-bar { background: rgba(255, 215, 0, 0.7)!important; }
