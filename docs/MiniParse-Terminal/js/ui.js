@@ -89,7 +89,6 @@ function renderDpsMeter(combatants) {
             if (c.name === 'YOU') textRow.classList.add('is-you');
             const graphRow = document.createElement('div');
             graphRow.className = 'dps-graph-container';
-            graphRow.dataset.job = (c.Job || '').toUpperCase();
             const percentBar = document.createElement('div');
             percentBar.className = 'percent-bar';
             graphRow.appendChild(percentBar);
@@ -112,6 +111,22 @@ function renderDpsMeter(combatants) {
         }
 
         const prev = entry.prevData;
+
+        // Update job icon if changed
+        if (data.job !== prev.job) {
+            const iconCell = entry.cells.job;
+            iconCell.innerHTML = ''; // Clear previous content
+            const iconName = JOB_ICON_MAP[data.job.toUpperCase()];
+            if (iconName) {
+                const img = document.createElement('img');
+                img.className = 'job-icon';
+                img.src = `images/${iconName}`;
+                iconCell.appendChild(img);
+            } else {
+                iconCell.textContent = data.job; // Fallback
+            }
+        }
+
         animateNumber(entry.cells.dps, prev.dps || 0, data.dps);
         animateNumber(entry.cells.damage, prev.damage || 0, data.damage);
         entry.cells.damagePct.textContent = data.damagePct;
@@ -121,6 +136,7 @@ function renderDpsMeter(combatants) {
         entry.cells.cdhit.textContent = data.cdhit;
         entry.cells.maxhit.textContent = data.maxhit;
         entry.cells.deaths.textContent = data.deaths;
+        entry.dpsGraph.dataset.job = (data.job || '').toUpperCase();
         const relativeDps = (maxDps > 0) ? (data.dps / maxDps) * 100 : 0;
         entry.dpsGraph.querySelector('.percent-bar').style.width = relativeDps + '%';
         entry.prevData = { ...entry.prevData, ...data };
@@ -142,6 +158,7 @@ function renderHpsMeter(combatants) {
     if (!hpsMeterContainer) return new Set();
     const HEALER_JOBS = ['WHM', 'SCH', 'AST', 'SGE', 'CNJ'];
     const healers = combatants.filter(c => HEALER_JOBS.includes((c.Job || '').toUpperCase()));
+    const maxHps = healers.length > 0 ? (parseFloat(healers[0].enchps) || 1) : 1;
     const presentIds = new Set();
 
     healers.forEach(c => {
@@ -164,7 +181,6 @@ function renderHpsMeter(combatants) {
             if (c.name === 'YOU') textRow.classList.add('is-you');
             const graphRow = document.createElement('div');
             graphRow.className = 'stacked-bar-container';
-            graphRow.dataset.job = (c.Job || '').toUpperCase();
             const effBar = document.createElement('div');
             effBar.className = 'eff-heal-bar';
             const overBar = document.createElement('div');
@@ -186,11 +202,32 @@ function renderHpsMeter(combatants) {
         }
 
         const prev = entry.prevData;
+
+        // Update job icon if changed
+        if (data.job !== prev.job) {
+            const iconCell = entry.cells.h_job;
+            iconCell.innerHTML = ''; // Clear previous content
+            const iconName = JOB_ICON_MAP[data.job.toUpperCase()];
+            if (iconName) {
+                const img = document.createElement('img');
+                img.className = 'job-icon';
+                img.src = `images/${iconName}`;
+                iconCell.appendChild(img);
+            } else {
+                iconCell.textContent = data.job; // Fallback
+            }
+        }
+
         animateNumber(entry.cells.hps, prev.hps || 0, data.hps);
         animateNumber(entry.cells.healed, prev.healed || 0, data.healed);
         animateNumber(entry.cells.effHeal, prev.effHeal || 0, data.effHeal);
         animateNumber(entry.cells.overHeal, prev.overHeal || 0, data.overHeal);
         entry.cells.healedPct.textContent = data.healedPct;
+        entry.hpsGraph.dataset.job = (data.job || '').toUpperCase();
+
+        const relativeHps = (maxHps > 0) ? (data.hps / maxHps) * 100 : 0;
+        entry.hpsGraph.style.width = relativeHps + '%';
+
         const effHealPct = (data.healed > 0) ? (data.effHeal / data.healed) * 100 : 0;
         const overHealPct = (data.healed > 0) ? (data.overHeal / data.healed) * 100 : 0;
         entry.hpsGraph.querySelector('.eff-heal-bar').style.width = effHealPct + '%';
