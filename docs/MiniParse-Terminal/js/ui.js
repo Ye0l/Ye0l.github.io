@@ -90,7 +90,7 @@ function renderHpsMeter(container, combatants) {
     const header = document.createElement('div');
     header.className = 'grid-header';
     header.style.gridTemplateColumns = '30px 1fr 70px 50px 80px 80px 80px 80px';
-    ['Job', 'Name', 'HPS', 'H%', 'Healed', 'Eff.Heal', 'Shield', 'OverHeal'].forEach(text => {
+    ['Job', 'Name', 'HPS', 'H%', 'Healed', 'Eff.Heal', 'OverHeal'].forEach(text => {
         header.appendChild(createCell(text));
     });
     hpsMeter.appendChild(header);
@@ -114,7 +114,6 @@ function renderHpsMeter(container, combatants) {
         row.appendChild(createCell(c['healed%']));
         row.appendChild(createCell(formatNumber(c.healed)));
         row.appendChild(createCell(formatNumber(effHeal.toFixed(0))));
-        row.appendChild(createCell('N/A'));
         row.appendChild(createCell(formatNumber(overHeal)));
 
         const barContainer = document.createElement('div');

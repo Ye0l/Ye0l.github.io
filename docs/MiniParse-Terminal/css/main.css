@@ -1,7 +1,7 @@
 
 @font-face {
     font-family: 'RoundedFixedsys';
-    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
+    src: url('../fonts/DungGeunMo.woff') format('woff');
     font-weight: normal;
     font-display: swap;
 }
@@ -146,6 +146,6 @@ body, html {
 .percent-bar { height: 100%; }
 
 /* Stacked Bar */
-.stacked-bar-container { display: flex; width:100%; height: 4px; border: 1px solid #444; background-color: rgba(0,0,0,0.2); }
+.stacked-bar-container { display: flex; width:100%; height: 4px; background-color: rgba(0,0,0,0.2); margin-top: 1px; margin-bottom: 3px; }
 .eff-heal-bar { background-color: #6495ED; height: 100%; }
 .over-heal-bar { background-color: #DC143C; height: 100%; }
