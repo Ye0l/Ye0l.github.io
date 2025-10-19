@@ -27,21 +27,26 @@ function createMeterContainer(title, gridTemplateColumns, headers) {
 }
 
 function initMeters() {
-    const output = document.getElementById('terminal-output');
-    if (!output) return;
-    output.innerHTML = ''; // Clear only once
+    const dpsOutput = document.getElementById('dps-output');
+    const hpsOutput = document.getElementById('hps-output');
+    if (!dpsOutput || !hpsOutput) return;
+
+    dpsOutput.innerHTML = ''; // Clear DPS area
+    hpsOutput.innerHTML = ''; // Clear HPS area
+
     dpsMeterContainer = createMeterContainer(
         '[DAMAGE DONE]',
         '30px 1fr 70px 50px 80px 60px 60px 60px 60px 140px 50px',
         ['Job', 'Name', 'DPS', 'DMG%', 'Damage', 'Swing', 'D.HIT', 'C.HIT', 'C.D.HIT', 'MaxHit', 'Death']
     );
-    output.appendChild(dpsMeterContainer);
+    dpsOutput.appendChild(dpsMeterContainer);
+
     hpsMeterContainer = createMeterContainer(
         '[HEALING]',
         '30px 1fr 70px 50px 80px 80px 80px 60px',
         ['Job', 'Name', 'HPS', 'H%', 'Healed', 'Eff.Heal', 'OverHeal', 'OH%']
     );
-    output.appendChild(hpsMeterContainer);
+    hpsOutput.appendChild(hpsMeterContainer);
 }
 
 // --- Cell Creation ---
@@ -74,7 +79,7 @@ function renderDpsMeter(combatants) {
     const maxDps = combatants.length > 0 ? (parseFloat(combatants[0].encdps) || 1) : 1;
     const presentIds = new Set();
 
-    combatants.forEach(c => {
+    combatants.forEach((c, index) => {
         const id = c.name;
         presentIds.add(id);
         let entry = combatantRegistry.get(id) || { cells: {}, prevData: {} };
@@ -92,6 +97,7 @@ function renderDpsMeter(combatants) {
             textRow.className = 'grid-row';
             textRow.style.gridTemplateColumns = dpsMeterContainer.querySelector('.grid-header').style.gridTemplateColumns;
             if (c.name === 'YOU') textRow.classList.add('is-you');
+            
             const graphRow = document.createElement('div');
             graphRow.className = 'dps-graph-container';
             const percentBar = document.createElement('div');
@@ -112,6 +118,9 @@ function renderDpsMeter(combatants) {
             entry.cells.maxhit = createCell(data.maxhit);
             entry.cells.deaths = createCell(data.deaths);
             Object.values(entry.cells).forEach(cell => textRow.appendChild(cell));
+            
+            dpsMeterContainer.appendChild(textRow);
+            dpsMeterContainer.appendChild(graphRow);
             combatantRegistry.set(id, entry);
         }
 
@@ -149,16 +158,12 @@ function renderDpsMeter(combatants) {
         entry.dpsGraph.dataset.job = (data.job || '').toUpperCase();
         const relativeDps = (maxDps > 0) ? (data.dps / maxDps) * 100 : 0;
         entry.dpsGraph.querySelector('.percent-bar').style.width = relativeDps + '%';
-        entry.prevData = { ...entry.prevData, ...data };
-    });
+        
+        // Set order for flexbox sorting
+        entry.dpsRow.style.order = index * 2;
+        entry.dpsGraph.style.order = index * 2 + 1;
 
-    // Re-order DOM elements to match the sorted list
-    combatants.forEach(c => {
-        const entry = combatantRegistry.get(c.name);
-        if (entry && entry.dpsRow) {
-            dpsMeterContainer.appendChild(entry.dpsRow);
-            dpsMeterContainer.appendChild(entry.dpsGraph);
-        }
+        entry.prevData = { ...entry.prevData, ...data };
     });
 
     return presentIds;
@@ -171,7 +176,7 @@ function renderHpsMeter(combatants) {
     const maxHps = healers.length > 0 ? (parseFloat(healers[0].enchps) || 1) : 1;
     const presentIds = new Set();
 
-    healers.forEach(c => {
+    healers.forEach((c, index) => {
         const id = c.name;
         presentIds.add(id);
         let entry = combatantRegistry.get(id) || { cells: {}, prevData: {} };
@@ -190,6 +195,7 @@ function renderHpsMeter(combatants) {
             textRow.className = 'grid-row';
             textRow.style.gridTemplateColumns = hpsMeterContainer.querySelector('.grid-header').style.gridTemplateColumns;
             if (c.name === 'YOU') textRow.classList.add('is-you');
+            
             const graphRow = document.createElement('div');
             graphRow.className = 'stacked-bar-container';
             const effBar = document.createElement('div');
@@ -210,6 +216,9 @@ function renderHpsMeter(combatants) {
             entry.cells.overHeal = createCell(formatNumber(data.overHeal.toFixed(0)));
             entry.cells.h_overHealPct = createCell(data.overHealPct); // New cell
             [entry.cells.h_job, entry.cells.h_name, entry.cells.hps, entry.cells.healedPct, entry.cells.healed, entry.cells.effHeal, entry.cells.overHeal, entry.cells.h_overHealPct].forEach(cell => textRow.appendChild(cell)); // Added to row
+            
+            hpsMeterContainer.appendChild(textRow);
+            hpsMeterContainer.appendChild(graphRow);
             combatantRegistry.set(id, entry);
         }
 
@@ -250,16 +259,12 @@ function renderHpsMeter(combatants) {
         const overHealPct = (data.healed > 0) ? (data.overHeal / data.healed) * 100 : 0;
         entry.hpsGraph.querySelector('.eff-heal-bar').style.width = effHealPct + '%';
         entry.hpsGraph.querySelector('.over-heal-bar').style.width = overHealPct + '%';
-        entry.prevData = { ...entry.prevData, ...data };
-    });
 
-    // Re-order DOM elements to match the sorted list
-    healers.forEach(c => {
-        const entry = combatantRegistry.get(c.name);
-        if (entry && entry.hpsRow) {
-            hpsMeterContainer.appendChild(entry.hpsRow);
-            hpsMeterContainer.appendChild(entry.hpsGraph);
-        }
+        // Set order for flexbox sorting
+        entry.hpsRow.style.order = index * 2;
+        entry.hpsGraph.style.order = index * 2 + 1;
+
+        entry.prevData = { ...entry.prevData, ...data };
     });
 
     return presentIds;

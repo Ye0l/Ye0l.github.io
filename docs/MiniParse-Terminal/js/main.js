@@ -72,6 +72,9 @@ async function captureToClipboard() {
 
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
+    // Disable right-click context menu
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
     // Apply saved scanline preference
     if (localStorage.getItem('scanlineEnabled') === 'false') {
         document.getElementsByClassName('terminal-window')[0].classList.remove('scanline');

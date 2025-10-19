@@ -30,6 +30,10 @@ body, html {
     overflow: hidden;
     background-color: transparent;
     color: var(--primary-color);
+    user-select: none; /* Disable text selection */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 .terminal-window {
@@ -103,7 +107,7 @@ body, html {
     color: #fff;
 }
 
-#terminal-output {
+#dps-output {
     flex-grow: 1;
     overflow-y: auto;
     padding: 5px 10px;
@@ -111,8 +115,13 @@ body, html {
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
 }
-#terminal-output::-webkit-scrollbar {
+#dps-output::-webkit-scrollbar {
     display: none; /* Chrome, Safari, and Opera */
+}
+
+#hps-output {
+    flex-shrink: 0; /* Prevent this container from shrinking */
+    padding: 5px 10px;
 }
 
 /* New Grid Layout */
@@ -139,13 +148,17 @@ body, html {
     vertical-align: middle;
 }
 
-.dps-meter, .hps-meter { margin-bottom: 15px; }
+.dps-meter, .hps-meter { 
+    margin-bottom: 15px; 
+    display: flex; 
+    flex-direction: column; 
+}
 .meter-title { font-weight: bold; margin-bottom: 5px; }
 
 .dps-graph-container { width: 100%; height: 4px; background-color: rgba(0,0,0,0.2); margin-top: 1px; margin-bottom: 3px; }
-.percent-bar { height: 100%; transition: width 1s ease-out; }
+.percent-bar { height: 100%; transition: width 1s ease-in-out; }
 
 /* Stacked Bar */
-.stacked-bar-container { display: flex; width:100%; height: 4px; background-color: rgba(0,0,0,0.2); margin-top: 1px; margin-bottom: 3px; }
-.eff-heal-bar { background-color: #6495ED; height: 100%; transition: width 1s ease-out; }
-.over-heal-bar { background-color: #DC143C; height: 100%; transition: width 1s ease-out; }
+.stacked-bar-container { display: flex; width:100%; height: 4px; background-color: rgba(0,0,0,0.2); margin-top: 1px; margin-bottom: 3px; transition: width 1s ease-in-out; }
+.eff-heal-bar { background-color: #6495ED; height: 100%; transition: width 1s ease-in-out; }
+.over-heal-bar { background-color: #DC143C; height: 100%; transition: width 1s ease-in-out; }
