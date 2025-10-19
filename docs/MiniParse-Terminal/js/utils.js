@@ -14,3 +14,34 @@ export function parseActFormat(str, dictionary) {
         return dictionary[key] || '0';
     });
 }
+
+export function animateNumber(element, start, end, duration = 1000) {
+    const startTime = performance.now();
+    const change = end - start;
+
+    // If there's no change, just set the final value and return.
+    if (change === 0) {
+        const formattedEnd = formatNumber(end.toFixed(0));
+        if (element.textContent !== formattedEnd) {
+            element.textContent = formattedEnd;
+        }
+        return;
+    }
+
+    function updateNumber(currentTime) {
+        const elapsedTime = currentTime - startTime;
+        
+        if (elapsedTime >= duration) {
+            element.textContent = formatNumber(end.toFixed(0));
+            return;
+        }
+
+        const progress = elapsedTime / duration;
+        const currentValue = start + change * progress;
+        element.textContent = formatNumber(currentValue.toFixed(0));
+        
+        requestAnimationFrame(updateNumber);
+    }
+
+    requestAnimationFrame(updateNumber);
+}
