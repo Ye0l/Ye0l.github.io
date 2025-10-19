@@ -70,7 +70,6 @@ function createCell(content, { isIcon = false, job = '' } = {}) {
 
 // --- Meter Rendering ---
 function renderDpsMeter(combatants) {
-    console.log(combatants)
     if (!dpsMeterContainer) return new Set();
     const maxDps = combatants.length > 0 ? (parseFloat(combatants[0].encdps) || 1) : 1;
     const presentIds = new Set();
