@@ -148,7 +148,7 @@ body, html {
     vertical-align: middle;
 }
 
-.dps-meter, .hps-meter { 
+.meter-container { 
     margin-bottom: 15px; 
     display: flex; 
     flex-direction: column; 
