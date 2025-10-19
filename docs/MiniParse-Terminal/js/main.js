@@ -1,4 +1,3 @@
-
 import { sampleData, mergePetData } from './data.js';
 import { updateEncounter, updateCombatantViews } from './ui.js';
 
@@ -21,15 +20,17 @@ function update(data) {
 
 function toggleScanline() {
     const div = document.getElementsByClassName('terminal-window')[0];
-    if(div.classList.contains('scanline')) {
-        div.classList.remove('scanline');
-    } else {
-        div.classList.add('scanline');
-    }
+    const isScanlineNowPresent = div.classList.toggle('scanline');
+    localStorage.setItem('scanlineEnabled', isScanlineNowPresent);
 }
 
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
+    // Apply saved scanline preference
+    if (localStorage.getItem('scanlineEnabled') === 'false') {
+        document.getElementsByClassName('terminal-window')[0].classList.remove('scanline');
+    }
+
     const sampleBtn = document.getElementById('sample-data-btn');
     if (sampleBtn) {
         sampleBtn.addEventListener('click', () => update(sampleData));
