@@ -1,4 +1,3 @@
-
 import { JOB_ICON_MAP } from './config.js';
 import { formatNumber, animateNumber } from './utils.js';
 
@@ -109,8 +108,6 @@ function renderDpsMeter(combatants) {
             entry.cells.maxhit = createCell(data.maxhit);
             entry.cells.deaths = createCell(data.deaths);
             Object.values(entry.cells).forEach(cell => textRow.appendChild(cell));
-            dpsMeterContainer.appendChild(textRow);
-            dpsMeterContainer.appendChild(graphRow);
             combatantRegistry.set(id, entry);
         }
 
@@ -128,6 +125,16 @@ function renderDpsMeter(combatants) {
         entry.dpsGraph.querySelector('.percent-bar').style.width = relativeDps + '%';
         entry.prevData = { ...entry.prevData, ...data };
     });
+
+    // Re-order DOM elements to match the sorted list
+    combatants.forEach(c => {
+        const entry = combatantRegistry.get(c.name);
+        if (entry && entry.dpsRow) {
+            dpsMeterContainer.appendChild(entry.dpsRow);
+            dpsMeterContainer.appendChild(entry.dpsGraph);
+        }
+    });
+
     return presentIds;
 }
 
@@ -175,8 +182,6 @@ function renderHpsMeter(combatants) {
             entry.cells.effHeal = createCell(formatNumber(data.effHeal.toFixed(0)));
             entry.cells.overHeal = createCell(formatNumber(data.overHeal.toFixed(0)));
             [entry.cells.h_job, entry.cells.h_name, entry.cells.hps, entry.cells.healedPct, entry.cells.healed, entry.cells.effHeal, entry.cells.overHeal].forEach(cell => textRow.appendChild(cell));
-            hpsMeterContainer.appendChild(textRow);
-            hpsMeterContainer.appendChild(graphRow);
             combatantRegistry.set(id, entry);
         }
 
@@ -192,6 +197,16 @@ function renderHpsMeter(combatants) {
         entry.hpsGraph.querySelector('.over-heal-bar').style.width = overHealPct + '%';
         entry.prevData = { ...entry.prevData, ...data };
     });
+
+    // Re-order DOM elements to match the sorted list
+    healers.forEach(c => {
+        const entry = combatantRegistry.get(c.name);
+        if (entry && entry.hpsRow) {
+            hpsMeterContainer.appendChild(entry.hpsRow);
+            hpsMeterContainer.appendChild(entry.hpsGraph);
+        }
+    });
+
     return presentIds;
 }
 
