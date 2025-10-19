@@ -70,6 +70,7 @@ function createCell(content, { isIcon = false, job = '' } = {}) {
 
 // --- Meter Rendering ---
 function renderDpsMeter(combatants) {
+    console.log(combatants)
     if (!dpsMeterContainer) return new Set();
     const maxDps = combatants.length > 0 ? (parseFloat(combatants[0].encdps) || 1) : 1;
     const presentIds = new Set();
@@ -82,8 +83,8 @@ function renderDpsMeter(combatants) {
         const data = {
             job: c.Job, name: c.name, dps: parseFloat(c.encdps) || 0,
             damagePct: c['damage%'], damage: parseFloat(c.damage) || 0,
-            swings: c.swings, dhit: c.DirectHitCount, chit: c.CriticalHitCount,
-            cdhit: c.CritDirectHitCount, deaths: c.deaths,
+            swings: c.swings, dhit: c.DirectHitPct, chit: c['crithit%'],
+            cdhit: c.CritDirectHitPct, deaths: c.deaths,
             maxhit: (c.maxhit || '-').split('-').length > 1 ? `${(c.maxhit || '-').split('-')[0]}-${formatNumber((c.maxhit || '-').split('-')[1])}` : c.maxhit,
         };
 
