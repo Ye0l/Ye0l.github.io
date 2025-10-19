@@ -3,7 +3,6 @@ import { updateEncounter, updateCombatantViews } from './ui.js';
 
 // --- Main Update Function ---
 function update(data) {
-    console.log(data);
     if (!data || !data.Encounter || !data.Combatant) return;
 
     // Process data
