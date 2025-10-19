@@ -3,6 +3,7 @@ import { updateEncounter, updateCombatantViews } from './ui.js';
 
 // --- Main Update Function ---
 function update(data) {
+    console.log(data);
     if (!data || !data.Encounter || !data.Combatant) return;
 
     // Process data
@@ -24,6 +25,52 @@ function toggleScanline() {
     localStorage.setItem('scanlineEnabled', isScanlineNowPresent);
 }
 
+async function captureToClipboard() {
+    const captureBtn = document.getElementById('capture-btn');
+    const originalText = captureBtn.textContent;
+    try {
+        const element = document.querySelector('.terminal-window');
+        const isResizable = document.documentElement.classList.contains("resizeHandle");
+        if (isResizable) {
+            document.documentElement.classList.remove("resizeHandle");
+        }
+
+        captureBtn.textContent = '[CAPTURING...]';
+
+        const canvas = await html2canvas(element, {
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: null
+        });
+
+        if (isResizable) {
+            document.documentElement.classList.add("resizeHandle");
+        }
+
+        canvas.toBlob(async (blob) => {
+            try {
+                await navigator.clipboard.write([
+                    new ClipboardItem({ 'image/png': blob })
+                ]);
+                captureBtn.textContent = '[COPIED!]';
+            } catch (err) {
+                console.error('Error copying to clipboard.', err);
+                captureBtn.textContent = '[FAILED!]';
+            } finally {
+                setTimeout(() => {
+                    captureBtn.textContent = originalText;
+                }, 2000);
+            }
+        }, 'image/png');
+    } catch (err) {
+        console.error('Error using html2canvas.', err);
+        captureBtn.textContent = '[FAILED!]';
+        setTimeout(() => {
+            captureBtn.textContent = originalText;
+        }, 2000);
+    }
+}
+
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
     // Apply saved scanline preference
@@ -35,8 +82,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sampleBtn) {
         sampleBtn.addEventListener('click', () => update(sampleData));
     }
-    const scanlienBtn = document.getElementById('scanline-btn');
-    scanlienBtn.addEventListener('click', () => toggleScanline())
+    const scanlineBtn = document.getElementById('scanline-btn');
+    if (scanlineBtn) {
+        scanlineBtn.addEventListener('click', () => toggleScanline());
+    }
+    const captureBtn = document.getElementById('capture-btn');
+    if (captureBtn) {
+        captureBtn.addEventListener('click', captureToClipboard);
+    }
     // Initial load with sample data
     update(sampleData);
 });
