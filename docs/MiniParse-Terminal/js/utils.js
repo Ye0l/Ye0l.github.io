@@ -7,5 +7,10 @@ export function formatNumber(num) {
 
 export function parseActFormat(str, dictionary) {
     if (!dictionary) return str;
-    return str.replace(/\{(\w+|\w+%)\}/g, (match, key) => formatNumber(dictionary[key]) || '0');
+    return str.replace(/\{(\w+|\w+%)\}/g, (match, key) => {
+        if (key === 'ENCDPS') {
+            return formatNumber(dictionary[key]) || '0';
+        }
+        return dictionary[key] || '0';
+    });
 }

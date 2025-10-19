@@ -150,7 +150,6 @@ export function updateEncounter(data) {
             <span class="stat-item"><span id="enc-time">{duration}</span></span>
         </div>
         `, data.Encounter);
-    // if(encounterEl) encounterEl.innerHTML = parseActFormat(`{title} -- DURATION: {duration} -- ENCDPS: {ENCDPS}`, data.Encounter);
 }
 
 export function updateCombatantViews(dpsData, hpsData) {

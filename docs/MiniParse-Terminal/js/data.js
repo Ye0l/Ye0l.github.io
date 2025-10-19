@@ -1,6 +1,6 @@
 
 export const sampleData = {
-    Encounter: { title: 'Sample Battle', duration: '194', ENCDPS: '150123.45' },
+    Encounter: { title: 'Sample Battle', duration: '01:34', ENCDPS: '150123.45' },
     Combatant: {
         'YOU': { name: 'YOU', Job: 'Sam', id: '101', ownerId: null, encdps: '25102.8', 'damage%': '16.7', damage: '4886789', swings: '300', DirectHitCount: '120', CritDirectHitCount: '40', CriticalHitCount: '90', maxhit: 'Midare Setsugekka-55123', deaths: '0', healed: '120345', OverHeal: '30100', enchps: '625.3', 'healed%': '15.2' },
         'Player 2': { name: 'Player 2', Job: 'Smn', id: '102', ownerId: null, encdps: '23888.1', 'damage%': '15.9', damage: '4643210', swings: '350', DirectHitCount: '110', CritDirectHitCount: '35', CriticalHitCount: '80', maxhit: 'Akh Morn-49876', deaths: '0', healed: '0', OverHeal: '0', enchps: '0', 'healed%': '0' },
