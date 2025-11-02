@@ -1,0 +1,26 @@
+
+/* Job Colors for Icon Borders */
+[data-job="PLD"] .combatant-job-icon-container { border: 1px solid rgba(133, 155, 162, 0.8); }
+[data-job="WAR"] .combatant-job-icon-container { border: 1px solid rgba(204, 73, 64, 0.8); }
+[data-job="DRK"] .combatant-job-icon-container { border: 1px solid rgba(154, 75, 87, 0.8); }
+[data-job="GNB"] .combatant-job-icon-container { border: 1px solid rgba(146, 131, 65, 0.8); }
+[data-job="WHM"] .combatant-job-icon-container { border: 1px solid rgba(193, 193, 193, 0.8); }
+[data-job="SCH"] .combatant-job-icon-container { border: 1px solid rgba(98, 93, 172, 0.8); }
+[data-job="AST"] .combatant-job-icon-container { border: 1px solid rgba(201, 117, 65, 0.8); }
+[data-job="SGE"] .combatant-job-icon-container { border: 1px solid rgba(137, 196, 211, 0.8); }
+[data-job="MNK"] .combatant-job-icon-container { border: 1px solid rgba(202, 156, 49, 0.8); }
+[data-job="DRG"] .combatant-job-icon-container { border: 1px solid rgba(91, 111, 232, 0.8); }
+[data-job="NIN"] .combatant-job-icon-container { border: 1px solid rgba(240, 89, 110, 0.8); }
+[data-job="SAM"] .combatant-job-icon-container { border: 1px solid rgba(232, 119, 57, 0.8); }
+[data-job="RPR"] .combatant-job-icon-container { border: 1px solid rgba(234, 221, 111, 0.8); }
+[data-job="VPR"] .combatant-job-icon-container { border: 1px solid rgba(165, 93, 67, 0.8); }
+[data-job="BRD"] .combatant-job-icon-container { border: 1px solid rgba(181, 201, 95, 0.8); }
+[data-job="MCH"] .combatant-job-icon-container { border: 1px solid rgba(69, 172, 196, 0.8); }
+[data-job="DNC"] .combatant-job-icon-container { border: 1px solid rgba(228, 178, 177, 0.8); }
+[data-job="BLM"] .combatant-job-icon-container { border: 1px solid rgba(138, 106, 189, 0.8); }
+[data-job="SMN"] .combatant-job-icon-container { border: 1px solid rgba(96, 133, 49, 0.8); }
+[data-job="RDM"] .combatant-job-icon-container { border: 1px solid rgba(200, 84, 176, 0.8); }
+[data-job="PCT"] .combatant-job-icon-container { border: 1px solid rgba(214, 113, 116, 0.8); }
+[data-job="BLU"] .combatant-job-icon-container { border: 1px solid rgba(65, 99, 189, 0.8); }
+[data-job="LMB"] .combatant-job-icon-container { border: 1px solid rgba(255, 187, 0, 0.8); }
+[data-job="LIMIT BREAK"] .combatant-job-icon-container { border: 1px solid rgba(255, 215, 0, 0.8); }

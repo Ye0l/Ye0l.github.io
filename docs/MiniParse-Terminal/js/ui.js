@@ -1,5 +1,5 @@
 import { JOB_ICON_MAP } from './config.js';
-import { formatNumber, animateNumber } from './utils.js';
+import { formatNumber, formatNumberK, animateNumber } from './utils.js';
 
 // --- State Management ---
 let dpsMeterContainer = null;
@@ -7,22 +7,13 @@ let hpsMeterContainer = null;
 const combatantRegistry = new Map(); // Stores { dpsRow, dpsGraph, hpsRow, hpsGraph, cells, prevData }
 
 // --- UI Initialization ---
-function createMeterContainer(title, gridTemplateColumns, headers) {
+function createMeterContainer(title) {
     const container = document.createElement('div');
     container.className = 'meter-container';
     const titleEl = document.createElement('div');
     titleEl.className = 'meter-title';
     titleEl.textContent = title;
     container.appendChild(titleEl);
-    const headerEl = document.createElement('div');
-    headerEl.className = 'grid-header';
-    headerEl.style.gridTemplateColumns = gridTemplateColumns;
-    headers.forEach(text => {
-        const cell = document.createElement('span');
-        cell.textContent = text;
-        headerEl.appendChild(cell);
-    });
-    container.appendChild(headerEl);
     return container;
 }
 
@@ -34,19 +25,11 @@ function initMeters() {
     dpsOutput.innerHTML = ''; // Clear DPS area
     hpsOutput.innerHTML = ''; // Clear HPS area
 
-    dpsMeterContainer = createMeterContainer(
-        '[DAMAGE DONE]',
-        '30px 1fr 70px 50px 80px 60px 60px 60px 60px 140px 50px',
-        ['Job', 'Name', 'DPS', 'DMG%', 'Damage', 'Swing', 'D.HIT', 'C.HIT', 'C.D.HIT', 'MaxHit', 'Death']
-    );
+    dpsMeterContainer = createMeterContainer('⚔ DAMAGE');
     dpsOutput.appendChild(dpsMeterContainer);
 
-    hpsMeterContainer = createMeterContainer(
-        '[HEALING]',
-        '30px 1fr 70px 50px 80px 80px 80px 60px',
-        ['Job', 'Name', 'HPS', 'H%', 'Healed', 'Eff.Heal', 'OverHeal', 'OH%']
-    );
-    hpsOutput.appendChild(hpsMeterContainer);
+    hpsMeterContainer = createMeterContainer('✚ HEALING');
+    dpsOutput.appendChild(hpsMeterContainer); // Add HPS container to same output
 }
 
 // --- Cell Creation ---
@@ -92,35 +75,116 @@ function renderDpsMeter(combatants) {
             maxhit: (c.maxhit || '-').split('-').length > 1 ? `${(c.maxhit || '-').split('-')[0]}-${formatNumber((c.maxhit || '-').split('-')[1])}` : c.maxhit,
         };
 
-        if (!entry.dpsRow) {
-            const textRow = document.createElement('div');
-            textRow.className = 'grid-row';
-            textRow.style.gridTemplateColumns = dpsMeterContainer.querySelector('.grid-header').style.gridTemplateColumns;
-            if (c.name === 'YOU') textRow.classList.add('is-you');
-            
-            const graphRow = document.createElement('div');
-            graphRow.className = 'dps-graph-container';
-            const percentBar = document.createElement('div');
-            percentBar.className = 'percent-bar';
-            graphRow.appendChild(percentBar);
+        if (!entry.dpsCard) {
+            const card = document.createElement('div');
+            card.className = 'combatant-card';
+            card.dataset.job = (data.job || '').toUpperCase();
+            if (c.name === 'YOU') card.classList.add('is-you');
 
-            entry.dpsRow = textRow;
-            entry.dpsGraph = graphRow;
-            entry.cells.job = createCell(null, { isIcon: true, job: data.job });
-            entry.cells.name = createCell(data.name);
-            entry.cells.dps = createCell(formatNumber(data.dps.toFixed(0)));
-            entry.cells.damagePct = createCell(data.damagePct);
-            entry.cells.damage = createCell(formatNumber(data.damage.toFixed(0)));
-            entry.cells.swings = createCell(data.swings);
-            entry.cells.dhit = createCell(data.dhit);
-            entry.cells.chit = createCell(data.chit);
-            entry.cells.cdhit = createCell(data.cdhit);
-            entry.cells.maxhit = createCell(data.maxhit);
-            entry.cells.deaths = createCell(data.deaths);
-            Object.values(entry.cells).forEach(cell => textRow.appendChild(cell));
-            
-            dpsMeterContainer.appendChild(textRow);
-            dpsMeterContainer.appendChild(graphRow);
+            // Header with job icon, name and inline stats
+            const header = document.createElement('div');
+            header.className = 'combatant-header';
+
+            const iconCell = createCell(null, { isIcon: true, job: data.job });
+            const nameCell = document.createElement('div');
+            nameCell.className = 'combatant-name';
+            nameCell.textContent = data.name;
+
+            // Inline stats (right side of name)
+            const inlineStats = document.createElement('div');
+            inlineStats.className = 'combatant-stats-inline';
+
+            const inlineStatItems = [
+                { label: 'DPS', value: formatNumber(data.dps.toFixed(0)) },
+                { label: 'DMG%', value: data.damagePct || '0' },
+                { label: 'Damage', value: formatNumberK(data.damage) || '0' },
+                { label: 'D.HIT', value: data.dhit || '0' },
+                { label: 'C.HIT', value: data.chit || '0' },
+                { label: 'C.D.HIT', value: data.cdhit || '0' },
+                { label: 'Swing', value: data.swings || '0' },
+                { label: 'MaxHit', value: data.maxhit, isMaxHit: true },
+                { label: 'Deaths', value: data.deaths || '0' }
+            ];
+
+            inlineStatItems.forEach((item, index) => {
+                const statItem = document.createElement('div');
+                statItem.className = 'stat-item';
+                statItem.style.display = 'flex';
+                statItem.style.flexDirection = 'column';
+                statItem.style.alignItems = 'center';
+                statItem.style.minWidth = '20px';
+
+                const label = document.createElement('span');
+                label.className = 'stat-label';
+                label.textContent = item.label;
+                label.style.marginBottom = '1px';
+
+                if (item.isMaxHit) {
+                    // Parse MaxHit into skill name and damage
+                    let skillName = '-';
+                    let damageValue = '-';
+                    if (item.value && item.value !== '-') {
+                        const parts = item.value.split('-');
+                        if (parts.length === 2) {
+                            skillName = parts[0];
+                            damageValue = parts[1];
+                        } else {
+                            skillName = item.value;
+                        }
+                    }
+
+                    const maxHitContent = document.createElement('div');
+                    maxHitContent.style.display = 'flex';
+                    maxHitContent.style.alignItems = 'center';
+                    maxHitContent.style.gap = '4px';
+
+                    const maxHitSkill = document.createElement('span');
+                    maxHitSkill.className = 'stat-value';
+                    maxHitSkill.style.color = '#87CEEB'; // Sky blue for skill name
+                    maxHitSkill.style.fontStyle = 'italic';
+                    maxHitSkill.style.fontSize = '10px';
+                    maxHitSkill.textContent = skillName;
+
+                    const maxHitDamage = document.createElement('span');
+                    maxHitDamage.className = 'stat-value';
+                    maxHitDamage.textContent = damageValue;
+
+                    maxHitContent.appendChild(maxHitSkill);
+                    maxHitContent.appendChild(maxHitDamage);
+
+                    statItem.appendChild(label);
+                    statItem.appendChild(maxHitContent);
+                } else {
+                    const value = document.createElement('span');
+                    value.className = 'stat-value';
+                    value.textContent = item.value;
+
+                    statItem.appendChild(label);
+                    statItem.appendChild(value);
+                }
+
+                inlineStats.appendChild(statItem);
+
+                // Add divider except after last item
+                if (index < inlineStatItems.length - 1) {
+                    const divider = document.createElement('div');
+                    divider.className = 'stat-divider';
+                    inlineStats.appendChild(divider);
+                }
+            });
+
+            header.appendChild(iconCell);
+            header.appendChild(nameCell);
+            header.appendChild(inlineStats);
+
+            card.appendChild(header);
+
+            entry.dpsCard = card;
+            entry.cells = {
+                jobIcon: iconCell
+            };
+
+            dpsMeterContainer.appendChild(card);
             combatantRegistry.set(id, entry);
         }
 
@@ -128,12 +192,10 @@ function renderDpsMeter(combatants) {
 
         // Update job icon if changed
         if (data.job !== prev.job) {
-            const iconCell = entry.cells.job;
+            const iconCell = entry.cells.jobIcon;
             iconCell.innerHTML = ''; // Clear previous content
             const upperJob = (data.job || '').toUpperCase();
-            if (upperJob === 'LIMIT BREAK') {
-                iconCell.textContent = '';
-            } else {
+            if (upperJob !== 'LIMIT BREAK') {
                 const iconName = JOB_ICON_MAP[upperJob];
                 if (iconName) {
                     const img = document.createElement('img');
@@ -146,22 +208,112 @@ function renderDpsMeter(combatants) {
             }
         }
 
-        animateNumber(entry.cells.dps, prev.dps || 0, data.dps);
-        animateNumber(entry.cells.damage, prev.damage || 0, data.damage);
-        entry.cells.damagePct.textContent = data.damagePct;
-        entry.cells.swings.textContent = data.swings;
-        entry.cells.dhit.textContent = data.dhit;
-        entry.cells.chit.textContent = data.chit;
-        entry.cells.cdhit.textContent = data.cdhit;
-        entry.cells.maxhit.textContent = data.maxhit;
-        entry.cells.deaths.textContent = data.deaths;
-        entry.dpsGraph.dataset.job = (data.job || '').toUpperCase();
-        const relativeDps = (maxDps > 0) ? (data.dps / maxDps) * 100 : 0;
-        entry.dpsGraph.querySelector('.percent-bar').style.width = relativeDps + '%';
-        
-        // Set order for flexbox sorting
-        entry.dpsRow.style.order = index * 2;
-        entry.dpsGraph.style.order = index * 2 + 1;
+        // Update inline stats (right side of name)
+        const inlineStatElements = entry.dpsCard.querySelector('.combatant-stats-inline').querySelectorAll('.stat-item');
+        if (inlineStatElements[0]) {
+            // DPS with animation (moved to front)
+            const dpsElement = inlineStatElements[0].querySelector('.stat-value');
+            animateNumber(dpsElement, prev.dps || 0, data.dps);
+        }
+        if (inlineStatElements[1]) inlineStatElements[1].querySelector('.stat-value').textContent = data.damagePct || '0';
+        if (inlineStatElements[2]) inlineStatElements[2].querySelector('.stat-value').textContent = formatNumberK(data.damage) || '0';
+        if (inlineStatElements[3]) inlineStatElements[3].querySelector('.stat-value').textContent = data.dhit || '0';
+        if (inlineStatElements[4]) inlineStatElements[4].querySelector('.stat-value').textContent = data.chit || '0';
+        if (inlineStatElements[5]) inlineStatElements[5].querySelector('.stat-value').textContent = data.cdhit || '0';
+        if (inlineStatElements[6]) inlineStatElements[6].querySelector('.stat-value').textContent = data.swings || '0';
+        if (inlineStatElements[7]) {
+            // MaxHit (moved before Deaths) - separate skill and damage styling
+            let skillName = '-';
+            let damageValue = '-';
+            if (data.maxhit && data.maxhit !== '-') {
+                const parts = data.maxhit.split('-');
+                if (parts.length === 2) {
+                    skillName = parts[0];
+                    damageValue = parts[1];
+                } else {
+                    skillName = data.maxhit;
+                }
+            }
+            const maxHitContainer = inlineStatElements[7].querySelector('div');
+            if (maxHitContainer) {
+                const maxHitElements = maxHitContainer.querySelectorAll('.stat-value');
+                if (maxHitElements[0]) maxHitElements[0].textContent = skillName;
+                if (maxHitElements[1]) maxHitElements[1].textContent = damageValue;
+            }
+        }
+        if (inlineStatElements[8]) inlineStatElements[8].querySelector('.stat-value').textContent = data.deaths || '0';
+
+        // Update graph background
+        if (entry.dpsCard) {
+            const relativeDps = (maxDps > 0) ? (data.dps / maxDps) * 100 : 0;
+
+            // Set background gradient based on job color and DPS percentage
+            const job = (data.job || '').toUpperCase();
+            const jobColors = {
+                'PLD': 'rgba(133, 155, 162, 0.4)',
+                'WAR': 'rgba(204, 73, 64, 0.4)',
+                'DRK': 'rgba(154, 75, 87, 0.4)',
+                'GNB': 'rgba(146, 131, 65, 0.4)',
+                'WHM': 'rgba(193, 193, 193, 0.4)',
+                'SCH': 'rgba(98, 93, 172, 0.4)',
+                'AST': 'rgba(201, 117, 65, 0.4)',
+                'SGE': 'rgba(137, 196, 211, 0.4)',
+                'MNK': 'rgba(202, 156, 49, 0.4)',
+                'DRG': 'rgba(91, 111, 232, 0.4)',
+                'NIN': 'rgba(240, 89, 110, 0.4)',
+                'SAM': 'rgba(232, 119, 57, 0.4)',
+                'RPR': 'rgba(234, 221, 111, 0.4)',
+                'VPR': 'rgba(165, 93, 67, 0.4)',
+                'BRD': 'rgba(181, 201, 95, 0.4)',
+                'MCH': 'rgba(69, 172, 196, 0.4)',
+                'DNC': 'rgba(228, 178, 177, 0.4)',
+                'BLM': 'rgba(138, 106, 189, 0.4)',
+                'SMN': 'rgba(96, 133, 49, 0.4)',
+                'RDM': 'rgba(200, 84, 176, 0.4)',
+                'PCT': 'rgba(214, 113, 116, 0.4)',
+                'BLU': 'rgba(65, 99, 189, 0.4)',
+                'LIMIT BREAK': 'rgba(255, 215, 0, 0.5)'
+            };
+
+            const jobColor = jobColors[job] || 'rgba(100, 100, 100, 0.4)';
+            const graphWidth = Math.min(relativeDps, 100);
+
+            // Create terminal-style background with scanline effect
+            const terminalBg = `repeating-linear-gradient(
+                90deg,
+                ${jobColor} 0px,
+                ${jobColor} ${graphWidth}%,
+                transparent ${graphWidth}%,
+                transparent 100%
+            )`;
+
+            entry.dpsCard.style.setProperty('--graph-bg', terminalBg);
+        }
+
+        // Set order for flexbox sorting with smooth animation
+        if (entry.dpsCard) {
+            const prevOrder = entry.prevOrder || index;
+
+            if (prevOrder !== index) {
+                // Rank changed - trigger animation
+                entry.dpsCard.style.transform = 'scale(1.02)';
+                entry.dpsCard.style.boxShadow = '0 4px 12px rgba(100, 150, 255, 0.3)';
+
+                // Set order first, then clear animation
+                entry.dpsCard.style.order = index;
+
+                setTimeout(() => {
+                    if (entry.dpsCard) {
+                        entry.dpsCard.style.transform = '';
+                        entry.dpsCard.style.boxShadow = '';
+                    }
+                }, 200);
+            } else {
+                // No rank change, just set order
+                entry.dpsCard.style.order = index;
+            }
+            entry.prevOrder = index;
+        }
 
         entry.prevData = { ...entry.prevData, ...data };
     });
@@ -187,38 +339,78 @@ function renderHpsMeter(combatants) {
             job: c.Job, name: c.name, hps: parseFloat(c.enchps) || 0,
             healedPct: c['healed%'], healed: healed,
             effHeal: healed - overHeal, overHeal: overHeal,
-            overHealPct: c.OverHealPct || '0%' // New data point
+            overHealPct: c.OverHealPct || '0%'
         };
 
-        if (!entry.hpsRow) {
-            const textRow = document.createElement('div');
-            textRow.className = 'grid-row';
-            textRow.style.gridTemplateColumns = hpsMeterContainer.querySelector('.grid-header').style.gridTemplateColumns;
-            if (c.name === 'YOU') textRow.classList.add('is-you');
-            
-            const graphRow = document.createElement('div');
-            graphRow.className = 'stacked-bar-container';
-            const effBar = document.createElement('div');
-            effBar.className = 'eff-heal-bar';
-            const overBar = document.createElement('div');
-            overBar.className = 'over-heal-bar';
-            graphRow.appendChild(effBar);
-            graphRow.appendChild(overBar);
+        if (!entry.hpsCard) {
+            const card = document.createElement('div');
+            card.className = 'combatant-card';
+            card.dataset.job = (data.job || '').toUpperCase();
+            if (c.name === 'YOU') card.classList.add('is-you');
 
-            entry.hpsRow = textRow;
-            entry.hpsGraph = graphRow;
-            entry.cells.h_job = createCell(null, { isIcon: true, job: data.job });
-            entry.cells.h_name = createCell(data.name);
-            entry.cells.hps = createCell(formatNumber(data.hps.toFixed(0)));
-            entry.cells.healedPct = createCell(data.healedPct);
-            entry.cells.healed = createCell(formatNumber(data.healed.toFixed(0)));
-            entry.cells.effHeal = createCell(formatNumber(data.effHeal.toFixed(0)));
-            entry.cells.overHeal = createCell(formatNumber(data.overHeal.toFixed(0)));
-            entry.cells.h_overHealPct = createCell(data.overHealPct); // New cell
-            [entry.cells.h_job, entry.cells.h_name, entry.cells.hps, entry.cells.healedPct, entry.cells.healed, entry.cells.effHeal, entry.cells.overHeal, entry.cells.h_overHealPct].forEach(cell => textRow.appendChild(cell)); // Added to row
-            
-            hpsMeterContainer.appendChild(textRow);
-            hpsMeterContainer.appendChild(graphRow);
+            // Header with job icon, name and inline stats
+            const header = document.createElement('div');
+            header.className = 'combatant-header';
+
+            const iconCell = createCell(null, { isIcon: true, job: data.job });
+            const nameCell = document.createElement('div');
+            nameCell.className = 'combatant-name';
+            nameCell.textContent = data.name;
+
+            // Inline stats (right side of name)
+            const inlineStats = document.createElement('div');
+            inlineStats.className = 'combatant-stats-inline';
+
+            const inlineStatItems = [
+                { label: 'HPS', value: formatNumber(data.hps.toFixed(0)) },
+                { label: 'HEAL%', value: data.healedPct || '0' },
+                { label: 'Healed', value: formatNumberK(data.healed) || '0' },
+                { label: 'EffHeal', value: formatNumberK(data.effHeal) || '0' },
+                { label: 'OverHeal', value: formatNumberK(data.overHeal) || '0' },
+                { label: 'OverHeal%', value: data.overHealPct || '0' }
+            ];
+
+            inlineStatItems.forEach((item, index) => {
+                const statItem = document.createElement('div');
+                statItem.className = 'stat-item';
+                statItem.style.display = 'flex';
+                statItem.style.flexDirection = 'column';
+                statItem.style.alignItems = 'center';
+                statItem.style.minWidth = '20px';
+
+                const label = document.createElement('span');
+                label.className = 'stat-label';
+                label.textContent = item.label;
+                label.style.marginBottom = '1px';
+
+                const value = document.createElement('span');
+                value.className = 'stat-value';
+                value.textContent = item.value;
+
+                statItem.appendChild(label);
+                statItem.appendChild(value);
+                inlineStats.appendChild(statItem);
+
+                // Add divider except after last item
+                if (index < inlineStatItems.length - 1) {
+                    const divider = document.createElement('div');
+                    divider.className = 'stat-divider';
+                    inlineStats.appendChild(divider);
+                }
+            });
+
+            header.appendChild(iconCell);
+            header.appendChild(nameCell);
+            header.appendChild(inlineStats);
+
+            card.appendChild(header);
+
+            entry.hpsCard = card;
+            entry.hpsCells = {
+                jobIcon: iconCell
+            };
+
+            hpsMeterContainer.appendChild(card);
             combatantRegistry.set(id, entry);
         }
 
@@ -226,12 +418,10 @@ function renderHpsMeter(combatants) {
 
         // Update job icon if changed
         if (data.job !== prev.job) {
-            const iconCell = entry.cells.h_job;
+            const iconCell = entry.hpsCells.jobIcon;
             iconCell.innerHTML = ''; // Clear previous content
             const upperJob = (data.job || '').toUpperCase();
-            if (upperJob === 'LIMIT BREAK') {
-                iconCell.textContent = '';
-            } else {
+            if (upperJob !== 'LIMIT BREAK') {
                 const iconName = JOB_ICON_MAP[upperJob];
                 if (iconName) {
                     const img = document.createElement('img');
@@ -244,25 +434,71 @@ function renderHpsMeter(combatants) {
             }
         }
 
-        animateNumber(entry.cells.hps, prev.hps || 0, data.hps);
-        animateNumber(entry.cells.healed, prev.healed || 0, data.healed);
-        animateNumber(entry.cells.effHeal, prev.effHeal || 0, data.effHeal);
-        animateNumber(entry.cells.overHeal, prev.overHeal || 0, data.overHeal);
-        entry.cells.healedPct.textContent = data.healedPct;
-        entry.cells.h_overHealPct.textContent = data.overHealPct; // Update cell text
-        entry.hpsGraph.dataset.job = (data.job || '').toUpperCase();
+        // Update HPS inline stats
+        const inlineStatElements = entry.hpsCard.querySelector('.combatant-stats-inline').querySelectorAll('.stat-item');
+        if (inlineStatElements[0]) {
+            // HPS with animation
+            const hpsElement = inlineStatElements[0].querySelector('.stat-value');
+            animateNumber(hpsElement, prev.hps || 0, data.hps);
+        }
+        if (inlineStatElements[1]) inlineStatElements[1].querySelector('.stat-value').textContent = data.healedPct || '0';
+        if (inlineStatElements[2]) inlineStatElements[2].querySelector('.stat-value').textContent = formatNumberK(data.healed) || '0';
+        if (inlineStatElements[3]) inlineStatElements[3].querySelector('.stat-value').textContent = formatNumberK(data.effHeal) || '0';
+        if (inlineStatElements[4]) inlineStatElements[4].querySelector('.stat-value').textContent = formatNumberK(data.overHeal) || '0';
+        if (inlineStatElements[5]) inlineStatElements[5].querySelector('.stat-value').textContent = data.overHealPct || '0';
 
-        const relativeHps = (maxHps > 0) ? (data.hps / maxHps) * 100 : 0;
-        entry.hpsGraph.style.width = relativeHps + '%';
+        // Update graph background for HPS with overheal
+        if (entry.hpsCard) {
+            const relativeHps = (maxHps > 0) ? (data.hps / maxHps) * 100 : 0;
 
-        const effHealPct = (data.healed > 0) ? (data.effHeal / data.healed) * 100 : 0;
-        const overHealPct = (data.healed > 0) ? (data.overHeal / data.healed) * 100 : 0;
-        entry.hpsGraph.querySelector('.eff-heal-bar').style.width = effHealPct + '%';
-        entry.hpsGraph.querySelector('.over-heal-bar').style.width = overHealPct + '%';
+            // Calculate overheal percentage
+            const totalHealing = Math.max(data.healed || 1, 1);
+            const effectiveHealing = Math.max(data.effHeal || 0, 0);
+            const overhealing = Math.max(data.overHeal || 0, 0);
 
-        // Set order for flexbox sorting
-        entry.hpsRow.style.order = index * 2;
-        entry.hpsGraph.style.order = index * 2 + 1;
+            const effPercentage = (effectiveHealing / totalHealing) * 100;
+            const overPercentage = (overhealing / totalHealing) * 100;
+
+            // Set background gradient with effective heal and overheal
+            const healColor = 'rgba(100, 200, 100, 0.4)'; // Green for effective healing
+            const graphWidth = Math.min(relativeHps, 100);
+
+            // Create stacked background with effective heal and overheal
+            const terminalBg = `repeating-linear-gradient(
+                90deg,
+                ${healColor} 0px,
+                ${healColor} ${graphWidth * (effPercentage/100)}%,
+                rgba(255, 150, 150, 0.4) ${graphWidth * (effPercentage/100)}%,
+                rgba(255, 150, 150, 0.4) ${graphWidth}%
+            )`;
+
+            entry.hpsCard.style.setProperty('--graph-bg', terminalBg);
+        }
+
+        // Set order for flexbox sorting with smooth animation
+        if (entry.hpsCard) {
+            const prevOrder = entry.prevHpsOrder || index;
+
+            if (prevOrder !== index) {
+                // Rank changed - trigger animation
+                entry.hpsCard.style.transform = 'scale(1.02)';
+                entry.hpsCard.style.boxShadow = '0 4px 12px rgba(100, 200, 255, 0.3)';
+
+                // Set order first, then clear animation
+                entry.hpsCard.style.order = index;
+
+                setTimeout(() => {
+                    if (entry.hpsCard) {
+                        entry.hpsCard.style.transform = '';
+                        entry.hpsCard.style.boxShadow = '';
+                    }
+                }, 200);
+            } else {
+                // No rank change, just set order
+                entry.hpsCard.style.order = index;
+            }
+            entry.prevHpsOrder = index;
+        }
 
         entry.prevData = { ...entry.prevData, ...data };
     });
@@ -293,13 +529,11 @@ export function updateCombatantViews(dpsData, hpsData) {
 
     combatantRegistry.forEach((entry, id) => {
         if (!allPresentIds.has(id)) {
-            if (entry.dpsRow) {
-                entry.dpsRow.remove();
-                entry.dpsGraph.remove();
+            if (entry.dpsCard) {
+                entry.dpsCard.remove();
             }
-            if (entry.hpsRow) {
-                entry.hpsRow.remove();
-                entry.hpsGraph.remove();
+            if (entry.hpsCard) {
+                entry.hpsCard.remove();
             }
             combatantRegistry.delete(id);
         }

@@ -5,6 +5,17 @@ export function formatNumber(num) {
     return n.toLocaleString('en-US');
 }
 
+export function formatNumberK(num) {
+    if (num === undefined || num === null) return '0';
+    const n = parseFloat(num);
+    if (isNaN(n)) return num.toString();
+
+    if (n >= 1000) {
+        return (n / 1000).toFixed(1) + 'k';
+    }
+    return n.toLocaleString('en-US');
+}
+
 export function parseActFormat(str, dictionary) {
     if (!dictionary) return str;
     return str.replace(/\{(\w+|\w+%)\}/g, (match, key) => {

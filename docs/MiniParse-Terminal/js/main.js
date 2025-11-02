@@ -1,5 +1,6 @@
 import { sampleData, mergePetData } from './data.js';
 import { updateEncounter, updateCombatantViews } from './ui.js';
+import { formatNumberK } from './utils.js';
 
 // --- Main Update Function ---
 function update(data) {
