@@ -370,23 +370,48 @@ function renderDpsMeter(combatants) {
             const prevOrder = entry.prevOrder || index;
 
             if (prevOrder !== index) {
-                // Rank changed - trigger animation
-                entry.dpsCard.style.transform = 'scale(1.02)';
-                entry.dpsCard.style.boxShadow = '0 4px 12px rgba(100, 150, 255, 0.3)';
+                // Rank changed - use FLIP animation technique
+                const rect = entry.dpsCard.getBoundingClientRect();
+                const parentRect = entry.dpsCard.parentElement.getBoundingClientRect();
 
-                // Set order first, then clear animation
+                // Store current position
+                entry.dpsCard.style.setProperty('--prev-top', `${rect.top - parentRect.top}px`);
+
+                // Set new order immediately
                 entry.dpsCard.style.order = index;
 
-                setTimeout(() => {
-                    if (entry.dpsCard) {
-                        entry.dpsCard.style.transform = '';
+                // Force reflow
+                entry.dpsCard.offsetHeight;
+
+                // Calculate new position after order change
+                const newRect = entry.dpsCard.getBoundingClientRect();
+                const deltaY = (rect.top - parentRect.top) - (newRect.top - parentRect.top);
+
+                if (Math.abs(deltaY) > 1) {
+                    // Apply inverse transform to create smooth animation
+                    entry.dpsCard.style.transform = `translateY(${deltaY}px)`;
+                    entry.dpsCard.style.transition = 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease';
+                    entry.dpsCard.style.zIndex = Math.abs(deltaY) + 10;
+                    entry.dpsCard.style.boxShadow = '0 4px 12px rgba(100, 150, 255, 0.3)';
+
+                    // Animate to final position
+                    requestAnimationFrame(() => {
+                        entry.dpsCard.style.transform = 'translateY(0)';
+                    });
+
+                    // Clean up after animation
+                    setTimeout(() => {
+                        entry.dpsCard.style.transition = '';
+                        entry.dpsCard.style.zIndex = '';
                         entry.dpsCard.style.boxShadow = '';
-                    }
-                }, 200);
+                        entry.dpsCard.style.removeProperty('--prev-top');
+                    }, 600);
+                }
             } else {
-                // No rank change, just set order
+                // No rank change
                 entry.dpsCard.style.order = index;
             }
+
             entry.prevOrder = index;
         }
 
@@ -607,23 +632,48 @@ function renderHpsMeter(combatants) {
             const prevOrder = entry.prevHpsOrder || index;
 
             if (prevOrder !== index) {
-                // Rank changed - trigger animation
-                entry.hpsCard.style.transform = 'scale(1.02)';
-                entry.hpsCard.style.boxShadow = '0 4px 12px rgba(100, 200, 255, 0.3)';
+                // Rank changed - use FLIP animation technique
+                const rect = entry.hpsCard.getBoundingClientRect();
+                const parentRect = entry.hpsCard.parentElement.getBoundingClientRect();
 
-                // Set order first, then clear animation
+                // Store current position
+                entry.hpsCard.style.setProperty('--prev-top', `${rect.top - parentRect.top}px`);
+
+                // Set new order immediately
                 entry.hpsCard.style.order = index;
 
-                setTimeout(() => {
-                    if (entry.hpsCard) {
-                        entry.hpsCard.style.transform = '';
+                // Force reflow
+                entry.hpsCard.offsetHeight;
+
+                // Calculate new position after order change
+                const newRect = entry.hpsCard.getBoundingClientRect();
+                const deltaY = (rect.top - parentRect.top) - (newRect.top - parentRect.top);
+
+                if (Math.abs(deltaY) > 1) {
+                    // Apply inverse transform to create smooth animation
+                    entry.hpsCard.style.transform = `translateY(${deltaY}px)`;
+                    entry.hpsCard.style.transition = 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease';
+                    entry.hpsCard.style.zIndex = Math.abs(deltaY) + 10;
+                    entry.hpsCard.style.boxShadow = '0 4px 12px rgba(100, 200, 100, 0.3)';
+
+                    // Animate to final position
+                    requestAnimationFrame(() => {
+                        entry.hpsCard.style.transform = 'translateY(0)';
+                    });
+
+                    // Clean up after animation
+                    setTimeout(() => {
+                        entry.hpsCard.style.transition = '';
+                        entry.hpsCard.style.zIndex = '';
                         entry.hpsCard.style.boxShadow = '';
-                    }
-                }, 200);
+                        entry.hpsCard.style.removeProperty('--prev-top');
+                    }, 600);
+                }
             } else {
-                // No rank change, just set order
+                // No rank change
                 entry.hpsCard.style.order = index;
             }
+
             entry.prevHpsOrder = index;
         }
 

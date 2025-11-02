@@ -145,6 +145,7 @@ body, html {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    position: relative;
 }
 
 .meter-title {
@@ -175,9 +176,10 @@ body, html {
     padding: 3px 6px 2px 6px;
     margin-bottom: 1px;
     backdrop-filter: blur(4px);
-    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1),
                 box-shadow 0.3s ease,
-                border-color 0.3s ease;
+                border-color 0.3s ease,
+                top 0.8s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
     order: 999; /* Initial high order, will be set by JavaScript */
