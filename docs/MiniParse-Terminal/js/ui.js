@@ -1,5 +1,5 @@
 import { JOB_ICON_MAP } from './config.js';
-import { formatNumber, formatNumberK, animateNumber } from './utils.js';
+import { formatNumber, formatNumberK, animateNumber, animateWidth, createGraphBar } from './utils.js';
 
 // --- State Management ---
 let dpsMeterContainer = null;
@@ -215,12 +215,69 @@ function renderDpsMeter(combatants) {
             const dpsElement = inlineStatElements[0].querySelector('.stat-value');
             animateNumber(dpsElement, prev.dps || 0, data.dps);
         }
-        if (inlineStatElements[1]) inlineStatElements[1].querySelector('.stat-value').textContent = data.damagePct || '0';
-        if (inlineStatElements[2]) inlineStatElements[2].querySelector('.stat-value').textContent = formatNumberK(data.damage) || '0';
-        if (inlineStatElements[3]) inlineStatElements[3].querySelector('.stat-value').textContent = data.dhit || '0';
-        if (inlineStatElements[4]) inlineStatElements[4].querySelector('.stat-value').textContent = data.chit || '0';
-        if (inlineStatElements[5]) inlineStatElements[5].querySelector('.stat-value').textContent = data.cdhit || '0';
-        if (inlineStatElements[6]) inlineStatElements[6].querySelector('.stat-value').textContent = data.swings || '0';
+        if (inlineStatElements[1]) {
+            // Damage% with animation
+            const damagePctElement = inlineStatElements[1].querySelector('.stat-value');
+            const prevDamagePct = parseFloat(prev.damagePct) || 0;
+            const currentDamagePct = parseFloat(data.damagePct) || 0;
+            if (Math.abs(currentDamagePct - prevDamagePct) >= 0.1) {
+                animateNumber(damagePctElement, prevDamagePct, currentDamagePct, 1000, 'percent');
+            } else {
+                damagePctElement.textContent = currentDamagePct.toFixed(1) + '%';
+            }
+        }
+        if (inlineStatElements[2]) {
+            // Damage with animation (K format)
+            const damageElement = inlineStatElements[2].querySelector('.stat-value');
+            const prevDamage = prev.damage || 0;
+            if (Math.abs(data.damage - prevDamage) > 1) {
+                animateNumber(damageElement, prevDamage, data.damage, 1000, 'k');
+            } else {
+                damageElement.textContent = formatNumberK(data.damage) || '0';
+            }
+        }
+        if (inlineStatElements[3]) {
+            // D.HIT with animation
+            const dhitElement = inlineStatElements[3].querySelector('.stat-value');
+            const prevDhit = parseFloat(prev.dhit) || 0;
+            const currentDhit = parseFloat(data.dhit) || 0;
+            if (Math.abs(currentDhit - prevDhit) >= 0.1) {
+                animateNumber(dhitElement, prevDhit, currentDhit, 1000, 'percent');
+            } else {
+                dhitElement.textContent = currentDhit.toFixed(1) + '%';
+            }
+        }
+        if (inlineStatElements[4]) {
+            // C.HIT with animation
+            const chitElement = inlineStatElements[4].querySelector('.stat-value');
+            const prevChit = parseFloat(prev.chit) || 0;
+            const currentChit = parseFloat(data.chit) || 0;
+            if (Math.abs(currentChit - prevChit) >= 0.1) {
+                animateNumber(chitElement, prevChit, currentChit, 1000, 'percent');
+            } else {
+                chitElement.textContent = currentChit.toFixed(1) + '%';
+            }
+        }
+        if (inlineStatElements[5]) {
+            // C.D.HIT with animation
+            const cdhitElement = inlineStatElements[5].querySelector('.stat-value');
+            const prevCdhit = parseFloat(prev.cdhit) || 0;
+            const currentCdhit = parseFloat(data.cdhit) || 0;
+            if (Math.abs(currentCdhit - prevCdhit) >= 0.1) {
+                animateNumber(cdhitElement, prevCdhit, currentCdhit, 1000, 'percent');
+            } else {
+                cdhitElement.textContent = currentCdhit.toFixed(1) + '%';
+            }
+        }
+        if (inlineStatElements[6]) {
+            // Swings with animation
+            const swingsElement = inlineStatElements[6].querySelector('.stat-value');
+            const prevSwings = parseInt(prev.swings) || 0;
+            const currentSwings = parseInt(data.swings) || 0;
+            if (currentSwings !== prevSwings) {
+                animateNumber(swingsElement, prevSwings, currentSwings);
+            }
+        }
         if (inlineStatElements[7]) {
             // MaxHit (moved before Deaths) - separate skill and damage styling
             let skillName = '-';
@@ -238,7 +295,26 @@ function renderDpsMeter(combatants) {
             if (maxHitContainer) {
                 const maxHitElements = maxHitContainer.querySelectorAll('.stat-value');
                 if (maxHitElements[0]) maxHitElements[0].textContent = skillName;
-                if (maxHitElements[1]) maxHitElements[1].textContent = damageValue;
+                if (maxHitElements[1]) {
+                    // MaxHit damage with animation
+                    const prevMaxHitParts = (prev.maxhit || '-').split('-');
+                    let prevDamage = 0;
+                    if (prevMaxHitParts.length === 2) {
+                        // Remove any commas and parse as number
+                        prevDamage = parseFloat(prevMaxHitParts[1].replace(/,/g, '')) || 0;
+                    }
+
+                    let currentDamage = 0;
+                    if (damageValue !== '-') {
+                        currentDamage = parseFloat(damageValue.replace(/,/g, '')) || 0;
+                    }
+
+                    if (Math.abs(currentDamage - prevDamage) >= 1) {
+                        animateNumber(maxHitElements[1], prevDamage, currentDamage);
+                    } else {
+                        maxHitElements[1].textContent = damageValue;
+                    }
+                }
             }
         }
         if (inlineStatElements[8]) inlineStatElements[8].querySelector('.stat-value').textContent = data.deaths || '0';
@@ -278,16 +354,15 @@ function renderDpsMeter(combatants) {
             const jobColor = jobColors[job] || 'rgba(100, 100, 100, 0.4)';
             const graphWidth = Math.min(relativeDps, 100);
 
-            // Create terminal-style background
-            const terminalBg = `repeating-linear-gradient(
-                90deg,
-                ${jobColor} 0px,
-                ${jobColor} ${graphWidth}%,
-                transparent ${graphWidth}%,
-                transparent 100%
-            )`;
+            // Create smooth width animation for graph
+            const graphBar = entry.dpsCard.querySelector('.graph-bar') || createGraphBar(entry.dpsCard);
+            graphBar.style.setProperty('--graph-color', jobColor);
 
-            entry.dpsCard.style.setProperty('--graph-bg', terminalBg);
+            // Animate width
+            const currentWidth = parseFloat(graphBar.style.width) || 0;
+            const targetWidth = Math.min(relativeDps, 100);
+
+            animateWidth(graphBar, currentWidth, targetWidth, 800);
         }
 
         // Set order for flexbox sorting with smooth animation
@@ -441,11 +516,58 @@ function renderHpsMeter(combatants) {
             const hpsElement = inlineStatElements[0].querySelector('.stat-value');
             animateNumber(hpsElement, prev.hps || 0, data.hps);
         }
-        if (inlineStatElements[1]) inlineStatElements[1].querySelector('.stat-value').textContent = data.healedPct || '0';
-        if (inlineStatElements[2]) inlineStatElements[2].querySelector('.stat-value').textContent = formatNumberK(data.healed) || '0';
-        if (inlineStatElements[3]) inlineStatElements[3].querySelector('.stat-value').textContent = formatNumberK(data.effHeal) || '0';
-        if (inlineStatElements[4]) inlineStatElements[4].querySelector('.stat-value').textContent = formatNumberK(data.overHeal) || '0';
-        if (inlineStatElements[5]) inlineStatElements[5].querySelector('.stat-value').textContent = data.overHealPct || '0';
+        if (inlineStatElements[1]) {
+            // HEAL% with animation
+            const healedPctElement = inlineStatElements[1].querySelector('.stat-value');
+            const prevHealedPct = parseFloat(prev.healedPct) || 0;
+            const currentHealedPct = parseFloat(data.healedPct) || 0;
+            if (Math.abs(currentHealedPct - prevHealedPct) >= 0.1) {
+                animateNumber(healedPctElement, prevHealedPct, currentHealedPct, 1000, 'percent');
+            } else {
+                healedPctElement.textContent = currentHealedPct.toFixed(1) + '%';
+            }
+        }
+        if (inlineStatElements[2]) {
+            // Healed with animation (K format)
+            const healedElement = inlineStatElements[2].querySelector('.stat-value');
+            const prevHealed = prev.healed || 0;
+            if (Math.abs(data.healed - prevHealed) > 1) {
+                animateNumber(healedElement, prevHealed, data.healed, 1000, 'k');
+            } else {
+                healedElement.textContent = formatNumberK(data.healed) || '0';
+            }
+        }
+        if (inlineStatElements[3]) {
+            // EffHeal with animation (K format)
+            const effHealElement = inlineStatElements[3].querySelector('.stat-value');
+            const prevEffHeal = prev.effHeal || 0;
+            if (Math.abs(data.effHeal - prevEffHeal) > 1) {
+                animateNumber(effHealElement, prevEffHeal, data.effHeal, 1000, 'k');
+            } else {
+                effHealElement.textContent = formatNumberK(data.effHeal) || '0';
+            }
+        }
+        if (inlineStatElements[4]) {
+            // OverHeal with animation (K format)
+            const overHealElement = inlineStatElements[4].querySelector('.stat-value');
+            const prevOverHeal = prev.overHeal || 0;
+            if (Math.abs(data.overHeal - prevOverHeal) > 1) {
+                animateNumber(overHealElement, prevOverHeal, data.overHeal, 1000, 'k');
+            } else {
+                overHealElement.textContent = formatNumberK(data.overHeal) || '0';
+            }
+        }
+        if (inlineStatElements[5]) {
+            // OverHeal% with animation
+            const overHealPctElement = inlineStatElements[5].querySelector('.stat-value');
+            const prevOverHealPct = parseFloat(prev.overHealPct) || 0;
+            const currentOverHealPct = parseFloat(data.overHealPct) || 0;
+            if (Math.abs(currentOverHealPct - prevOverHealPct) >= 0.1) {
+                animateNumber(overHealPctElement, prevOverHealPct, currentOverHealPct, 1000, 'percent');
+            } else {
+                overHealPctElement.textContent = currentOverHealPct.toFixed(1) + '%';
+            }
+        }
 
         // Update graph background for HPS with overheal
         if (entry.hpsCard) {
@@ -459,20 +581,25 @@ function renderHpsMeter(combatants) {
             const effPercentage = (effectiveHealing / totalHealing) * 100;
             const overPercentage = (overhealing / totalHealing) * 100;
 
-            // Set background gradient with effective heal and overheal
-            const healColor = 'rgba(100, 200, 100, 0.4)'; // Green for effective healing
-            const graphWidth = Math.min(relativeHps, 100);
+            // Create smooth width animation for HPS graph with overheal
+            const graphBar = entry.hpsCard.querySelector('.graph-bar') || createGraphBar(entry.hpsCard);
 
-            // Create stacked background with effective heal and overheal
-            const terminalBg = `repeating-linear-gradient(
-                90deg,
-                ${healColor} 0px,
-                ${healColor} ${graphWidth * (effPercentage/100)}%,
-                rgba(255, 150, 150, 0.4) ${graphWidth * (effPercentage/100)}%,
-                rgba(255, 150, 150, 0.4) ${graphWidth}%
-            )`;
+            // For healers, use stacked approach: total width for HPS, color composition for overheal
+            const totalWidth = Math.min(relativeHps, 100);
 
-            entry.hpsCard.style.setProperty('--graph-bg', terminalBg);
+            // Create gradient for effective heal vs overheal
+            const effWidthPercent = effPercentage / 100;
+            const healGradient = `linear-gradient(90deg,
+                rgba(100, 200, 100, 0.6) 0%,
+                rgba(100, 200, 100, 0.6) ${effWidthPercent * 100}%,
+                rgba(255, 150, 150, 0.6) ${effWidthPercent * 100}%,
+                rgba(255, 150, 150, 0.6) 100%)`;
+
+            graphBar.style.setProperty('--graph-color', healGradient);
+
+            // Animate width
+            const currentWidth = parseFloat(graphBar.style.width) || 0;
+            animateWidth(graphBar, currentWidth, totalWidth, 800);
         }
 
         // Set order for flexbox sorting with smooth animation
