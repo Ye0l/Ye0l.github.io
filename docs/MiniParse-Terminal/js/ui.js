@@ -278,7 +278,7 @@ function renderDpsMeter(combatants) {
             const jobColor = jobColors[job] || 'rgba(100, 100, 100, 0.4)';
             const graphWidth = Math.min(relativeDps, 100);
 
-            // Create terminal-style background with scanline effect
+            // Create terminal-style background
             const terminalBg = `repeating-linear-gradient(
                 90deg,
                 ${jobColor} 0px,

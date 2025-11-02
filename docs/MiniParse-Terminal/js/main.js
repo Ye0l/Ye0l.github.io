@@ -19,11 +19,6 @@ function update(data) {
     updateCombatantViews(dpsSorted, hpsSorted);
 }
 
-function toggleScanline() {
-    const div = document.getElementsByClassName('terminal-window')[0];
-    const isScanlineNowPresent = div.classList.toggle('scanline');
-    localStorage.setItem('scanlineEnabled', isScanlineNowPresent);
-}
 
 async function captureToClipboard() {
     const captureBtn = document.getElementById('capture-btn');
@@ -76,18 +71,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Disable right-click context menu
     document.addEventListener('contextmenu', e => e.preventDefault());
 
-    // Apply saved scanline preference
-    if (localStorage.getItem('scanlineEnabled') === 'false') {
-        document.getElementsByClassName('terminal-window')[0].classList.remove('scanline');
-    }
-
     const sampleBtn = document.getElementById('sample-data-btn');
     if (sampleBtn) {
         sampleBtn.addEventListener('click', () => update(sampleData));
-    }
-    const scanlineBtn = document.getElementById('scanline-btn');
-    if (scanlineBtn) {
-        scanlineBtn.addEventListener('click', () => toggleScanline());
     }
     const captureBtn = document.getElementById('capture-btn');
     if (captureBtn) {
