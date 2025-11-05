@@ -103,16 +103,88 @@ export function createGraphBar(cardElement) {
     graphBar.className = 'graph-bar';
     graphBar.style.cssText = `
         position: absolute;
-        top: 0;
+        bottom: 0;
         left: 0;
-        height: 100%;
+        height: 50%;
         width: 0%;
-        background: var(--graph-color, rgba(100, 100, 100, 0.4));
+        background: repeating-linear-gradient(
+            90deg,
+            var(--graph-color, rgba(100, 100, 100, 0.8)),
+            var(--graph-color, rgba(100, 100, 100, 0.8)) 2px,
+            transparent 2px,
+            transparent 4px
+        );
         transition: background-color 0.3s ease;
         pointer-events: none;
         z-index: 0;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
     `;
 
     cardElement.appendChild(graphBar);
     return graphBar;
+}
+
+export function createHealerGraphBar(cardElement, effPercentage) {
+    // Remove existing graph bar if any
+    const existing = cardElement.querySelector('.graph-bar');
+    if (existing) existing.remove();
+
+    // Create container for both graphs
+    const graphContainer = document.createElement('div');
+    graphContainer.className = 'graph-bar';
+    graphContainer.style.cssText = `
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 50%;
+        width: 0%;
+        transition: all 0.3s ease;
+        pointer-events: none;
+        z-index: 0;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    `;
+
+    // Effective heal part
+    const effHealBar = document.createElement('div');
+    effHealBar.style.cssText = `
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 100%;
+        width: ${effPercentage}%;
+        background: repeating-linear-gradient(
+            90deg,
+            rgba(100, 200, 100, 0.5),
+            rgba(100, 200, 100, 0.5) 2px,
+            transparent 2px,
+            transparent 4px
+        );
+        pointer-events: none;
+        z-index: 1;
+    `;
+
+    // Overheal part
+    const overHealBar = document.createElement('div');
+    overHealBar.style.cssText = `
+        position: absolute;
+        bottom: 0;
+        left: ${effPercentage}%;
+        height: 100%;
+        width: ${100 - effPercentage}%;
+        background: repeating-linear-gradient(
+            90deg,
+            rgba(255, 150, 150, 0.4),
+            rgba(255, 150, 150, 0.4) 1px,
+            transparent 1px,
+            transparent 3px
+        );
+        pointer-events: none;
+        z-index: 1;
+    `;
+
+    graphContainer.appendChild(effHealBar);
+    graphContainer.appendChild(overHealBar);
+
+    cardElement.appendChild(graphContainer);
+    return graphContainer;
 }

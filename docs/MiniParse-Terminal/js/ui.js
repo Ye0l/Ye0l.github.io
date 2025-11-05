@@ -1,5 +1,5 @@
 import { JOB_ICON_MAP } from './config.js';
-import { formatNumber, formatNumberK, animateNumber, animateWidth, createGraphBar } from './utils.js';
+import { formatNumber, formatNumberK, animateNumber, animateWidth, createGraphBar, createHealerGraphBar } from './utils.js';
 
 // --- State Management ---
 let dpsMeterContainer = null;
@@ -607,20 +607,10 @@ function renderHpsMeter(combatants) {
             const overPercentage = (overhealing / totalHealing) * 100;
 
             // Create smooth width animation for HPS graph with overheal
-            const graphBar = entry.hpsCard.querySelector('.graph-bar') || createGraphBar(entry.hpsCard);
+            const graphBar = entry.hpsCard.querySelector('.graph-bar') || createHealerGraphBar(entry.hpsCard, effPercentage);
 
             // For healers, use stacked approach: total width for HPS, color composition for overheal
             const totalWidth = Math.min(relativeHps, 100);
-
-            // Create gradient for effective heal vs overheal
-            const effWidthPercent = effPercentage / 100;
-            const healGradient = `linear-gradient(90deg,
-                rgba(100, 200, 100, 0.6) 0%,
-                rgba(100, 200, 100, 0.6) ${effWidthPercent * 100}%,
-                rgba(255, 150, 150, 0.6) ${effWidthPercent * 100}%,
-                rgba(255, 150, 150, 0.6) 100%)`;
-
-            graphBar.style.setProperty('--graph-color', healGradient);
 
             // Animate width
             const currentWidth = parseFloat(graphBar.style.width) || 0;
