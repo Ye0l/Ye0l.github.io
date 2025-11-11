@@ -434,11 +434,20 @@ function renderHpsMeter(combatants) {
         let entry = combatantRegistry.get(id) || { cells: {}, prevData: {} };
 
         const healed = parseFloat(c.healed) || 0;
-        const overHeal = parseFloat(c.overHeal) || 0;
+        const overHeal = parseFloat(c.OverHeal) || parseFloat(c.overHeal) || 0;
 
         // Calculate consistent overheal percentage
         const totalHealing = Math.max(healed || 1, 1);
         const overHealPctValue = (overHeal / totalHealing) * 100;
+
+        // Debug logging
+        console.log(`Healer ${c.name}:`, {
+            healed,
+            overHeal,
+            OverHeal_c: c.OverHeal,
+            overHeal_c: c.overHeal,
+            effHeal: healed - overHeal
+        });
 
         const data = {
             job: c.Job, name: c.name, hps: parseFloat(c.enchps) || 0,
