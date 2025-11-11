@@ -435,11 +435,16 @@ function renderHpsMeter(combatants) {
 
         const healed = parseFloat(c.healed) || 0;
         const overHeal = parseFloat(c.overHeal) || 0;
+
+        // Calculate consistent overheal percentage
+        const totalHealing = Math.max(healed || 1, 1);
+        const overHealPctValue = (overHeal / totalHealing) * 100;
+
         const data = {
             job: c.Job, name: c.name, hps: parseFloat(c.enchps) || 0,
             healedPct: c['healed%'], healed: healed,
             effHeal: healed - overHeal, overHeal: overHeal,
-            overHealPct: c.OverHealPct || '0%'
+            overHealPct: overHealPctValue.toFixed(1) + '%'
         };
 
         if (!entry.hpsCard) {

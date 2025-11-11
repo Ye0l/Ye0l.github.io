@@ -55,6 +55,14 @@ export function mergePetData(combatants, encounterDuration) {
             const duration = encounterDuration > 0 ? encounterDuration : 1;
             owner.encdps = (owner.damage / duration).toFixed(1);
             owner.enchps = (owner.healed / duration).toFixed(1);
+
+            // Recalculate OverHealPct after pet data merge
+            const totalHealing = Math.max(parseFloat(owner.healed) || 0, 1);
+            const overHealing = parseFloat(owner.OverHeal) || parseFloat(owner.overHeal) || 0;
+            owner.OverHealPct = ((overHealing / totalHealing) * 100).toFixed(1) + '%';
+            // Ensure both field names have the same value
+            owner.overHeal = overHealing;
+            owner.OverHeal = overHealing;
         }
     }
     return Object.values(owners);
