@@ -603,10 +603,10 @@ function renderHpsMeter(combatants) {
         if (entry.hpsCard) {
             const relativeHps = (maxHps > 0) ? (data.hps / maxHps) * 100 : 0;
 
-            // Calculate overheal percentage
-            const totalHealing = Math.max(data.healed || 1, 1);
-            const effectiveHealing = Math.max(data.effHeal || 0, 0);
-            const overhealing = Math.max(data.overHeal || 0, 0);
+            // Calculate overheal percentage with proper type conversion
+            const totalHealing = Math.max(parseFloat(data.healed) || 1, 1);
+            const effectiveHealing = Math.max(parseFloat(data.healed) - parseFloat(data.overHeal), 0);
+            const overhealing = Math.max(parseFloat(data.overHeal) || 0, 0);
 
             const effPercentage = (effectiveHealing / totalHealing) * 100;
             const overPercentage = (overhealing / totalHealing) * 100;
