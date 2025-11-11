@@ -440,15 +440,6 @@ function renderHpsMeter(combatants) {
         const totalHealing = Math.max(healed || 1, 1);
         const overHealPctValue = (overHeal / totalHealing) * 100;
 
-        // Debug logging
-        console.log(`Healer ${c.name}:`, {
-            healed,
-            overHeal,
-            OverHeal_c: c.OverHeal,
-            overHeal_c: c.overHeal,
-            effHeal: healed - overHeal
-        });
-
         const data = {
             job: c.Job, name: c.name, hps: parseFloat(c.enchps) || 0,
             healedPct: c['healed%'], healed: healed,
