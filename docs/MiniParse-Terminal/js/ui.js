@@ -611,8 +611,13 @@ function renderHpsMeter(combatants) {
             const effPercentage = (effectiveHealing / totalHealing) * 100;
             const overPercentage = (overhealing / totalHealing) * 100;
 
-            // Create smooth width animation for HPS graph with overheal
-            const graphBar = entry.hpsCard.querySelector('.graph-bar') || createHealerGraphBar(entry.hpsCard, effPercentage);
+            
+            // Create healer graph (follow DPS pattern - no parameters)
+            const graphBar = entry.hpsCard.querySelector('.graph-bar') || createHealerGraphBar(entry.hpsCard);
+
+            // Update CSS variables for overheal ratios (follow DPS pattern)
+            graphBar.style.setProperty('--eff-percentage', effPercentage + '%');
+            graphBar.style.setProperty('--over-percentage', (100 - effPercentage) + '%');
 
             // For healers, use stacked approach: total width for HPS, color composition for overheal
             const totalWidth = Math.min(relativeHps, 100);
