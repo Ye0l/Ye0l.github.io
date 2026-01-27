@@ -1,4 +1,3 @@
-
 @font-face {
     font-family: 'RoundedFixedsys';
     src: url('../fonts/DungGeunMo.woff') format('woff');
@@ -7,322 +6,211 @@
 }
 
 :root {
-    --primary-color: #E0E0E0;
-    --background-color: transparent;
-    --card-bg: rgba(20, 20, 20, 0.85);
-    --card-border: rgba(150, 150, 150, 0.9);
-    --border-color: #555;
-    --title-bar-bg: rgba(30, 30, 30, 0.85);
-    --title-bar-fg: #E0E0E0;
-    --text-shadow: 0 0 3px rgba(0, 0, 0, 0.9);
-    --you-highlight-bg: rgba(100, 100, 255, 0.3);
+    --bg-color: rgba(10, 10, 10, 0.8);
+    --text-color: #eee;
+    --border-color: rgba(255, 255, 255, 0.15);
+    /* 높이를 140px로 증가 */
+    --header-height: 140px; 
+    --card-height: 34px;
 }
 
 * {
-    font-family: 'RoundedFixedsys', monospace;
-    font-size: 14px;
     box-sizing: border-box;
-    text-shadow: var(--text-shadow);
+    font-family: 'RoundedFixedsys', monospace;
+    user-select: none;
 }
 
 body, html {
-    margin: 0;
-    padding: 0;
+    margin: 0; padding: 0;
     height: 100%;
     overflow: hidden;
     background-color: transparent;
-    color: var(--primary-color);
-    user-select: none; /* Disable text selection */
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
+    color: var(--text-color);
 }
 
 .terminal-window {
-    background-color: var(--background-color);
     height: 100%;
     display: flex;
     flex-direction: column;
+    background: transparent;
+    padding: 4px;
+}
+
+/* --- 1. 상단 헤더 영역 --- */
+#header-area {
+    height: var(--header-height);
+    background: rgba(20, 20, 20, 0.9);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin-bottom: 6px;
+    display: flex;
+    flex-direction: column;
     position: relative;
+    flex-shrink: 0;
+    overflow: visible; 
 }
 
-
-.title-bar {
-    background-color: var(--title-bar-bg);
-    color: var(--title-bar-fg);
-    padding: 2px 10px;
-    font-size: 12px;
-    text-align: center;
-    margin: 0 10px;
-    border-radius: 4px 4px 0 0;
-}
-
-#controls {
-    position: absolute;
-    top: 2px;
-    right: 5px;
-    z-index: 10000;
-}
-
-#controls span {
-    cursor: pointer;
-    user-select: none;
-    margin-left: 8px;
-    font-size: 12px;
-}
-
-#encounter {
-    padding: 1px 10px 2px 10px;
+#encounter-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.05);
     border-bottom: 1px solid var(--border-color);
-    text-align: center;
-    background: rgba(20, 20, 20, 0.85);
-    margin: 0 10px;
+    z-index: 10;
+    height: 28px;
+    flex-shrink: 0; /* 타이틀바 높이 고정 */
 }
 
 #encounter-title {
     font-size: 12px;
-    margin-right: 10px;
+    color: #bbb;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60%;
 }
 
-#encounter-stats {
+.enc-stats { display: flex; gap: 10px; align-items: baseline; }
+#enc-time { font-size: 14px; color: #ffcc00; font-family: monospace; }
+#enc-dps { font-size: 16px; font-weight: bold; color: #fff; }
+
+/* 통합 그래프 컨테이너 */
+#graph-container {
+    flex: 1; /* 남은 공간 모두 사용 */
+    position: relative;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0; 
+    overflow: hidden;
+}
+
+#main-graph {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.graph-line {
+    fill: none;
+    stroke-width: 2px;
+    vector-effect: non-scaling-stroke;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.7;
+    transition: opacity 0.3s;
+}
+
+.graph-line.is-you {
+    stroke-width: 3px;
+    opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5));
+    z-index: 10;
+}
+
+/* --- 2. 리스트 영역 --- */
+#dps-output, #hps-output {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 2px;
+    scrollbar-width: none; 
+}
+#dps-output::-webkit-scrollbar { display: none; }
+
+.combatant-card {
+    height: var(--card-height);
+    display: flex;
+    align-items: center;
+    background: rgba(30, 30, 30, 0.4);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    margin-bottom: 2px;
+    padding: 0 8px;
+    border-radius: 3px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 막대 그래프 (배경) */
+.bar-graph {
+    position: absolute;
+    top: 0; bottom: 0; left: 0;
+    width: 0%;
+    background: var(--job-color, #888);
+    opacity: 0.25;
+    z-index: 0;
+    transition: width 0.4s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.combatant-card.is-you .bar-graph {
+    opacity: 0.4;
+}
+
+.combatant-card.is-you {
+    background: rgba(60, 70, 100, 0.3);
+    border-left: 2px solid #aaaaff;
+}
+
+.job-icon, .card-info {
+    position: relative;
+    z-index: 1;
+}
+
+.job-icon {
+    width: 22px; height: 22px;
+    border-radius: 3px;
+    margin-right: 10px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.card-info {
+    flex: 1;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 10px;
 }
 
-.stat-item {
+.name-group {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    margin-right: 10px;
+}
+
+.c-name {
     font-size: 13px;
-    font-weight: 300;
-}
-
-#enc-time {
-    font-size: 24px; /* Make time significantly larger */
-    font-weight: 400;
-    color: #fff;
-}
-
-#dps-output {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 2px 10px;
-    /* Hide scrollbar */
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-}
-#dps-output::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, and Opera */
-}
-
-/* New Grid Layout */
-.grid-header, .grid-row {
-    display: grid;
-    align-items: center;
-    padding: 0px 0;
-    font-size: 13px;
-}
-
-.grid-header { font-weight: bold; border-bottom: 1px solid var(--border-color); }
-.grid-row.is-you { background-color: var(--you-highlight-bg); }
-
-/* A general rule for all cells to handle overflow */
-.grid-row > span {
+    font-weight: bold;
+    color: #f0f0f0;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.job-icon {
-    height: 16px;
-    width: 16px;
-    border-radius: 2px;
-    background: rgba(0, 0, 0, 0.2);
-    padding: 1px;
-    flex-shrink: 0;
+.stats-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-/* Card-based layout */
-.meter-container {
-    margin-bottom: 0px;
+.stat-cell {
     display: flex;
     flex-direction: column;
-    gap: 0px;
-    position: relative;
+    align-items: flex-end;
+    min-width: 35px;
 }
 
-.meter-title {
-    font-weight: 300;
-    font-size: 12px;
-    margin-bottom: 0px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: #ffffff;
-    text-shadow:
-        -1px -1px 1px #c1ad79,
-        1px -1px 1px #c1ad79,
-        -1px 1px 1px #c1ad79,
-        1px 1px 1px #c1ad79,
-        0 -1px 1px #c1ad79,
-        0 1px 1px #c1ad79,
-        -1px 0 1px #c1ad79,
-        1px 0 1px #c1ad79,
-        0 0 2px #d4c291,
-        0 0 3px rgba(193, 173, 121, 0.4),
-        2px 2px 4px rgba(0, 0, 0, 0.6);
-}
-
-.combatant-card {
-    background: var(--card-bg);
-    border: none;
-    border-radius: 0px;
-    padding: 2px 6px 1px 6px;
-    margin-bottom: 0px;
-    backdrop-filter: blur(4px);
-    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.3s ease,
-                top 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-    order: 999; /* Initial high order, will be set by JavaScript */
-}
-
-.combatant-card::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg,
-        transparent 0%,
-        var(--card-border) 20%,
-        var(--card-border) 80%,
-        transparent 100%
-    );
-    opacity: 0.6;
-}
-
-.combatant-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--graph-bg, rgba(100, 100, 100, 0.1));
-    z-index: 0;
-    opacity: 0.4;
-    transition: background 1.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease;
-}
-
-.combatant-card:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.combatant-card:hover::after {
-    opacity: 0.8;
-}
-
-.combatant-card.is-you {
-    /* YOU highlight effect removed */
-}
-
-.combatant-header {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 0px;
-    position: relative;
-    z-index: 1;
-}
-
-.combatant-name {
-    font-weight: 300;
-    font-size: 12px;
-    flex: 0 0 auto;
-    white-space: nowrap;
-}
-
-.combatant-stats-inline {
-    display: flex;
-    gap: 5px;
-    font-size: 9px;
-    align-items: center;
-    flex: 1;
-    justify-content: flex-end;
-}
-
-.combatant-stats-column {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    font-size: 11px;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    z-index: 1;
-}
-
-.combatant-stats-column .stat-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 50px;
-}
-
-.combatant-stats-column .stat-label {
-    font-size: 8px;
-    font-weight: 300;
-    margin-bottom: 0px;
-    color: rgba(150, 150, 150, 0.9);
-}
-
-.combatant-stats-column .stat-value {
+.stat-val {
     font-size: 13px;
-    font-weight: 300;
+    font-weight: bold;
+    color: #eee;
+    line-height: 1.1;
 }
-
-.stat-label {
-    color: rgba(150, 150, 150, 0.9);
-    font-size: 10px;
-    margin-right: 2px;
+.stat-sub {
+    font-size: 9px;
+    color: #999;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
 
-.stat-value {
-    font-weight: 300;
-    font-size: 14px;
-    text-shadow: 0 0 0.5px rgba(255, 255, 255, 0.1);
-    letter-spacing: 0.5px;
-}
-
-.stat-item {
-    display: flex;
-    align-items: center;
-    white-space: nowrap;
-}
-
-.stat-divider {
-    width: 1px;
-    height: 10px;
-    background: rgba(150, 150, 150, 0.3);
-    margin: 0 3px;
-}
-
-.screen-corner {
-    position: fixed;
-    bottom: 0;
-    right: 0;
-    width: 0;
-    height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid var(--card-border, rgba(150, 150, 150, 0.9));
-    border-bottom: 8px solid var(--card-border, rgba(150, 150, 150, 0.9));
-    border-top: 8px solid transparent;
-    z-index: 10001;
-    opacity: 0.6;
-}
-
-
+.text-crit { color: #ff8888; }
+.text-dh { color: #ffcc66; }

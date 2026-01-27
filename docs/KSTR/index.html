@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FFXIV Interval Damage Graph</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="text/javascript" src="https://overlayplugin.github.io/OverlayPlugin/assets/shared/common.min.js"></script>
+    <style>
+        body {
+            background-color: rgba(0, 0, 0, 0.6); /* 배경 반투명 */
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: sans-serif;
+        }
+        #ui-controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 12px;
+            border: 1px solid #555;
+        }
+        #ui-controls select {
+            background: #222;
+            color: #fff;
+            border: 1px solid #444;
+            margin-left: 5px;
+            padding: 2px;
+        }
+        #chart-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+
+<div id="ui-controls">
+    <label for="intervalSelect">집계 단위:</label>
+    <select id="intervalSelect">
+        <option value="1">1초 (즉발)</option>
+        <option value="3" selected>3초 (이동 합계)</option>
+        <option value="5">5초</option>
+        <option value="10">10초</option>
+        <option value="15">15초</option>
+        <option value="20">20초</option>
+    </select>
+</div>
+
+<div id="chart-container">
+    <canvas id="dpsChart"></canvas>
+</div>
+
+<script>
+    // === 1. 설정 및 상태 변수 ===
+    const ctx = document.getElementById('dpsChart').getContext('2d');
+    const intervalSelect = document.getElementById('intervalSelect');
+    
+    // 유저가 선택한 집계 시간 (초 단위)
+    let selectedInterval = parseInt(intervalSelect.value);
+
+    // 이벤트 리스너: 드롭다운 변경 시 값 업데이트
+    intervalSelect.addEventListener('change', (e) => {
+        selectedInterval = parseInt(e.target.value);
+    });
+
+    // 직업별 색상
+    const jobColors = {
+        'Pld': 'rgba(168, 210, 230, 1)',
+        'War': 'rgba(207, 38, 33, 1)',
+        'Gnb': 'rgba(113, 106, 96, 1)',
+        'Drk': 'rgba(209, 38, 204, 1)',
+        'Whm': 'rgba(255, 255, 255, 1)',
+        'Sch': 'rgba(134, 87, 255, 1)',
+        'Ast': 'rgba(255, 231, 74, 1)',
+        'Sge': 'rgba(128, 160, 240, 1)',
+        'Mnk': 'rgba(214, 156, 0, 1)',
+        'Drg': 'rgba(65, 100, 205, 1)',
+        'Nin': 'rgba(175, 25, 100, 1)',
+        'Sam': 'rgba(228, 109, 4, 1)',
+        'Rpr': 'rgba(150, 90, 144, 1)',
+        'Vpr': 'rgba(16, 130, 16, 1)',
+        'Blm': 'rgba(165, 121, 214, 1)',
+        'Smn': 'rgba(45, 155, 120, 1)',
+        'Rdm': 'rgba(232, 123, 123, 1)',
+        'Pct': 'rgba(226, 124, 178, 1)',
+        'Brd': 'rgba(145, 186, 94, 1)',
+        'Mch': 'rgba(110, 192, 222, 1)',
+        'Dnc': 'rgba(226, 176, 175, 1)',
+        'YOU': 'rgba(255, 99, 132, 1)' 
+    };
+
+    // 차트 초기화
+    const dpsChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: [], datasets: [] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            interaction: { mode: 'index', intersect: false },
+            elements: {
+                point: { radius: 0 },
+                line: { tension: 0.4, borderWidth: 2 }
+            },
+            scales: {
+                x: {
+                    display: true,
+                    grid: { display: false, color: '#444' },
+                    ticks: { color: '#ccc', maxTicksLimit: 10 }
+                },
+                y: {
+                    display: true,
+                    beginAtZero: true,
+                    grid: { color: '#333' },
+                    ticks: { color: '#ccc' }
+                }
+            },
+            plugins: {
+                legend: { labels: { color: '#fff' } }
+            }
+        }
+    });
+
+    // === 2. 데이터 처리 로직 ===
+    
+    // 데이터 보관용 변수
+    // history: { 'Name': [ {t: timeSeconds, dmg: deltaDamage}, ... ] }
+    let damageHistory = {}; 
+    // lastTotalDamage: { 'Name': 123456 } -> 이전 틱의 총 데미지 저장용
+    let lastTotalDamage = {};
+    let lastDuration = -1;
+
+    function resetData() {
+        damageHistory = {};
+        lastTotalDamage = {};
+        lastDuration = -1;
+        dpsChart.data.labels = [];
+        dpsChart.data.datasets = [];
+        dpsChart.update();
+    }
+
+    function updateGraph(data) {
+      console.log(data);
+        // 전투 중이 아니면 리셋하거나 무시
+        if (!data.isActive) {
+            // 전투가 끝났다고 판단되면 그래프를 초기화하고 싶다면 아래 주석 해제
+            // if (data.Encounter.duration === "00:00") resetData();
+            return;
+        }
+
+        // 시간 파싱
+        const durationStr = data.Encounter.duration;
+        const parts = durationStr.split(':');
+        let timeInSeconds = 0;
+        if(parts.length === 2) {
+            timeInSeconds = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        } else if (parts.length === 3) {
+            timeInSeconds = parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+        }
+
+        // 중복 업데이트 방지
+        if (timeInSeconds === lastDuration) return;
+        lastDuration = timeInSeconds;
+
+        // X축 라벨 추가
+        dpsChart.data.labels.push(durationStr);
+        // 메모리 관리를 위해 너무 오래된 라벨 제거 (예: 10분 이상)
+        if (dpsChart.data.labels.length > 600) {
+            dpsChart.data.labels.shift();
+        }
+
+        // 각 플레이어 데이터 처리
+        for (const key in data.Combatant) {
+            const combatant = data.Combatant[key];
+            const name = combatant.name;
+            const job = combatant.Job;
+            
+            // 1. 현재 총 누적 데미지 파싱
+            // ACT는 숫자를 문자열로 줌 (예: "1050")
+            let currentTotalDmg = parseInt(combatant.damage.replace(/,/g, ''));
+            if (isNaN(currentTotalDmg)) currentTotalDmg = 0;
+
+            // 2. 이번 틱에 가한 데미지(Delta) 계산
+            let prevTotal = lastTotalDamage[name] || 0;
+            // 첫 데이터 수신시 튀는 현상 방지: 0초일 땐 그냥 현재값, 아니면 차이값
+            let deltaDmg = (timeInSeconds === 0) ? currentTotalDmg : (currentTotalDmg - prevTotal);
+            
+            // 데이터가 음수가 되는 경우(ACT 리셋 등) 방지
+            if (deltaDmg < 0) deltaDmg = 0;
+
+            // 상태 업데이트
+            lastTotalDamage[name] = currentTotalDmg;
+
+            // 3. 기록 저장 (Rolling Window 계산용)
+            if (!damageHistory[name]) damageHistory[name] = [];
+            damageHistory[name].push({ t: timeInSeconds, d: deltaDmg });
+
+            // 메모리 관리: 필요 없는 과거 데이터 삭제 (현재 시간 - 선택 간격 - 여유분)
+            const cutoffTime = timeInSeconds - selectedInterval - 5;
+            if (damageHistory[name].length > 0 && damageHistory[name][0].t < cutoffTime) {
+                 // 오래된 데이터 필터링 (성능을 위해 shift 대신 filter 사용 고려 가능하지만, 배열이 작으므로 shift 사용)
+                 while(damageHistory[name].length > 0 && damageHistory[name][0].t < cutoffTime) {
+                     damageHistory[name].shift();
+                 }
+            }
+
+            // 4. 선택한 Interval(예: 3초) 동안의 데미지 합계 계산
+            // 현재 시간 ~ (현재 시간 - Interval) 사이의 모든 delta 합산
+            let sumDamageInInterval = 0;
+            for (let i = damageHistory[name].length - 1; i >= 0; i--) {
+                const item = damageHistory[name][i];
+                if (item.t > timeInSeconds - selectedInterval) {
+                    sumDamageInInterval += item.d;
+                } else {
+                    break; // 시간 범위를 벗어나면 중단
+                }
+            }
+
+            // 5. 차트 데이터셋 찾기 및 업데이트
+            let dataset = dpsChart.data.datasets.find(ds => ds.label === name);
+            if (!dataset) {
+                const color = jobColors[job] || jobColors['YOU'] || 'rgba(200, 200, 200, 1)';
+                dataset = {
+                    label: name,
+                    data: new Array(dpsChart.data.labels.length - 1).fill(0),
+                    borderColor: color,
+                    backgroundColor: color.replace('1)', '0.2)'),
+                    fill: true,
+                    borderWidth: 2,
+                    pointRadius: 0
+                };
+                dpsChart.data.datasets.push(dataset);
+            }
+
+            dataset.data.push(sumDamageInInterval);
+            
+            // 데이터셋 길이 맞추기 (라벨이 지워졌으면 데이터도 지움)
+            if (dataset.data.length > dpsChart.data.labels.length) {
+                dataset.data.shift();
+            }
+        }
+
+        dpsChart.update();
+    }
+
+    // === 3. ACT OverlayPlugin 리스너 ===
+    if (window.addOverlayListener) {
+        addOverlayListener("CombatData", (e) => updateGraph(e));
+        addOverlayListener("ChangeZone", () => resetData()); // 맵 이동시 리셋
+        startOverlayEvents();
+    } else {
+        console.log("OverlayPlugin을 찾을 수 없습니다.");
+        // 테스트용 더미 데이터가 필요하면 여기에 작성
+    }
+</script>
+
+</body>
+</html>

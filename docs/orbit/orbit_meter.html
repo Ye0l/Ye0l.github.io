@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>FF14 Dynamic Radar HUD</title>
+    <script src="https://overlayplugin.github.io/OverlayPlugin/assets/shared/common.min.js"></script>
+    <script src="https://unpkg.com/zdog@1/dist/zdog.dist.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Noto+Sans+KR:wght@400;700&display=swap');
+
+        /* 레이아웃 */
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: transparent; }
+        #container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+        /* 3D 캔버스 */
+        .zdog-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+
+        /* 중앙 정보 */
+        #center-panel {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; font-family: 'Rajdhani', sans-serif;
+            z-index: 5; pointer-events: none;
+            background: radial-gradient(circle, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 70%);
+            padding: 60px; border-radius: 50%;
+        }
+        #timer { font-size: 24px; color: #ffcc00; font-weight: 700; letter-spacing: 2px; text-shadow: 0 0 10px #ffcc00; }
+        #rdps-val { font-size: 64px; font-weight: 900; line-height: 1; color: white; text-shadow: 0 0 20px rgba(255,255,255,0.5); }
+        #target { font-size: 14px; color: #ccc; text-transform: uppercase; margin-top: 5px; letter-spacing: 1px; }
+
+        /* UI 리스트 */
+        #card-list {
+            position: absolute; top: 50%; right: 40px; width: 360px;
+            height: 0px; 
+            z-index: 10;
+        }
+
+        /* 플레이어 카드 (Matte & Slim) */
+        .player-card {
+            position: absolute; right: 0;
+            display: flex; align-items: center; justify-content: flex-end; gap: 12px;
+            
+            background: rgba(15, 15, 15, 0.85);
+            border-right: 3px solid #555; 
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+
+            padding: 0 12px; border-radius: 2px; width: 100%; 
+            height: 28px; 
+            color: white;
+            
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .dps-group { text-align: right; min-width: 65px; }
+        .dps-text { font-family: 'Rajdhani', sans-serif; font-size: 19px; font-weight: bold; color: #fff; line-height: 1; text-shadow: 0 1px 2px black; }
+        
+        .info-group { display: flex; flex-direction: column; align-items: flex-end; margin-right: auto; flex: 1; justify-content: center; height: 100%; margin-left: 8px; }
+        .name { font-family: 'Noto Sans KR', sans-serif; font-size: 13px; font-weight: bold; color: #eee; line-height: 1; white-space: nowrap; text-shadow: 0 1px 2px black; }
+        .death-badge { font-size: 9px; color: #ff5555; font-weight: 800; margin-left: 4px; }
+
+        .stat-row { display: flex; gap: 6px; font-size: 10px; font-family: 'Rajdhani', sans-serif; color: #aaa; margin-top: 0; text-shadow: 0 1px 1px black; }
+        .stat-item span { font-weight: bold; color: #ccc; }
+        .maxhit-text { color: #66ccff; margin-left: 4px; padding-left: 6px; border-left: 1px solid #555; }
+
+        .crit { color: #ffcc00 !important; } .dh { color: #ff6600 !important; } .cdh { color: #ff3366 !important; }
+        .job-icon { width: 24px; height: 24px; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }
+
+        .player-card.compact { height: 20px; width: 60%; margin-left: auto; background: rgba(0,0,0,0.6); border-right-width: 2px; padding: 0 8px; }
+        .player-card.compact .info-group { display: none; }
+        .player-card.compact .dps-text { font-size: 13px; color: #ccc; }
+        .player-card.compact .job-icon { width: 16px; height: 16px; }
+        .player-card.compact::before { content: attr(data-name); font-size: 11px; color: #999; margin-right: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 5px; text-shadow: 0 1px 1px black; }
+    </style>
+</head>
+<body>
+
+    <div id="container">
+        <canvas class="zdog-canvas"></canvas>
+        <div id="center-panel">
+            <div id="timer">00:00</div>
+            <div id="rdps-val">READY</div>
+            <div id="target">SYSTEM ONLINE</div>
+        </div>
+        <div id="card-list"></div>
+    </div>
+
+    <script>
+        // === 1. 설정 ===
+        const IMG_BASE_PATH = './images/';
+        const jobFileMap = {
+            'Pld': 'paladin.png', 'War': 'warrior.png', 'Drk': 'darkknight.png', 'Gnb': 'gunbreaker.png',
+            'Whm': 'whitemage.png', 'Sch': 'scholar.png', 'Ast': 'astrologian.png', 'Sge': 'sage.png',
+            'Mnk': 'monk.png', 'Drg': 'dragoon.png', 'Nin': 'ninja.png', 'Sam': 'samurai.png', 'Rpr': 'reaper.png', 'Vpr': 'viper.png',
+            'Brd': 'bard.png', 'Mch': 'machinist.png', 'Dnc': 'dancer.png',
+            'Blm': 'blackmage.png', 'Smn': 'summoner.png', 'Rdm': 'redmage.png', 'Blu': 'bluemage.png', 'Pct': 'pictomancer.png',
+            '_default': 'companion.png'
+        };
+        const jobColorMap = {
+            'Pld': '#A8D2E6', 'War': '#CF2621', 'Drk': '#D126CC', 'Gnb': '#796D30',
+            'Whm': '#FFF0F5', 'Sch': '#8657FF', 'Ast': '#FFE74A', 'Sge': '#80A0F0',
+            'Mnk': '#D69C00', 'Drg': '#4164CD', 'Nin': '#AF1964', 'Sam': '#E46D04', 'Rpr': '#965A90', 'Vpr': '#108210',
+            'Brd': '#91BA5E', 'Mch': '#6EE1D6', 'Dnc': '#E2B0AF',
+            'Blm': '#A579D6', 'Smn': '#2D9B78', 'Rdm': '#E87B7B', 'Blu': '#2459FF', 'Pct': '#E45691',
+            '_pet': '#888888', '_default': '#FF00FF'
+        };
+
+        function getJobIcon(job) {
+            let key = job || '_default';
+            if(!jobFileMap[key] && key !== '_default') key = key.charAt(0).toUpperCase() + key.slice(1).toLowerCase();
+            return IMG_BASE_PATH + (jobFileMap[key] || jobFileMap['_default']);
+        }
+
+        function formatNum(num) {
+            if (typeof num !== 'number' || isNaN(num)) return "0.0";
+            if (num >= 1000) return (num / 1000).toFixed(1) + "k";
+            return num.toFixed(1);
+        }
+        
+        function formatPct(str) {
+            if (!str) return "0.0%";
+            let val = parseFloat(str.replace('%', ''));
+            if (isNaN(val)) return "0.0%";
+            return val.toFixed(1) + "%";
+        }
+
+        function lerp(start, end, t) {
+            return start * (1 - t) + end * t;
+        }
+
+        // === 2. Zdog 초기화 ===
+        const illo = new Zdog.Illustration({
+            element: '.zdog-canvas',
+            dragRotate: true,
+            rotate: { x: -0.4, y: 0.15 }, 
+            zoom: 0.9,
+            resize: true
+        });
+
+        const playersMap = new Map();
+        const CARD_HEIGHT_FULL = 29; 
+        const CARD_HEIGHT_COMPACT = 21;
+        const LIST_START_Y = -116; 
+
+        // === 리본 그리기 함수 ===
+        function getRibbonPath(startAngle, endAngle, radius, width) {
+            let path = [];
+            const outerRadius = radius + width / 2;
+            const innerRadius = radius - width / 2;
+            const segments = Math.max(2, Math.floor(Math.abs(endAngle - startAngle) * 20));
+
+            for (let i = 0; i <= segments; i++) {
+                let t = i / segments;
+                let angle = startAngle + (endAngle - startAngle) * t;
+                path.push({ x: Math.cos(angle) * outerRadius, y: Math.sin(angle) * outerRadius });
+            }
+            for (let i = segments; i >= 0; i--) {
+                let t = i / segments;
+                let angle = startAngle + (endAngle - startAngle) * t;
+                path.push({ x: Math.cos(angle) * innerRadius, y: Math.sin(angle) * innerRadius });
+            }
+            return path;
+        }
+
+        // === 3. 업데이트 로직 ===
+        function updateOverlay(data) {
+            const encounter = data.Encounter;
+            const combatants = data.Combatant;
+
+            let encDps = parseFloat(encounter.encdps);
+            document.getElementById('rdps-val').textContent = isNaN(encDps) ? "READY" : formatNum(encDps);
+            document.getElementById('target').textContent = encounter.title || '';
+            document.getElementById('timer').textContent = encounter.duration || '00:00';
+
+            let dataArray = Object.values(combatants);
+            let topDamage = 0;
+
+            dataArray.forEach(p => {
+                let rawDmg = typeof p.damage === 'string' ? p.damage.replace(/,/g, '') : p.damage;
+                p.damageVal = parseFloat(rawDmg);
+            });
+            dataArray.sort((a, b) => b.damageVal - a.damageVal);
+            if(dataArray.length > 0) topDamage = dataArray[0].damageVal;
+
+            const currentNames = new Set();
+
+            dataArray.forEach((p, index) => {
+                currentNames.add(p.name);
+                if (!playersMap.has(p.name)) createPlayer(p.name);
+                const pObj = playersMap.get(p.name);
+                pObj.targetDmg = p.damageVal;
+                pObj.topDmg = topDamage;
+                pObj.targetRank = index; 
+                updatePlayerInfo(pObj, p, index);
+            });
+
+            for (let [name, pObj] of playersMap) {
+                if (!currentNames.has(name)) removePlayer(name);
+            }
+        }
+
+        function createPlayer(name) {
+            const listContainer = document.getElementById('card-list');
+            let card = document.createElement('div');
+            card.className = 'player-card';
+            card.innerHTML = `
+                <div class="dps-group"><div class="dps-text">0.0k</div></div>
+                <div class="info-group">
+                    <div class="name-row"><span class="name">${name}</span><span class="death-badge" style="display:none">💀0</span></div>
+                    <div class="stat-row">
+                        <div class="stat-item">극<span class="crit">0%</span></div>
+                        <div class="stat-item">직<span class="dh">0%</span></div>
+                        <div class="stat-item">직극<span class="cdh">0%</span></div>
+                        <div class="maxhit-text">-</div>
+                    </div>
+                </div>
+                <img class="job-icon" src="" alt="">
+            `;
+            listContainer.appendChild(card);
+            playersMap.set(name, {
+                ui: card, shapes: [],
+                targetDmg: 0, currentDmg: 0, topDmg: 1,
+                targetRank: 99, currentRank: 99, 
+                color: '#fff'
+            });
+        }
+
+        function removePlayer(name) {
+            const pObj = playersMap.get(name);
+            pObj.ui.remove();
+            pObj.shapes.forEach(s => s.remove());
+            playersMap.delete(name);
+        }
+
+        function updatePlayerInfo(pObj, p, index) {
+            const ui = pObj.ui;
+            const isCompact = index >= 8; 
+            if (isCompact) ui.classList.add('compact'); else ui.classList.remove('compact');
+
+            ui.setAttribute('data-name', p.name);
+            let dpsVal = parseFloat(p.encdps);
+            ui.querySelector('.dps-text').textContent = formatNum(dpsVal);
+            ui.querySelector('.job-icon').src = getJobIcon(p.Job);
+            
+            let color = jobColorMap[p.Job] || jobColorMap._default;
+            pObj.color = color;
+            ui.style.borderRightColor = color;
+
+            if (!isCompact) {
+                ui.querySelector('.name').textContent = p.name;
+                let deaths = parseInt(p.deaths) || 0;
+                let deathBadge = ui.querySelector('.death-badge');
+                deathBadge.style.display = deaths > 0 ? 'inline' : 'none';
+                deathBadge.textContent = `💀${deaths}`;
+                ui.querySelector('.crit').textContent = formatPct(p['crithit%']).replace('%','');
+                ui.querySelector('.dh').textContent = formatPct(p['DirectHitPct']).replace('%','');
+                ui.querySelector('.cdh').textContent = formatPct(p['CritDirectHitPct']).replace('%','');
+                
+                let maxHitRaw = p.maxhit || "";
+                let parts = maxHitRaw.split('-');
+                let maxHitStr = "-";
+                if (parts.length >= 2) maxHitStr = `${parts[0]}(${formatNum(parseFloat(parts[1]))})`;
+                ui.querySelector('.maxhit-text').textContent = maxHitStr;
+            }
+        }
+
+        // === 4. 애니메이션 ===
+        // 다이내믹 모션을 위한 변수
+        let tick = 0;
+
+        function animate() {
+            tick += 0.01;
+            
+            // [Dynamic 1] 전체 회전 (시계 방향)
+            illo.rotate.z -= 0.003; 
+            
+            // [Dynamic 2] 부유 효과 (호흡하듯 각도가 살짝 변함)
+            illo.rotate.x = -0.4 + Math.sin(tick * 0.5) * 0.05;
+            illo.rotate.y = 0.15 + Math.cos(tick * 0.3) * 0.05;
+
+            const maxRadius = 180;
+            const gap = 18;
+            // [Dynamic 3] 360도 풀 사용
+            const maxAngle = Zdog.TAU; 
+            const ribbonWidth = 6; 
+
+            for (let [name, pObj] of playersMap) {
+                pObj.currentDmg = lerp(pObj.currentDmg, pObj.targetDmg, 0.1);
+                pObj.currentRank = lerp(pObj.currentRank, pObj.targetRank, 0.1);
+
+                let targetY = 0;
+                if (pObj.currentRank < 8) {
+                    targetY = LIST_START_Y + (pObj.currentRank * CARD_HEIGHT_FULL);
+                } else {
+                    targetY = LIST_START_Y + (8 * CARD_HEIGHT_FULL) + ((pObj.currentRank - 8) * CARD_HEIGHT_COMPACT);
+                }
+                pObj.ui.style.transform = `translateY(${targetY}px)`;
+
+                pObj.shapes.forEach(s => s.remove());
+                pObj.shapes = [];
+
+                if (pObj.currentRank < 8 && pObj.currentDmg > 0 && pObj.topDmg > 0) {
+                    let currentRadius = maxRadius - (pObj.currentRank * gap);
+                    let ratio = pObj.currentDmg / pObj.topDmg;
+                    
+                    // [Dynamic 4] 1등도 95%까지만 채워서 "회전하는 틈(Gap)"을 보여줌
+                    // -> 레이더가 돌아가는 느낌을 극대화
+                    let visualRatio = Math.min(ratio, 0.95); 
+                    
+                    let arcLength = visualRatio * maxAngle;
+                    let zHeight = -pObj.currentRank * 8; 
+
+                    // 트랙 (전체 원)
+                    let trackPath = getRibbonPath(0, maxAngle, currentRadius, ribbonWidth);
+                    let track = new Zdog.Shape({
+                        addTo: illo,
+                        path: trackPath,
+                        fill: true, stroke: false,
+                        color: 'rgba(255,255,255,0.08)',
+                        translate: { z: zHeight }
+                    });
+                    pObj.shapes.push(track);
+
+                    // 데이터 리본 (3시 방향 0도에서 시작하여 채워짐)
+                    // 전체가 회전하므로 시작점은 고정해도 무방
+                    let startAngle = 0;
+                    let barPath = getRibbonPath(startAngle, startAngle + arcLength, currentRadius, ribbonWidth);
+                    let bar = new Zdog.Shape({
+                        addTo: illo,
+                        path: barPath,
+                        fill: true, stroke: false,
+                        color: pObj.color,
+                        translate: { z: zHeight + 0.1 }
+                    });
+                    pObj.shapes.push(bar);
+                }
+            }
+
+            illo.updateRenderGraph();
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+        addOverlayListener('CombatData', updateOverlay);
+        startOverlayEvents();
+    </script>
+</body>
+</html>
