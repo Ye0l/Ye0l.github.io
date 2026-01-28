@@ -5,23 +5,30 @@
     <title>MiniParse-Terminal</title>
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/job-colors.css">
+    <script>
+        document.fonts.ready.then(function () {
+            document.body.classList.add('fonts-loaded');
+        });
+    </script>
 </head>
 <body>
 
     <div class="terminal-window">
-        <div class="title-bar">MiniParse-Terminal</div>
-        <div id="controls">
-            <!-- <span id="sample-data-btn">[SAMPLE]</span>
-            <span id="scanline-btn">[SCANLINE]</span> -->
-            <!-- <span id="capture-btn">[CAPTURE]</span> -->
-        </div>
-        <div id="encounter">
-            <div id="encounter-stats">
-                <span id="encounter-title"></span>
-                <span class="stat-item">ENCDPS: <span id="enc-dps"></span></span>
-                <span class="stat-item">TIME: <span id="enc-time"></span></span>
+        <div id="header-area">
+            <div id="encounter-info">
+                <span id="encounter-title">Waiting...</span>
+                <div class="enc-stats">
+                    <span id="enc-time">00:00</span>
+                    <span id="enc-dps">---</span>
+                </div>
+            </div>
+            
+            <div id="graph-container">
+                <svg id="main-graph" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    </svg>
             </div>
         </div>
+
         <div id="dps-output"></div>
         <div id="hps-output"></div>
     </div>
