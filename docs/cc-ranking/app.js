@@ -358,6 +358,9 @@ function renderChart(history) {
     ctx.fill();
   });
 
+  drawTierChangeMarkers(points, chartSize.height);
+  drawDateLabels(points, chartSize.height);
+
   ctx.fillStyle = "#dbeafe";
   ctx.font = "700 12px sans-serif";
   points.slice(-6).forEach((point) => {
@@ -368,6 +371,71 @@ function renderChart(history) {
   ctx.font = "12px sans-serif";
   ctx.fillText(`best #${minRank}`, padding, 20);
   ctx.fillText(`worst #${maxRank}`, padding, chartSize.height - 14);
+}
+
+function drawTierChangeMarkers(points, chartHeight) {
+  const changes = points.filter((point, index) => {
+    if (index === 0) return false;
+    return normalizeTier(point.row.tier_label) !== normalizeTier(points[index - 1].row.tier_label);
+  });
+
+  ctx.font = "700 11px sans-serif";
+  changes.forEach((point, index) => {
+    const label = point.row.tier_label || "계급 변경";
+    const labelWidth = ctx.measureText(label).width;
+    const labelX = Math.min(Math.max(point.x - labelWidth / 2, 8), canvas.clientWidth - labelWidth - 8);
+    const labelY = Math.max(24, Math.min(point.y - 24 - (index % 2) * 18, chartHeight - 54));
+
+    ctx.fillStyle = "#ff8fb3";
+    ctx.beginPath();
+    ctx.moveTo(point.x, point.y - 9);
+    ctx.lineTo(point.x + 8, point.y);
+    ctx.lineTo(point.x, point.y + 9);
+    ctx.lineTo(point.x - 8, point.y);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255, 143, 179, 0.42)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(point.x, point.y);
+    ctx.lineTo(point.x, labelY + 5);
+    ctx.stroke();
+
+    ctx.fillStyle = "#ffd4df";
+    ctx.fillText(label, labelX, labelY);
+  });
+}
+
+function drawDateLabels(points, chartHeight) {
+  const labelPoints = dateLabelPoints(points);
+  ctx.fillStyle = "#93a4b8";
+  ctx.font = "11px sans-serif";
+  labelPoints.forEach((point) => {
+    const label = formatGraphDate(point.row.source_time_text || point.row.scraped_at);
+    const labelWidth = ctx.measureText(label).width;
+    const labelX = Math.min(Math.max(point.x - labelWidth / 2, 8), canvas.clientWidth - labelWidth - 8);
+    ctx.fillText(label, labelX, chartHeight - 30);
+  });
+}
+
+function dateLabelPoints(points) {
+  if (points.length <= 4) return points;
+  const indexes = new Set([0, points.length - 1]);
+  indexes.add(Math.floor((points.length - 1) / 3));
+  indexes.add(Math.floor(((points.length - 1) * 2) / 3));
+  return [...indexes].sort((a, b) => a - b).map((index) => points[index]);
+}
+
+function formatGraphDate(value) {
+  const text = String(value || "-");
+  const match = text.match(/\d{4}[-/.]\d{1,2}[-/.]\d{1,2}/);
+  if (match) return match[0].replaceAll("/", "-").replaceAll(".", "-");
+  return text.split(/\s+/)[0] || "-";
+}
+
+function normalizeTier(value) {
+  return String(value || "").trim().toLowerCase();
 }
 
 function resizeCanvas() {

@@ -340,6 +340,7 @@ button:disabled {
 .layout {
   display: grid;
   grid-template-columns: minmax(560px, 1.15fr) minmax(420px, 0.85fr);
+  align-items: start;
   gap: 18px;
   padding: 0 18px 18px;
 }
@@ -358,6 +359,10 @@ button:disabled {
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(18px);
   overflow: hidden;
+}
+
+.ranking-panel {
+  align-self: start;
 }
 
 .panel-head {
@@ -602,9 +607,9 @@ tr.is-new:hover td {
 }
 
 .detail-panel {
+  align-self: start;
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 235px);
   padding-bottom: 16px;
 }
 
@@ -631,9 +636,8 @@ input[type="search"]:focus {
   align-content: start;
   grid-auto-rows: max-content;
   gap: 8px;
-  flex: 1 1 260px;
-  min-height: 170px;
-  max-height: none;
+  flex: 0 1 auto;
+  max-height: 210px;
   overflow: auto;
   padding: 0 16px 12px;
 }
@@ -732,7 +736,7 @@ canvas {
 .history {
   display: grid;
   gap: 6px;
-  flex: 0 1 190px;
+  flex: 0 1 auto;
   max-height: 190px;
   overflow: auto;
   padding: 0 16px;
