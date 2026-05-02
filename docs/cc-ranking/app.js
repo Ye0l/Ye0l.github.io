@@ -22,14 +22,92 @@ let currentHistory = [];
 let latestCharacters = [];
 
 const API_BASE = String(window.CC_API_BASE || "").replace(/\/$/, "");
+const STATIC_DATA_BASE = String(window.CC_STATIC_DATA_BASE || "static/data").replace(/\/$/, "");
+let staticDataPromise = null;
 
 async function api(path, options = {}) {
-  const response = await fetch(`${API_BASE}${path}`, options);
-  const payload = await response.json();
-  if (!response.ok || payload.error) {
-    throw new Error(payload.error || `HTTP ${response.status}`);
+  try {
+    const response = await fetch(`${API_BASE}${path}`, options);
+    const payload = await response.json();
+    if (!response.ok || payload.error) {
+      throw new Error(payload.error || `HTTP ${response.status}`);
+    }
+    return payload;
+  } catch (error) {
+    if (options.method && options.method !== "GET") {
+      throw error;
+    }
+    return staticApi(path);
   }
-  return payload;
+}
+
+async function loadStaticData() {
+  if (!staticDataPromise) {
+    staticDataPromise = fetch(`${STATIC_DATA_BASE}/manifest.json`)
+      .then((response) => {
+        if (!response.ok) throw new Error(`Static manifest HTTP ${response.status}`);
+        return response.json();
+      })
+      .then((manifest) => {
+        const seasons = manifest.seasons || [];
+        const latestSeason = seasons.find((season) => season.season === manifest.latest_season)
+          || seasons[seasons.length - 1];
+        if (!latestSeason) {
+          return { snapshots: [], entries_by_snapshot: {}, characters: [], history_by_key: {} };
+        }
+        return fetch(`${STATIC_DATA_BASE}/${latestSeason.path}`).then((response) => {
+          if (!response.ok) throw new Error(`Static data HTTP ${response.status}`);
+          return response.json();
+        });
+      });
+  }
+  return staticDataPromise;
+}
+
+async function staticApi(path) {
+  const data = await loadStaticData();
+  const url = new URL(path, window.location.origin);
+  if (url.pathname === "/api/snapshots" || url.pathname === "/api/v1/snapshots") {
+    return { snapshots: data.snapshots || [] };
+  }
+  if (url.pathname === "/api/latest") {
+    const snapshot = latestStaticSnapshot(data);
+    return {
+      snapshot,
+      entries: snapshot ? data.entries_by_snapshot[String(snapshot.id)] || [] : [],
+    };
+  }
+  if (url.pathname === "/api/snapshot") {
+    const snapshotId = url.searchParams.get("id");
+    const snapshot = (data.snapshots || []).find((item) => String(item.id) === String(snapshotId));
+    return {
+      snapshot: snapshot || null,
+      entries: snapshot ? data.entries_by_snapshot[String(snapshot.id)] || [] : [],
+    };
+  }
+  if (url.pathname === "/api/characters") {
+    const query = (url.searchParams.get("q") || "").trim().toLowerCase();
+    const characters = (data.characters || [])
+      .filter((character) => !query
+        || String(character.character_name).toLowerCase().includes(query)
+        || String(character.server_name).toLowerCase().includes(query))
+      .slice(0, 50);
+    return { characters };
+  }
+  if (url.pathname === "/api/history") {
+    const key = url.searchParams.get("key") || "";
+    return { history: (data.history_by_key || {})[key] || [] };
+  }
+  throw new Error(`No static fallback for ${url.pathname}`);
+}
+
+function latestStaticSnapshot(data) {
+  const staticSnapshots = data.snapshots || [];
+  if (staticSnapshots.length === 0) return null;
+  return staticSnapshots.reduce(
+    (latest, snapshot) => (snapshot.id > latest.id ? snapshot : latest),
+    staticSnapshots[0],
+  );
 }
 
 function movementText(entry) {
