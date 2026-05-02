@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FF14 CC Rankings</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <span class="eyebrow">FFXIV KR PvP Archive</span>
+        <div class="title-row">
+          <h1>Crystalline Conflict Rankings</h1>
+          <span id="seasonBadge" class="season-badge">Season -</span>
+        </div>
+        <p class="meta-line">
+          <span id="snapshotMeta">저장된 스냅샷을 불러오는 중</span>
+          <span id="totalMeta">총 저장 인원 -</span>
+        </p>
+      </div>
+    </header>
+
+    <section class="snapshot-nav" aria-label="스냅샷 이동">
+      <button id="prevSnapshot" class="nav-button" type="button">이전</button>
+      <div class="snapshot-select-wrap">
+        <span>기준 시점</span>
+        <select id="snapshotSelect" aria-label="랭킹 기준 시점"></select>
+      </div>
+      <button id="nextSnapshot" class="nav-button" type="button">다음</button>
+    </section>
+
+    <section class="leader-strip" aria-label="랭킹 요약">
+      <span class="leader-label">현재 1위</span>
+      <strong id="leaderStat">-</strong>
+      <span id="leaderMeta">-</span>
+    </section>
+
+    <main class="layout">
+      <section class="panel ranking-panel">
+        <div class="panel-head">
+          <h2>전체 랭킹</h2>
+          <span id="entryCount"></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>순위</th>
+                <th>캐릭터</th>
+                <th>서버</th>
+                <th>티어</th>
+                <th>승리</th>
+                <th>변동</th>
+              </tr>
+            </thead>
+            <tbody id="rankingRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside class="panel detail-panel">
+        <div class="panel-head">
+          <h2>사용자 추이</h2>
+          <span>rank history</span>
+        </div>
+        <input id="searchInput" type="search" placeholder="캐릭터 또는 서버 검색">
+        <div id="characterList" class="character-list"></div>
+        <div id="selectedCharacter" class="selected"></div>
+        <canvas id="rankChart" width="520" height="260"></canvas>
+        <div id="historyRows" class="history"></div>
+      </aside>
+    </main>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
