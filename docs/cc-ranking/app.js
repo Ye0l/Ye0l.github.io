@@ -43,11 +43,8 @@ async function api(path, options = {}) {
 
 async function loadStaticData() {
   if (!staticDataPromise) {
-    staticDataPromise = fetch(`${STATIC_DATA_BASE}/manifest.json`)
-      .then((response) => {
-        if (!response.ok) throw new Error(`Static manifest HTTP ${response.status}`);
-        return response.json();
-      })
+    const cacheKey = Date.now().toString(36);
+    staticDataPromise = fetchStaticJson("manifest.json", cacheKey, "manifest")
       .then((manifest) => {
         const seasons = manifest.seasons || [];
         const latestSeason = seasons.find((season) => season.season === manifest.latest_season)
@@ -55,13 +52,19 @@ async function loadStaticData() {
         if (!latestSeason) {
           return { snapshots: [], entries_by_snapshot: {}, characters: [], history_by_key: {} };
         }
-        return fetch(`${STATIC_DATA_BASE}/${latestSeason.path}`).then((response) => {
-          if (!response.ok) throw new Error(`Static data HTTP ${response.status}`);
-          return response.json();
-        });
+        return fetchStaticJson(latestSeason.path, cacheKey, "data");
       });
   }
   return staticDataPromise;
+}
+
+async function fetchStaticJson(path, cacheKey, label) {
+  const separator = path.includes("?") ? "&" : "?";
+  const response = await fetch(`${STATIC_DATA_BASE}/${path}${separator}v=${encodeURIComponent(cacheKey)}`, {
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error(`Static ${label} HTTP ${response.status}`);
+  return response.json();
 }
 
 async function staticApi(path) {
