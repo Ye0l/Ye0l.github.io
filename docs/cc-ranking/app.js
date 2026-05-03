@@ -23,7 +23,6 @@ let currentSnapshotIndex = -1;
 let currentHistory = [];
 let latestCharacters = [];
 let latestEntries = [];
-let favorites = loadStoredSet("ccRankingFavorites");
 
 const THEMES = ["dark", "light", "crystal", "rose"];
 const THEME_ICONS = {
@@ -159,31 +158,6 @@ function movementBadge(entry) {
   return `<span class="movement-chip ${movementClass}">${escapeHtml(text)}</span>`;
 }
 
-function loadStoredSet(key) {
-  try {
-    const values = JSON.parse(window.localStorage.getItem(key) || "[]");
-    return new Set(Array.isArray(values) ? values.map(String) : []);
-  } catch (error) {
-    const cookieValue = readCookie(key);
-    if (!cookieValue) return new Set();
-    try {
-      const values = JSON.parse(cookieValue);
-      return new Set(Array.isArray(values) ? values.map(String) : []);
-    } catch (cookieError) {
-      return new Set();
-    }
-  }
-}
-
-function storeFavorites() {
-  const value = JSON.stringify([...favorites]);
-  try {
-    window.localStorage.setItem("ccRankingFavorites", value);
-  } catch (error) {
-    writeCookie("ccRankingFavorites", value);
-  }
-}
-
 function storedTheme() {
   try {
     const value = window.localStorage.getItem("ccRankingTheme") || DEFAULT_THEME;
@@ -224,32 +198,6 @@ function writeCookie(name, value) {
   document.cookie = `${name}=${encodeURIComponent(value)}; max-age=31536000; path=/; SameSite=Lax`;
 }
 
-function isFavorite(key) {
-  return favorites.has(String(key));
-}
-
-function favoriteButton(key, label) {
-  const active = isFavorite(key);
-  return `
-    <button type="button" class="favorite-button ${active ? "active" : ""}" data-favorite-key="${escapeHtml(key)}" aria-label="${escapeHtml(label)} 즐겨찾기 ${active ? "해제" : "추가"}" title="즐겨찾기">
-      ${active ? "★" : "☆"}
-    </button>
-  `;
-}
-
-function toggleFavorite(key) {
-  const normalizedKey = String(key);
-  if (favorites.has(normalizedKey)) {
-    favorites.delete(normalizedKey);
-  } else {
-    favorites.add(normalizedKey);
-  }
-  storeFavorites();
-  renderRankingRows();
-  renderCharacterList(latestCharacters);
-  updateSelectedCharacterFavorite();
-}
-
 function renderLatest(payload) {
   const snapshot = payload.snapshot;
   const entries = payload.entries || [];
@@ -279,14 +227,12 @@ function renderLatest(payload) {
 function renderRankingRows() {
   rankingRows.innerHTML = latestEntries.map((entry) => {
     const isNew = entry.movement_direction === "new";
-    const favorite = isFavorite(entry.character_key);
-    const rowClass = [isNew ? "is-new" : "", favorite ? "is-favorite" : ""].filter(Boolean).join(" ");
+    const rowClass = isNew ? "is-new" : "";
     return `
       <tr class="${rowClass}" data-key="${escapeHtml(entry.character_key)}">
         <td><span class="rank-badge ${rankClass(entry.rank)}">${entry.rank}</span></td>
         <td>
           <span class="name-cell">
-            ${favoriteButton(entry.character_key, entry.character_name)}
             <span>${escapeHtml(entry.character_name)}</span>
             ${isNew ? '<span class="new-pill">NEW</span>' : ""}
           </span>
@@ -302,13 +248,6 @@ function renderRankingRows() {
   [...rankingRows.querySelectorAll("tr[data-key]")].forEach((row) => {
     row.addEventListener("click", () => {
       selectCharacter(row.dataset.key, { scrollRanking: false, scrollCharacters: true });
-    });
-  });
-
-  [...rankingRows.querySelectorAll("[data-favorite-key]")].forEach((button) => {
-    button.addEventListener("click", (event) => {
-      event.stopPropagation();
-      toggleFavorite(button.dataset.favoriteKey);
     });
   });
 }
@@ -359,9 +298,8 @@ async function loadCharacters(query = "") {
 
 function renderCharacterList(characters) {
   characterList.innerHTML = characters.map((character) => `
-    <div class="character-item ${character.character_key === selectedKey ? "active" : ""} ${isFavorite(character.character_key) ? "is-favorite" : ""}" data-key="${escapeHtml(character.character_key)}" role="button" tabindex="0">
+    <div class="character-item ${character.character_key === selectedKey ? "active" : ""}" data-key="${escapeHtml(character.character_key)}" role="button" tabindex="0">
       <span class="character-name-line">
-        ${favoriteButton(character.character_key, character.character_name)}
         <strong>${escapeHtml(character.character_name)}</strong>
       </span>
       <span class="mini-rank ${rankClass(character.best_rank)}">#${character.best_rank}</span>
@@ -379,13 +317,6 @@ function renderCharacterList(characters) {
       selectCharacter(item.dataset.key, { scrollRanking: true, scrollCharacters: false });
     });
   });
-
-  [...characterList.querySelectorAll("[data-favorite-key]")].forEach((button) => {
-    button.addEventListener("click", (event) => {
-      event.stopPropagation();
-      toggleFavorite(button.dataset.favoriteKey);
-    });
-  });
 }
 
 async function selectCharacter(key, options = {}) {
@@ -400,10 +331,6 @@ async function selectCharacter(key, options = {}) {
   currentHistory = history;
   const latest = history[history.length - 1];
   selectedCharacter.innerHTML = latest ? selectedCharacterHtml(latest, history.length) : "";
-  const favoriteControl = selectedCharacter.querySelector("[data-favorite-key]");
-  if (favoriteControl) {
-    favoriteControl.addEventListener("click", () => toggleFavorite(favoriteControl.dataset.favoriteKey));
-  }
   renderChart(history);
   renderHistory(history);
   if (scrollCharacters) {
@@ -416,19 +343,8 @@ async function selectCharacter(key, options = {}) {
 
 function selectedCharacterHtml(latest, sampleCount) {
   return `
-    <span>${favoriteButton(latest.character_key, latest.character_name)}</span>
     <span>${escapeHtml(latest.character_name)} @ ${escapeHtml(latest.server_name)} · ${sampleCount}개 스냅샷</span>
   `;
-}
-
-function updateSelectedCharacterFavorite() {
-  if (!selectedKey || currentHistory.length === 0) return;
-  const latest = currentHistory[currentHistory.length - 1];
-  selectedCharacter.innerHTML = selectedCharacterHtml(latest, currentHistory.length);
-  const favoriteControl = selectedCharacter.querySelector("[data-favorite-key]");
-  if (favoriteControl) {
-    favoriteControl.addEventListener("click", () => toggleFavorite(favoriteControl.dataset.favoriteKey));
-  }
 }
 
 function scrollCharacterIntoView(key) {
