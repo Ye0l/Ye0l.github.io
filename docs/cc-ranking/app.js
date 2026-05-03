@@ -12,6 +12,8 @@ const searchInput = document.querySelector("#searchInput");
 const characterList = document.querySelector("#characterList");
 const selectedCharacter = document.querySelector("#selectedCharacter");
 const historyRows = document.querySelector("#historyRows");
+const themeToggle = document.querySelector("#themeToggle");
+const themeIcon = document.querySelector("#themeIcon");
 const canvas = document.querySelector("#rankChart");
 const ctx = canvas.getContext("2d");
 
@@ -20,6 +22,17 @@ let snapshots = [];
 let currentSnapshotIndex = -1;
 let currentHistory = [];
 let latestCharacters = [];
+let latestEntries = [];
+let favorites = loadStoredSet("ccRankingFavorites");
+
+const THEMES = ["dark", "light", "crystal", "rose"];
+const THEME_ICONS = {
+  dark: "☾",
+  light: "☀",
+  crystal: "✦",
+  rose: "◆",
+};
+const DEFAULT_THEME = "dark";
 
 const API_BASE = String(window.CC_API_BASE || "").replace(/\/$/, "");
 const STATIC_DATA_BASE = String(window.CC_STATIC_DATA_BASE || "static/data").replace(/\/$/, "");
@@ -146,9 +159,101 @@ function movementBadge(entry) {
   return `<span class="movement-chip ${movementClass}">${escapeHtml(text)}</span>`;
 }
 
+function loadStoredSet(key) {
+  try {
+    const values = JSON.parse(window.localStorage.getItem(key) || "[]");
+    return new Set(Array.isArray(values) ? values.map(String) : []);
+  } catch (error) {
+    const cookieValue = readCookie(key);
+    if (!cookieValue) return new Set();
+    try {
+      const values = JSON.parse(cookieValue);
+      return new Set(Array.isArray(values) ? values.map(String) : []);
+    } catch (cookieError) {
+      return new Set();
+    }
+  }
+}
+
+function storeFavorites() {
+  const value = JSON.stringify([...favorites]);
+  try {
+    window.localStorage.setItem("ccRankingFavorites", value);
+  } catch (error) {
+    writeCookie("ccRankingFavorites", value);
+  }
+}
+
+function storedTheme() {
+  try {
+    const value = window.localStorage.getItem("ccRankingTheme") || DEFAULT_THEME;
+    return THEMES.includes(value) ? value : DEFAULT_THEME;
+  } catch (error) {
+    const value = readCookie("ccRankingTheme") || DEFAULT_THEME;
+    return THEMES.includes(value) ? value : DEFAULT_THEME;
+  }
+}
+
+function applyTheme(theme) {
+  const nextTheme = THEMES.includes(theme) ? theme : DEFAULT_THEME;
+  document.body.dataset.theme = nextTheme;
+  themeIcon.textContent = THEME_ICONS[nextTheme] || THEME_ICONS[DEFAULT_THEME];
+  themeToggle.dataset.theme = nextTheme;
+  themeToggle.setAttribute("aria-label", `테마 변경: ${nextTheme}`);
+  themeToggle.title = `테마: ${nextTheme}`;
+  try {
+    window.localStorage.setItem("ccRankingTheme", nextTheme);
+  } catch (error) {
+    writeCookie("ccRankingTheme", nextTheme);
+  }
+  renderChart(currentHistory);
+}
+
+function nextTheme(theme) {
+  const index = THEMES.indexOf(theme);
+  return THEMES[(index + 1) % THEMES.length] || DEFAULT_THEME;
+}
+
+function readCookie(name) {
+  const prefix = `${name}=`;
+  const entry = document.cookie.split("; ").find((item) => item.startsWith(prefix));
+  return entry ? decodeURIComponent(entry.slice(prefix.length)) : "";
+}
+
+function writeCookie(name, value) {
+  document.cookie = `${name}=${encodeURIComponent(value)}; max-age=31536000; path=/; SameSite=Lax`;
+}
+
+function isFavorite(key) {
+  return favorites.has(String(key));
+}
+
+function favoriteButton(key, label) {
+  const active = isFavorite(key);
+  return `
+    <button type="button" class="favorite-button ${active ? "active" : ""}" data-favorite-key="${escapeHtml(key)}" aria-label="${escapeHtml(label)} 즐겨찾기 ${active ? "해제" : "추가"}" title="즐겨찾기">
+      ${active ? "★" : "☆"}
+    </button>
+  `;
+}
+
+function toggleFavorite(key) {
+  const normalizedKey = String(key);
+  if (favorites.has(normalizedKey)) {
+    favorites.delete(normalizedKey);
+  } else {
+    favorites.add(normalizedKey);
+  }
+  storeFavorites();
+  renderRankingRows();
+  renderCharacterList(latestCharacters);
+  updateSelectedCharacterFavorite();
+}
+
 function renderLatest(payload) {
   const snapshot = payload.snapshot;
   const entries = payload.entries || [];
+  latestEntries = entries;
   if (!snapshot) {
     seasonBadge.textContent = "Season -";
     snapshotMeta.textContent = "저장된 스냅샷이 없습니다.";
@@ -168,14 +273,23 @@ function renderLatest(payload) {
   leaderMeta.textContent = entries[0]
     ? `${entries[0].server_name} · ${entries[0].tier_label || "-"} · ${entries[0].wins ?? "-"}승`
     : "-";
-  rankingRows.innerHTML = entries.map((entry) => {
+  renderRankingRows();
+}
+
+function renderRankingRows() {
+  rankingRows.innerHTML = latestEntries.map((entry) => {
     const isNew = entry.movement_direction === "new";
-    const rowClass = isNew ? "is-new" : "";
+    const favorite = isFavorite(entry.character_key);
+    const rowClass = [isNew ? "is-new" : "", favorite ? "is-favorite" : ""].filter(Boolean).join(" ");
     return `
       <tr class="${rowClass}" data-key="${escapeHtml(entry.character_key)}">
         <td><span class="rank-badge ${rankClass(entry.rank)}">${entry.rank}</span></td>
         <td>
-          <span class="name-cell">${escapeHtml(entry.character_name)}${isNew ? '<span class="new-pill">NEW</span>' : ""}</span>
+          <span class="name-cell">
+            ${favoriteButton(entry.character_key, entry.character_name)}
+            <span>${escapeHtml(entry.character_name)}</span>
+            ${isNew ? '<span class="new-pill">NEW</span>' : ""}
+          </span>
         </td>
         <td>${escapeHtml(entry.server_name)}</td>
         <td><span class="tier-pill ${tierClass(entry.tier_label)}">${escapeHtml(entry.tier_label || "-")}</span></td>
@@ -188,6 +302,13 @@ function renderLatest(payload) {
   [...rankingRows.querySelectorAll("tr[data-key]")].forEach((row) => {
     row.addEventListener("click", () => {
       selectCharacter(row.dataset.key, { scrollRanking: false, scrollCharacters: true });
+    });
+  });
+
+  [...rankingRows.querySelectorAll("[data-favorite-key]")].forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleFavorite(button.dataset.favoriteKey);
     });
   });
 }
@@ -233,17 +354,36 @@ async function loadCharacters(query = "") {
   const payload = await api(`/api/characters?q=${encodeURIComponent(query)}`);
   const characters = payload.characters || [];
   latestCharacters = characters;
+  renderCharacterList(characters);
+}
+
+function renderCharacterList(characters) {
   characterList.innerHTML = characters.map((character) => `
-    <button type="button" class="character-item ${character.character_key === selectedKey ? "active" : ""}" data-key="${escapeHtml(character.character_key)}">
-      <strong>${escapeHtml(character.character_name)}</strong>
+    <div class="character-item ${character.character_key === selectedKey ? "active" : ""} ${isFavorite(character.character_key) ? "is-favorite" : ""}" data-key="${escapeHtml(character.character_key)}" role="button" tabindex="0">
+      <span class="character-name-line">
+        ${favoriteButton(character.character_key, character.character_name)}
+        <strong>${escapeHtml(character.character_name)}</strong>
+      </span>
       <span class="mini-rank ${rankClass(character.best_rank)}">#${character.best_rank}</span>
       <span class="character-meta">${escapeHtml(character.server_name)} · ${character.samples}회 기록 · 최고 ${character.best_rank} / 최저 ${character.worst_rank}</span>
-    </button>
+    </div>
   `).join("") || `<div class="empty">검색 결과가 없습니다.</div>`;
 
-  [...characterList.querySelectorAll("button[data-key]")].forEach((button) => {
-    button.addEventListener("click", () => {
-      selectCharacter(button.dataset.key, { scrollRanking: true, scrollCharacters: false });
+  [...characterList.querySelectorAll("[data-key]")].forEach((item) => {
+    item.addEventListener("click", () => {
+      selectCharacter(item.dataset.key, { scrollRanking: true, scrollCharacters: false });
+    });
+    item.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      selectCharacter(item.dataset.key, { scrollRanking: true, scrollCharacters: false });
+    });
+  });
+
+  [...characterList.querySelectorAll("[data-favorite-key]")].forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleFavorite(button.dataset.favoriteKey);
     });
   });
 }
@@ -259,9 +399,11 @@ async function selectCharacter(key, options = {}) {
   const history = payload.history || [];
   currentHistory = history;
   const latest = history[history.length - 1];
-  selectedCharacter.textContent = latest
-    ? `${latest.character_name} @ ${latest.server_name} · ${history.length}개 스냅샷`
-    : "";
+  selectedCharacter.innerHTML = latest ? selectedCharacterHtml(latest, history.length) : "";
+  const favoriteControl = selectedCharacter.querySelector("[data-favorite-key]");
+  if (favoriteControl) {
+    favoriteControl.addEventListener("click", () => toggleFavorite(favoriteControl.dataset.favoriteKey));
+  }
   renderChart(history);
   renderHistory(history);
   if (scrollCharacters) {
@@ -269,6 +411,23 @@ async function selectCharacter(key, options = {}) {
   }
   if (scrollRanking) {
     scrollRankingIntoView(key);
+  }
+}
+
+function selectedCharacterHtml(latest, sampleCount) {
+  return `
+    <span>${favoriteButton(latest.character_key, latest.character_name)}</span>
+    <span>${escapeHtml(latest.character_name)} @ ${escapeHtml(latest.server_name)} · ${sampleCount}개 스냅샷</span>
+  `;
+}
+
+function updateSelectedCharacterFavorite() {
+  if (!selectedKey || currentHistory.length === 0) return;
+  const latest = currentHistory[currentHistory.length - 1];
+  selectedCharacter.innerHTML = selectedCharacterHtml(latest, currentHistory.length);
+  const favoriteControl = selectedCharacter.querySelector("[data-favorite-key]");
+  if (favoriteControl) {
+    favoriteControl.addEventListener("click", () => toggleFavorite(favoriteControl.dataset.favoriteKey));
   }
 }
 
@@ -314,8 +473,9 @@ function renderHistory(history) {
 
 function renderChart(history) {
   const chartSize = resizeCanvas();
+  const styles = getComputedStyle(document.body);
   ctx.clearRect(0, 0, chartSize.width, chartSize.height);
-  ctx.fillStyle = "#07111f";
+  ctx.fillStyle = styles.getPropertyValue("--chart-bg").trim() || "#07111f";
   ctx.fillRect(0, 0, chartSize.width, chartSize.height);
 
   const padding = 42;
@@ -343,7 +503,7 @@ function renderChart(history) {
     return { x, y, row };
   });
 
-  ctx.strokeStyle = "#66e3d3";
+  ctx.strokeStyle = styles.getPropertyValue("--chart-line").trim() || "#66e3d3";
   ctx.lineWidth = 3;
   ctx.beginPath();
   points.forEach((point, index) => {
@@ -354,7 +514,7 @@ function renderChart(history) {
     ctx.stroke();
   }
 
-  ctx.fillStyle = "#f7c76a";
+  ctx.fillStyle = styles.getPropertyValue("--chart-point").trim() || "#f7c76a";
   points.forEach((point) => {
     ctx.beginPath();
     ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
@@ -364,19 +524,20 @@ function renderChart(history) {
   drawTierChangeMarkers(points, chartSize.height);
   drawDateLabels(points, chartSize.height);
 
-  ctx.fillStyle = "#dbeafe";
+  ctx.fillStyle = styles.getPropertyValue("--chart-text").trim() || "#dbeafe";
   ctx.font = "700 12px sans-serif";
   points.slice(-6).forEach((point) => {
     ctx.fillText(`#${point.row.rank}`, point.x - 12, point.y - 12);
   });
 
-  ctx.fillStyle = "#93a4b8";
+  ctx.fillStyle = styles.getPropertyValue("--chart-muted").trim() || "#93a4b8";
   ctx.font = "12px sans-serif";
   ctx.fillText(`best #${minRank}`, padding, 20);
   ctx.fillText(`worst #${maxRank}`, padding, chartSize.height - 14);
 }
 
 function drawTierChangeMarkers(points, chartHeight) {
+  const styles = getComputedStyle(document.body);
   const changes = points.filter((point, index) => {
     if (index === 0) return false;
     return normalizeTier(point.row.tier_label) !== normalizeTier(points[index - 1].row.tier_label);
@@ -389,7 +550,7 @@ function drawTierChangeMarkers(points, chartHeight) {
     const labelX = Math.min(Math.max(point.x - labelWidth / 2, 8), canvas.clientWidth - labelWidth - 8);
     const labelY = Math.max(24, Math.min(point.y - 24 - (index % 2) * 18, chartHeight - 54));
 
-    ctx.fillStyle = "#ff8fb3";
+    ctx.fillStyle = styles.getPropertyValue("--chart-marker").trim() || "#ff8fb3";
     ctx.beginPath();
     ctx.moveTo(point.x, point.y - 9);
     ctx.lineTo(point.x + 8, point.y);
@@ -398,21 +559,22 @@ function drawTierChangeMarkers(points, chartHeight) {
     ctx.closePath();
     ctx.fill();
 
-    ctx.strokeStyle = "rgba(255, 143, 179, 0.42)";
+    ctx.strokeStyle = styles.getPropertyValue("--chart-marker-line").trim() || "rgba(255, 143, 179, 0.42)";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(point.x, point.y);
     ctx.lineTo(point.x, labelY + 5);
     ctx.stroke();
 
-    ctx.fillStyle = "#ffd4df";
+    ctx.fillStyle = styles.getPropertyValue("--chart-marker-text").trim() || "#ffd4df";
     ctx.fillText(label, labelX, labelY);
   });
 }
 
 function drawDateLabels(points, chartHeight) {
   const labelPoints = dateLabelPoints(points);
-  ctx.fillStyle = "#93a4b8";
+  const styles = getComputedStyle(document.body);
+  ctx.fillStyle = styles.getPropertyValue("--chart-muted").trim() || "#93a4b8";
   ctx.font = "11px sans-serif";
   labelPoints.forEach((point) => {
     const label = formatGraphDate(point.row.source_time_text || point.row.scraped_at);
@@ -457,7 +619,8 @@ function resizeCanvas() {
 }
 
 function drawChartGrid(padding, plotWidth, plotHeight) {
-  ctx.strokeStyle = "rgba(148, 163, 184, 0.18)";
+  const styles = getComputedStyle(document.body);
+  ctx.strokeStyle = styles.getPropertyValue("--chart-grid").trim() || "rgba(148, 163, 184, 0.18)";
   ctx.lineWidth = 1;
   for (let i = 0; i < 5; i += 1) {
     const y = padding + (plotHeight / 4) * i;
@@ -476,6 +639,7 @@ function drawChartGrid(padding, plotWidth, plotHeight) {
 }
 
 function drawPreviewLine(padding, plotWidth, plotHeight) {
+  const styles = getComputedStyle(document.body);
   const points = [
     [padding, padding + plotHeight * 0.65],
     [padding + plotWidth * 0.32, padding + plotHeight * 0.46],
@@ -483,7 +647,7 @@ function drawPreviewLine(padding, plotWidth, plotHeight) {
     [padding + plotWidth, padding + plotHeight * 0.28],
   ];
   ctx.setLineDash([8, 8]);
-  ctx.strokeStyle = "rgba(102, 227, 211, 0.48)";
+  ctx.strokeStyle = styles.getPropertyValue("--chart-preview").trim() || "rgba(102, 227, 211, 0.48)";
   ctx.lineWidth = 3;
   ctx.beginPath();
   points.forEach(([x, y], index) => {
@@ -493,7 +657,7 @@ function drawPreviewLine(padding, plotWidth, plotHeight) {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  ctx.fillStyle = "rgba(247, 199, 106, 0.74)";
+  ctx.fillStyle = styles.getPropertyValue("--chart-point").trim() || "rgba(247, 199, 106, 0.74)";
   points.forEach(([x, y]) => {
     ctx.beginPath();
     ctx.arc(x, y, 4, 0, Math.PI * 2);
@@ -502,7 +666,8 @@ function drawPreviewLine(padding, plotWidth, plotHeight) {
 }
 
 function drawChartMessage(message, height) {
-  ctx.fillStyle = "#93a4b8";
+  const styles = getComputedStyle(document.body);
+  ctx.fillStyle = styles.getPropertyValue("--chart-muted").trim() || "#93a4b8";
   ctx.font = "13px sans-serif";
   ctx.fillText(message, 24, height - 24);
 }
@@ -517,6 +682,12 @@ function escapeHtml(value) {
 }
 
 let searchTimer = null;
+applyTheme(storedTheme());
+
+themeToggle.addEventListener("click", () => {
+  applyTheme(nextTheme(document.body.dataset.theme));
+});
+
 searchInput.addEventListener("input", () => {
   window.clearTimeout(searchTimer);
   searchTimer = window.setTimeout(() => loadCharacters(searchInput.value), 180);
