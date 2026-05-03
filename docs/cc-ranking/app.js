@@ -9,9 +9,7 @@ const snapshotSelect = document.querySelector("#snapshotSelect");
 const prevSnapshot = document.querySelector("#prevSnapshot");
 const nextSnapshot = document.querySelector("#nextSnapshot");
 const searchInput = document.querySelector("#searchInput");
-const characterList = document.querySelector("#characterList");
 const selectedCharacter = document.querySelector("#selectedCharacter");
-const historyRows = document.querySelector("#historyRows");
 const themeToggle = document.querySelector("#themeToggle");
 const themeIcon = document.querySelector("#themeIcon");
 const canvas = document.querySelector("#rankChart");
@@ -21,8 +19,9 @@ let selectedKey = null;
 let snapshots = [];
 let currentSnapshotIndex = -1;
 let currentHistory = [];
-let latestCharacters = [];
 let latestEntries = [];
+const snapshotPayloadCache = new Map();
+let leaderStreakToken = 0;
 
 const THEMES = ["dark", "light", "crystal", "rose"];
 const THEME_ICONS = {
@@ -202,6 +201,9 @@ function renderLatest(payload) {
   const snapshot = payload.snapshot;
   const entries = payload.entries || [];
   latestEntries = entries;
+  if (snapshot) {
+    snapshotPayloadCache.set(String(snapshot.id), payload);
+  }
   if (!snapshot) {
     seasonBadge.textContent = "Season -";
     snapshotMeta.textContent = "저장된 스냅샷이 없습니다.";
@@ -219,13 +221,23 @@ function renderLatest(payload) {
   entryCount.textContent = `${entries.length}명`;
   leaderStat.textContent = entries[0] ? entries[0].character_name : "-";
   leaderMeta.textContent = entries[0]
-    ? `${entries[0].server_name} · ${entries[0].tier_label || "-"} · ${entries[0].wins ?? "-"}승`
+    ? `${entries[0].server_name} · ${entries[0].tier_label || "-"} · ${entries[0].wins ?? "-"}승 · 1위 유지일 계산 중`
     : "-";
   renderRankingRows();
+  updateLeaderStreak(snapshot, entries[0]);
 }
 
 function renderRankingRows() {
-  rankingRows.innerHTML = latestEntries.map((entry) => {
+  const entries = filteredRankingEntries();
+  entryCount.textContent = searchInput.value.trim()
+    ? `${entries.length} / ${latestEntries.length}명`
+    : `${latestEntries.length}명`;
+  if (entries.length === 0) {
+    rankingRows.innerHTML = `<tr><td class="empty" colspan="6">검색 결과가 없습니다.</td></tr>`;
+    return;
+  }
+
+  rankingRows.innerHTML = entries.map((entry) => {
     const isNew = entry.movement_direction === "new";
     const rowClass = isNew ? "is-new" : "";
     return `
@@ -247,9 +259,54 @@ function renderRankingRows() {
 
   [...rankingRows.querySelectorAll("tr[data-key]")].forEach((row) => {
     row.addEventListener("click", () => {
-      selectCharacter(row.dataset.key, { scrollRanking: false, scrollCharacters: true });
+      selectCharacter(row.dataset.key, { scrollRanking: false });
     });
   });
+}
+
+function filteredRankingEntries() {
+  const query = searchInput.value.trim().toLowerCase();
+  if (!query) return latestEntries;
+  return latestEntries.filter((entry) => (
+    String(entry.character_name).toLowerCase().includes(query)
+    || String(entry.server_name).toLowerCase().includes(query)
+  ));
+}
+
+async function updateLeaderStreak(snapshot, leader) {
+  const token = ++leaderStreakToken;
+  if (!snapshot || !leader) return;
+  let streak = 1;
+  try {
+    streak = await leaderStreakDays(snapshot.id, leader.character_key);
+  } catch (error) {
+    streak = 1;
+  }
+  if (token !== leaderStreakToken) return;
+  leaderMeta.textContent = `${leader.server_name} · ${leader.tier_label || "-"} · ${leader.wins ?? "-"}승 · 1위 ${streak}일차`;
+}
+
+async function leaderStreakDays(snapshotId, leaderKey) {
+  const index = snapshots.findIndex((snapshot) => String(snapshot.id) === String(snapshotId));
+  if (index < 0) return 1;
+  let streak = 0;
+  for (let cursor = index; cursor >= 0; cursor -= 1) {
+    const payload = await snapshotPayload(snapshots[cursor].id);
+    const topEntry = (payload.entries || [])[0];
+    if (!topEntry || topEntry.character_key !== leaderKey) break;
+    streak += 1;
+  }
+  return Math.max(1, streak);
+}
+
+async function snapshotPayload(snapshotId) {
+  const key = String(snapshotId);
+  if (!snapshotPayloadCache.has(key)) {
+    snapshotPayloadCache.set(key, api(`/api/snapshot?id=${encodeURIComponent(snapshotId)}`));
+  }
+  const payload = await snapshotPayloadCache.get(key);
+  snapshotPayloadCache.set(key, payload);
+  return payload;
 }
 
 async function loadLatest() {
@@ -262,7 +319,7 @@ async function loadSnapshots() {
   const payload = await api("/api/snapshots");
   snapshots = (payload.snapshots || []).slice().reverse();
   snapshotSelect.innerHTML = snapshots.map((snapshot, index) => `
-    <option value="${snapshot.id}">${escapeHtml(snapshot.source_time_text || snapshot.scraped_at || `Snapshot ${snapshot.id}`)}</option>
+    <option value="${snapshot.id}">${escapeHtml(formatSnapshotDate(snapshot.source_time_text || snapshot.scraped_at || `Snapshot ${snapshot.id}`))}</option>
   `).join("");
   if (snapshots.length === 0) {
     snapshotSelect.innerHTML = `<option>저장된 데이터 없음</option>`;
@@ -270,6 +327,13 @@ async function loadSnapshots() {
     prevSnapshot.disabled = true;
     nextSnapshot.disabled = true;
   }
+}
+
+function formatSnapshotDate(value) {
+  const text = String(value || "-");
+  const match = text.match(/\d{4}[-/.]\d{1,2}[-/.]\d{1,2}/);
+  if (match) return match[0].replaceAll("/", "-").replaceAll(".", "-");
+  return text.split(/\s+/)[0] || "-";
 }
 
 async function loadSnapshot(snapshotId) {
@@ -289,53 +353,15 @@ function setCurrentSnapshot(snapshotId) {
   nextSnapshot.disabled = currentSnapshotIndex < 0 || currentSnapshotIndex >= snapshots.length - 1;
 }
 
-async function loadCharacters(query = "") {
-  const payload = await api(`/api/characters?q=${encodeURIComponent(query)}`);
-  const characters = payload.characters || [];
-  latestCharacters = characters;
-  renderCharacterList(characters);
-}
-
-function renderCharacterList(characters) {
-  characterList.innerHTML = characters.map((character) => `
-    <div class="character-item ${character.character_key === selectedKey ? "active" : ""}" data-key="${escapeHtml(character.character_key)}" role="button" tabindex="0">
-      <span class="character-name-line">
-        <strong>${escapeHtml(character.character_name)}</strong>
-      </span>
-      <span class="mini-rank ${rankClass(character.best_rank)}">#${character.best_rank}</span>
-      <span class="character-meta">${escapeHtml(character.server_name)} · ${character.samples}회 기록 · 최고 ${character.best_rank} / 최저 ${character.worst_rank}</span>
-    </div>
-  `).join("") || `<div class="empty">검색 결과가 없습니다.</div>`;
-
-  [...characterList.querySelectorAll("[data-key]")].forEach((item) => {
-    item.addEventListener("click", () => {
-      selectCharacter(item.dataset.key, { scrollRanking: true, scrollCharacters: false });
-    });
-    item.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      selectCharacter(item.dataset.key, { scrollRanking: true, scrollCharacters: false });
-    });
-  });
-}
-
 async function selectCharacter(key, options = {}) {
-  const { scrollRanking = true, scrollCharacters = true } = options;
+  const { scrollRanking = true } = options;
   selectedKey = key;
-  if (scrollCharacters && !latestCharacters.some((character) => character.character_key === key)) {
-    searchInput.value = "";
-  }
-  await loadCharacters(searchInput.value);
   const payload = await api(`/api/history?key=${encodeURIComponent(key)}`);
   const history = payload.history || [];
   currentHistory = history;
   const latest = history[history.length - 1];
   selectedCharacter.innerHTML = latest ? selectedCharacterHtml(latest, history.length) : "";
   renderChart(history);
-  renderHistory(history);
-  if (scrollCharacters) {
-    scrollCharacterIntoView(key);
-  }
   if (scrollRanking) {
     scrollRankingIntoView(key);
   }
@@ -347,11 +373,6 @@ function selectedCharacterHtml(latest, sampleCount) {
   `;
 }
 
-function scrollCharacterIntoView(key) {
-  const target = characterList.querySelector(`[data-key="${cssEscape(key)}"]`);
-  scrollAndFlash(target);
-}
-
 function scrollRankingIntoView(key) {
   const target = rankingRows.querySelector(`[data-key="${cssEscape(key)}"]`);
   scrollAndFlash(target);
@@ -359,7 +380,7 @@ function scrollRankingIntoView(key) {
 
 function scrollAndFlash(element) {
   if (!element) return;
-  const container = element.closest(".table-wrap, .character-list");
+  const container = element.closest(".table-wrap");
   if (container) {
     const elementTop = element.offsetTop;
     const centeredTop = elementTop - (container.clientHeight / 2) + (element.clientHeight / 2);
@@ -375,16 +396,6 @@ function cssEscape(value) {
     return window.CSS.escape(value);
   }
   return String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-}
-
-function renderHistory(history) {
-  historyRows.innerHTML = history.slice().reverse().map((row) => `
-    <div class="history-row">
-      <span class="mini-rank ${rankClass(row.rank)}">#${row.rank}</span>
-      <span>${escapeHtml(row.source_time_text || row.scraped_at)}</span>
-      <strong>${row.wins ?? "-"}승</strong>
-    </div>
-  `).join("") || `<div class="empty">추이 데이터가 없습니다.</div>`;
 }
 
 function renderChart(history) {
@@ -606,7 +617,7 @@ themeToggle.addEventListener("click", () => {
 
 searchInput.addEventListener("input", () => {
   window.clearTimeout(searchTimer);
-  searchTimer = window.setTimeout(() => loadCharacters(searchInput.value), 180);
+  searchTimer = window.setTimeout(() => renderRankingRows(), 120);
 });
 
 snapshotSelect.addEventListener("change", () => {
@@ -636,7 +647,6 @@ loadSnapshots()
     const initialSnapshot = new URLSearchParams(window.location.search).get("snapshot");
     return initialSnapshot ? loadSnapshot(initialSnapshot) : loadLatest();
   })
-  .then(() => loadCharacters())
   .catch((error) => {
     snapshotMeta.textContent = error.message;
   });

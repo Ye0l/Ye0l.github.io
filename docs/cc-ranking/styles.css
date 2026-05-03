@@ -135,31 +135,33 @@ body {
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   user-select: none;
   -webkit-user-select: none;
-  scrollbar-color: rgba(102, 227, 211, 0.42) rgba(15, 23, 42, 0.46);
+  scrollbar-color: rgba(148, 163, 184, 0.38) transparent;
   scrollbar-width: thin;
 }
 
 body[data-theme="light"] {
-  scrollbar-color: rgba(15, 118, 110, 0.36) rgba(226, 232, 240, 0.68);
+  scrollbar-color: rgba(100, 116, 139, 0.32) transparent;
 }
 
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.42);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  border: 3px solid rgba(15, 23, 42, 0.42);
+  border: 3px solid transparent;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(102, 227, 211, 0.72), rgba(96, 165, 250, 0.48));
+  background: rgba(148, 163, 184, 0.42);
+  background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(102, 227, 211, 0.9), rgba(96, 165, 250, 0.66));
+  background: rgba(148, 163, 184, 0.62);
+  background-clip: content-box;
 }
 
 ::-webkit-scrollbar-corner {
@@ -167,12 +169,12 @@ body[data-theme="light"] {
 }
 
 body[data-theme="light"]::-webkit-scrollbar-track {
-  background: rgba(226, 232, 240, 0.68);
+  background: transparent;
 }
 
 body[data-theme="light"]::-webkit-scrollbar-thumb {
-  border-color: rgba(226, 232, 240, 0.68);
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.44), rgba(37, 99, 235, 0.3));
+  background: rgba(100, 116, 139, 0.34);
+  background-clip: content-box;
 }
 
 .table-wrap,
@@ -243,6 +245,10 @@ body[data-theme="light"] code::-webkit-scrollbar-thumb {
   justify-content: space-between;
   gap: 24px;
   padding: 30px 34px 18px;
+}
+
+.topbar > div {
+  min-width: 0;
 }
 
 h1,
@@ -396,12 +402,51 @@ button:disabled {
 }
 
 .snapshot-nav {
-  display: grid;
-  grid-template-columns: auto minmax(320px, 500px) auto;
+  display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
   padding: 0 18px 16px;
+}
+
+.snapshot-nav input[type="search"] {
+  flex: 1 1 260px;
+  min-width: 180px;
+  height: 36px;
+  margin: 0;
+}
+
+.snapshot-control {
+  display: inline-grid;
+  grid-template-columns: minmax(300px, 430px) auto;
+  align-items: center;
+  overflow: hidden;
+  flex: 0 0 auto;
+  min-width: 0;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+  background: var(--control-bg);
+}
+
+.snapshot-stepper {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+  border-left: 1px solid var(--line);
+  background: transparent;
+}
+
+.snapshot-stepper .nav-button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.snapshot-stepper .nav-button + .nav-button {
+  border-left: 1px solid var(--line);
+}
+
+.snapshot-stepper .nav-button:hover {
+  background: rgba(30, 41, 59, 0.9);
 }
 
 .snapshot-select-wrap {
@@ -411,10 +456,10 @@ button:disabled {
   gap: 10px;
   min-width: 0;
   height: 36px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  border-radius: 999px;
+  border: 0;
+  border-radius: 0;
   padding: 0 8px 0 14px;
-  background: var(--control-bg);
+  background: transparent;
 }
 
 .snapshot-select-wrap span {
@@ -456,7 +501,7 @@ button:disabled {
   grid-template-columns: auto minmax(180px, max-content) minmax(0, 1fr);
   align-items: center;
   gap: 12px;
-  margin: 0 18px 18px;
+  margin: 0 0 10px;
   border: 1px solid var(--leader-line);
   border-radius: 18px;
   padding: 13px 16px;
@@ -495,6 +540,12 @@ button:disabled {
   align-items: start;
   gap: 18px;
   padding: 0 18px 18px;
+}
+
+.ranking-column {
+  display: grid;
+  gap: 0;
+  min-width: 0;
 }
 
 @media (min-width: 1500px) {
@@ -893,7 +944,8 @@ body[data-theme="light"] input[type="search"]:focus {
   align-self: start;
   display: flex;
   flex-direction: column;
-  padding-bottom: 16px;
+  min-height: calc(100vh - 220px);
+  padding-bottom: 18px;
 }
 
 input[type="search"] {
@@ -1019,8 +1071,8 @@ tr.focus-flash td {
 canvas {
   display: block;
   width: calc(100% - 32px);
-  height: 260px;
-  flex: 0 0 260px;
+  height: clamp(360px, calc(100vh - 340px), 620px);
+  flex: 1 1 auto;
   margin: 0 16px 12px;
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -1078,10 +1130,66 @@ code {
   white-space: nowrap;
 }
 
+@media (orientation: portrait) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .snapshot-nav {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .snapshot-nav input[type="search"] {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .snapshot-control,
+  .snapshot-stepper {
+    width: 100%;
+  }
+
+  .snapshot-control {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .snapshot-stepper .nav-button {
+    width: auto;
+  }
+
+  .leader-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-panel {
+    min-height: 0;
+  }
+
+  canvas {
+    height: 320px;
+    flex-basis: 320px;
+  }
+}
+
 @media (max-width: 980px) {
   .topbar {
     align-items: flex-start;
     flex-direction: column;
+    position: relative;
+    gap: 14px;
+    padding: 24px 18px 16px;
+  }
+
+  .topbar > div {
+    width: 100%;
+    padding-right: 58px;
+  }
+
+  .theme-toggle {
+    position: absolute;
+    top: 24px;
+    right: 18px;
   }
 
   .layout {
@@ -1090,11 +1198,39 @@ code {
 
   .api-panel,
   .snapshot-nav {
-    grid-template-columns: 1fr;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .snapshot-nav input[type="search"] {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .snapshot-control,
+  .snapshot-stepper {
+    width: 100%;
+  }
+
+  .snapshot-control {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .snapshot-stepper .nav-button {
+    width: auto;
   }
 
   .leader-strip {
     grid-template-columns: 1fr;
+  }
+
+  .detail-panel {
+    min-height: 0;
+  }
+
+  canvas {
+    height: 320px;
+    flex-basis: 320px;
   }
 
   .table-wrap {
