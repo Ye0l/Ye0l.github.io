@@ -28,6 +28,7 @@ let latestEntries = [];
 const snapshotPayloadCache = new Map();
 let leaderStreakToken = 0;
 let chartTransitionTimer = null;
+const SKELETON_ROW_COUNT = 12;
 
 const THEMES = ["dark", "light", "crystal", "rose"];
 const THEME_ICONS = {
@@ -250,7 +251,75 @@ function writeCookie(name, value) {
   document.cookie = `${name}=${encodeURIComponent(value)}; max-age=31536000; path=/; SameSite=Lax`;
 }
 
+function renderDashboardSkeleton() {
+  document.body.classList.add("is-loading");
+  seasonBadge.innerHTML = '<span class="skeleton-line skeleton-season"></span>';
+  snapshotMeta.innerHTML = '<span class="skeleton-line skeleton-meta"></span>';
+  totalMeta.innerHTML = '<span class="skeleton-line skeleton-total"></span>';
+  entryCount.innerHTML = '<span class="skeleton-line skeleton-count"></span>';
+  leaderStat.innerHTML = '<span class="skeleton-line skeleton-leader-name"></span>';
+  leaderMeta.innerHTML = '<span class="skeleton-line skeleton-leader-meta"></span>';
+  snapshotSelect.innerHTML = "<option>불러오는 중</option>";
+  snapshotSelect.disabled = true;
+  prevSnapshot.disabled = true;
+  nextSnapshot.disabled = true;
+  rankingRows.innerHTML = skeletonRowsHtml(SKELETON_ROW_COUNT);
+  renderCharacterSkeleton();
+  renderMapSkeleton();
+}
+
+function renderSnapshotSkeleton() {
+  entryCount.innerHTML = '<span class="skeleton-line skeleton-count"></span>';
+  leaderStat.innerHTML = '<span class="skeleton-line skeleton-leader-name"></span>';
+  leaderMeta.innerHTML = '<span class="skeleton-line skeleton-leader-meta"></span>';
+  rankingRows.innerHTML = skeletonRowsHtml(SKELETON_ROW_COUNT);
+}
+
+function renderCharacterSkeleton() {
+  selectedCharacter.innerHTML = `
+    <span class="skeleton-line skeleton-selected-name"></span>
+    <span class="skeleton-line skeleton-selected-tier"></span>
+    <span class="skeleton-line skeleton-selected-count"></span>
+  `;
+  seasonExtremes.innerHTML = `
+    <div class="extreme-card skeleton-card" aria-hidden="true">
+      <span class="skeleton-line skeleton-card-label"></span>
+      <strong><span class="skeleton-line skeleton-card-title"></span></strong>
+      <small><span class="skeleton-line skeleton-card-meta"></span></small>
+    </div>
+    <div class="extreme-card skeleton-card" aria-hidden="true">
+      <span class="skeleton-line skeleton-card-label"></span>
+      <strong><span class="skeleton-line skeleton-card-title"></span></strong>
+      <small><span class="skeleton-line skeleton-card-meta"></span></small>
+    </div>
+  `;
+  canvas.classList.add("chart-loading");
+}
+
+function renderMapSkeleton() {
+  currentMapName.innerHTML = '<span class="skeleton-line skeleton-map-name"></span>';
+  currentMapTime.innerHTML = '<span class="skeleton-line skeleton-map-time"></span>';
+  nextMapName.innerHTML = '<span class="skeleton-line skeleton-map-name"></span>';
+  nextMapTime.innerHTML = '<span class="skeleton-line skeleton-map-time"></span>';
+}
+
+function skeletonRowsHtml(count) {
+  return Array.from({ length: count }, (_, index) => `
+    <tr class="skeleton-row" aria-hidden="true">
+      <td><span class="skeleton-line skeleton-rank"></span></td>
+      <td><span class="skeleton-line ${index % 3 === 0 ? "skeleton-name-wide" : "skeleton-name"}"></span></td>
+      <td><span class="skeleton-line skeleton-server"></span></td>
+      <td><span class="skeleton-line skeleton-tier"></span></td>
+      <td><span class="skeleton-line skeleton-points"></span></td>
+      <td><span class="skeleton-line skeleton-wins"></span></td>
+      <td><span class="skeleton-line skeleton-movement"></span></td>
+    </tr>
+  `).join("");
+}
+
 function renderLatest(payload) {
+  document.body.classList.remove("is-loading");
+  canvas.classList.remove("chart-loading");
   const snapshot = payload.snapshot;
   const entries = payload.entries || [];
   latestEntries = entries;
@@ -264,8 +333,10 @@ function renderLatest(payload) {
     entryCount.textContent = "";
     leaderStat.textContent = "-";
     leaderMeta.textContent = "-";
+    selectedCharacter.innerHTML = "";
     seasonExtremes.innerHTML = "";
     rankingRows.innerHTML = `<tr><td class="empty" colspan="7">아직 데이터가 없습니다.</td></tr>`;
+    updateChart([], { animate: false });
     return;
   }
 
@@ -279,6 +350,9 @@ function renderLatest(payload) {
     : "-";
   renderRankingRows();
   updateLeaderStreak(snapshot, entries[0]);
+  if (currentHistory.length === 0) {
+    updateChart([], { animate: false });
+  }
 }
 
 function renderRankingRows() {
@@ -368,6 +442,7 @@ async function loadLatest() {
   const payload = await api("/api/latest");
   renderLatest(payload);
   setCurrentSnapshot(payload.snapshot?.id);
+  await selectDefaultCharacter();
 }
 
 async function loadMapRotation() {
@@ -463,6 +538,8 @@ async function loadSnapshots() {
     snapshotSelect.disabled = true;
     prevSnapshot.disabled = true;
     nextSnapshot.disabled = true;
+  } else {
+    snapshotSelect.disabled = false;
   }
 }
 
@@ -474,11 +551,18 @@ function formatSnapshotDate(value) {
 }
 
 async function loadSnapshot(snapshotId) {
+  renderSnapshotSkeleton();
   renderLatest(await api(`/api/snapshot?id=${encodeURIComponent(snapshotId)}`));
   setCurrentSnapshot(Number(snapshotId));
+  await selectDefaultCharacter();
   const url = new URL(window.location.href);
   url.searchParams.set("snapshot", snapshotId);
   window.history.replaceState({}, "", url);
+}
+
+async function selectDefaultCharacter() {
+  if (selectedKey || !latestEntries[0]) return;
+  await selectCharacter(latestEntries[0].character_key, { scrollRanking: false });
 }
 
 function setCurrentSnapshot(snapshotId) {
@@ -493,15 +577,23 @@ function setCurrentSnapshot(snapshotId) {
 async function selectCharacter(key, options = {}) {
   const { scrollRanking = true } = options;
   selectedKey = key;
-  const payload = await api(`/api/history?key=${encodeURIComponent(key)}`);
-  const history = payload.history || [];
-  currentHistory = history;
-  const latest = history[history.length - 1];
-  selectedCharacter.innerHTML = latest ? selectedCharacterHtml(latest, history.length) : "";
-  seasonExtremes.innerHTML = latest ? seasonExtremesHtml(history, latest.season) : "";
-  updateChart(history);
-  if (scrollRanking) {
-    scrollRankingIntoView(key);
+  renderCharacterSkeleton();
+  try {
+    const payload = await api(`/api/history?key=${encodeURIComponent(key)}`);
+    const history = payload.history || [];
+    currentHistory = history;
+    const latest = history[history.length - 1];
+    selectedCharacter.innerHTML = latest ? selectedCharacterHtml(latest, history.length) : "";
+    seasonExtremes.innerHTML = latest ? seasonExtremesHtml(history, latest.season) : "";
+    updateChart(history);
+    if (scrollRanking) {
+      scrollRankingIntoView(key);
+    }
+  } catch (error) {
+    canvas.classList.remove("chart-loading");
+    updateChart(currentHistory, { animate: false });
+    selectedCharacter.textContent = error.message;
+    seasonExtremes.innerHTML = "";
   }
 }
 
@@ -610,6 +702,7 @@ function cssEscape(value) {
 }
 
 function updateChart(history, options = {}) {
+  canvas.classList.remove("chart-loading");
   const animate = options.animate !== false && !prefersReducedMotion();
   window.clearTimeout(chartTransitionTimer);
   if (!animate) {
@@ -863,6 +956,7 @@ function escapeHtml(value) {
 
 let searchTimer = null;
 applyTheme(storedTheme());
+renderDashboardSkeleton();
 
 themeToggle.addEventListener("click", () => {
   applyTheme(nextTheme(document.body.dataset.theme));
@@ -907,7 +1001,6 @@ loadSnapshots()
 loadMapRotation();
 window.setInterval(loadMapRotation, 60 * 1000);
 
-updateChart([], { animate: false });
 window.addEventListener("resize", () => renderChart(currentHistory));
 
 document.addEventListener("contextmenu", (event) => event.preventDefault());

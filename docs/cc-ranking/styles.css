@@ -42,6 +42,8 @@
   --chart-marker: #ff8fb3;
   --chart-marker-line: rgba(255, 143, 179, 0.42);
   --chart-marker-text: #ffd4df;
+  --skeleton-base: rgba(148, 163, 184, 0.14);
+  --skeleton-glint: rgba(248, 250, 252, 0.24);
 }
 
 body[data-theme="light"] {
@@ -80,6 +82,8 @@ body[data-theme="light"] {
   --chart-grid: rgba(71, 85, 105, 0.16);
   --chart-text: #1e293b;
   --chart-muted: #64748b;
+  --skeleton-base: rgba(100, 116, 139, 0.13);
+  --skeleton-glint: rgba(255, 255, 255, 0.78);
 }
 
 body[data-theme="crystal"] {
@@ -167,6 +171,145 @@ a {
     color 220ms ease,
     opacity 180ms ease,
     transform 180ms ease;
+}
+
+.skeleton-line {
+  display: inline-block;
+  height: 12px;
+  min-width: 56px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, var(--skeleton-base) 0%, var(--skeleton-glint) 46%, var(--skeleton-base) 92%);
+  background-size: 220% 100%;
+  color: transparent;
+  vertical-align: middle;
+  animation: skeletonShimmer 1.15s ease-in-out infinite;
+}
+
+.skeleton-row {
+  pointer-events: none;
+}
+
+.skeleton-row td {
+  height: 52px;
+}
+
+.skeleton-row:hover td {
+  background: transparent;
+}
+
+.skeleton-season {
+  width: 78px;
+  height: 16px;
+}
+
+.skeleton-meta {
+  width: 172px;
+}
+
+.skeleton-total {
+  width: 108px;
+}
+
+.skeleton-count {
+  width: 42px;
+}
+
+.skeleton-leader-name {
+  width: 148px;
+  height: 18px;
+}
+
+.skeleton-leader-meta {
+  width: min(360px, 46vw);
+}
+
+.skeleton-rank {
+  width: 42px;
+  height: 28px;
+}
+
+.skeleton-name {
+  width: 118px;
+}
+
+.skeleton-name-wide {
+  width: 164px;
+}
+
+.skeleton-server {
+  width: 64px;
+}
+
+.skeleton-tier {
+  width: 104px;
+  height: 26px;
+}
+
+.skeleton-points {
+  width: 58px;
+}
+
+.skeleton-wins {
+  width: 34px;
+}
+
+.skeleton-movement {
+  width: 54px;
+  height: 26px;
+}
+
+.skeleton-map-name {
+  width: 148px;
+  height: 16px;
+}
+
+.skeleton-map-time {
+  width: 126px;
+}
+
+.skeleton-selected-name {
+  width: 150px;
+}
+
+.skeleton-selected-tier {
+  width: 120px;
+}
+
+.skeleton-selected-count {
+  width: 84px;
+}
+
+.skeleton-card {
+  pointer-events: none;
+}
+
+.skeleton-card-label {
+  width: 92px;
+}
+
+.skeleton-card-title {
+  width: 145px;
+  height: 18px;
+}
+
+.skeleton-card-meta {
+  width: min(230px, 100%);
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line {
+    animation: none;
+  }
 }
 
 body[data-theme="light"] {
@@ -1225,9 +1368,9 @@ tr.focus-flash td {
 canvas {
   display: block;
   width: calc(100% - 32px);
-  height: clamp(280px, calc(100vh - 560px), 420px);
-  flex: 1 1 auto;
-  margin: 0 16px 12px;
+  height: clamp(260px, calc(100vh - 690px), 390px);
+  flex: 0 0 auto;
+  margin: 0 16px 10px;
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--chart-bg);
@@ -1241,6 +1384,10 @@ canvas {
 canvas.chart-transitioning {
   opacity: 0.36;
   transform: scale(0.995);
+}
+
+canvas.chart-loading {
+  opacity: 0.42;
 }
 
 .season-extremes {
