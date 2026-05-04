@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FF14 CC Rankings</title>
-    <link rel="stylesheet" href="styles.css?v=20260504-unified-controls">
+    <link rel="stylesheet" href="styles.css?v=20260505-smooth-transitions">
   </head>
   <body>
     <header class="topbar">
@@ -17,6 +17,7 @@
         <p class="meta-line">
           <span id="snapshotMeta">저장된 스냅샷을 불러오는 중</span>
           <span id="totalMeta">총 저장 인원 -</span>
+          <span><a class="official-link" href="https://www.ff14.co.kr/ranking/CrystallineConflict" target="_blank" rel="noopener noreferrer">공식 랭킹 페이지</a></span>
         </p>
       </div>
       <button id="themeToggle" class="theme-toggle" type="button" aria-label="테마 변경" title="테마 변경">
@@ -36,6 +37,20 @@
         </div>
       </div>
       <input id="searchInput" type="search" placeholder="캐릭터 또는 서버 검색">
+    </section>
+
+    <section class="map-rotation" aria-label="현재 맵 로테이션">
+      <div>
+        <span class="map-label">현재 맵</span>
+        <strong id="currentMapName">불러오는 중</strong>
+        <span id="currentMapTime">-</span>
+      </div>
+      <div>
+        <span class="map-label">다음 맵</span>
+        <strong id="nextMapName">-</strong>
+        <span id="nextMapTime">-</span>
+      </div>
+      <a href="https://cc.shilin.net/" target="_blank" rel="noopener noreferrer">source</a>
     </section>
 
     <main class="layout">
@@ -59,6 +74,7 @@
                   <th>캐릭터</th>
                   <th>서버</th>
                   <th>티어</th>
+                  <th>평점</th>
                   <th>승리</th>
                   <th>변동</th>
                 </tr>
@@ -76,10 +92,11 @@
         </div>
         <div id="selectedCharacter" class="selected"></div>
         <canvas id="rankChart" width="520" height="260"></canvas>
+        <div id="seasonExtremes" class="season-extremes" aria-label="이번 시즌 최고 최저 기록"></div>
       </aside>
     </main>
 
-    <script src="config.js?v=20260504-unified-controls"></script>
-    <script src="app.js?v=20260504-unified-controls"></script>
+    <script src="config.js?v=20260505-smooth-transitions"></script>
+    <script src="app.js?v=20260505-smooth-transitions"></script>
   </body>
 </html>

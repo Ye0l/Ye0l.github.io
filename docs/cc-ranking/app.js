@@ -10,6 +10,11 @@ const prevSnapshot = document.querySelector("#prevSnapshot");
 const nextSnapshot = document.querySelector("#nextSnapshot");
 const searchInput = document.querySelector("#searchInput");
 const selectedCharacter = document.querySelector("#selectedCharacter");
+const seasonExtremes = document.querySelector("#seasonExtremes");
+const currentMapName = document.querySelector("#currentMapName");
+const currentMapTime = document.querySelector("#currentMapTime");
+const nextMapName = document.querySelector("#nextMapName");
+const nextMapTime = document.querySelector("#nextMapTime");
 const themeToggle = document.querySelector("#themeToggle");
 const themeIcon = document.querySelector("#themeIcon");
 const canvas = document.querySelector("#rankChart");
@@ -22,6 +27,7 @@ let currentHistory = [];
 let latestEntries = [];
 const snapshotPayloadCache = new Map();
 let leaderStreakToken = 0;
+let chartTransitionTimer = null;
 
 const THEMES = ["dark", "light", "crystal", "rose"];
 const THEME_ICONS = {
@@ -35,6 +41,14 @@ const DEFAULT_THEME = "dark";
 const API_BASE = String(window.CC_API_BASE || "").replace(/\/$/, "");
 const STATIC_DATA_BASE = String(window.CC_STATIC_DATA_BASE || "static/data").replace(/\/$/, "");
 let staticDataPromise = null;
+let mapNamesPromise = null;
+let mapNameLookup = {};
+
+const MAP_ROTATION_CONFIG = {
+  maps: ["Palaistra", "Volcanic Heart", "Bayside Battleground", "Cloud Nine", "Clockwork Castletown", "Archeia Harmonias", "Red Sands"],
+  startMap: "Volcanic Heart",
+  startTime: "2024-04-21T08:00:00-05:00",
+};
 
 async function api(path, options = {}) {
   try {
@@ -78,9 +92,26 @@ async function fetchStaticJson(path, cacheKey, label) {
   return response.json();
 }
 
+async function loadMapNames() {
+  if (!mapNamesPromise) {
+    const cacheKey = Date.now().toString(36);
+    mapNamesPromise = fetchStaticJson("map-names.json", cacheKey, "map names")
+      .catch(() => ({}))
+      .then((payload) => {
+        mapNameLookup = payload && typeof payload === "object" ? payload : {};
+        return mapNameLookup;
+      });
+  }
+  return mapNamesPromise;
+}
+
 async function staticApi(path) {
-  const data = await loadStaticData();
   const url = new URL(path, window.location.origin);
+  if (url.pathname === "/api/map-rotation") {
+    return localMapRotationPayload();
+  }
+
+  const data = await loadStaticData();
   if (url.pathname === "/api/snapshots" || url.pathname === "/api/v1/snapshots") {
     return { snapshots: data.snapshots || [] };
   }
@@ -145,6 +176,28 @@ function tierClass(tier) {
   return `tier-${String(tier || "unknown").toLowerCase()}`;
 }
 
+function tierNumber(entryOrTier) {
+  const tierCode = typeof entryOrTier === "object" ? entryOrTier.tier_code : "";
+  const codeMatch = String(tierCode || "").match(/^tier([1-8])$/);
+  if (codeMatch) return codeMatch[1];
+
+  const tier = normalizeTier(typeof entryOrTier === "object" ? entryOrTier.tier_label : entryOrTier);
+  if (tier === "bronze") return "1";
+  if (tier === "silver") return "2";
+  if (tier === "gold") return "3";
+  if (tier === "platinum") return "4";
+  if (tier === "diamond") return "5";
+  if (tier === "crystal") return "6";
+  if (tier === "omega") return "7";
+  if (tier === "ultima") return "8";
+  return "";
+}
+
+function tierIconHtml(entry) {
+  const number = tierNumber(entry);
+  return number ? `<span class="tier-icon tier-icon-${number}" aria-hidden="true"></span>` : "";
+}
+
 function movementBadge(entry) {
   const text = movementText(entry);
   const movementClass = entry.movement_direction === "up"
@@ -179,7 +232,7 @@ function applyTheme(theme) {
   } catch (error) {
     writeCookie("ccRankingTheme", nextTheme);
   }
-  renderChart(currentHistory);
+  updateChart(currentHistory);
 }
 
 function nextTheme(theme) {
@@ -211,7 +264,8 @@ function renderLatest(payload) {
     entryCount.textContent = "";
     leaderStat.textContent = "-";
     leaderMeta.textContent = "-";
-    rankingRows.innerHTML = `<tr><td class="empty" colspan="6">아직 데이터가 없습니다.</td></tr>`;
+    seasonExtremes.innerHTML = "";
+    rankingRows.innerHTML = `<tr><td class="empty" colspan="7">아직 데이터가 없습니다.</td></tr>`;
     return;
   }
 
@@ -221,7 +275,7 @@ function renderLatest(payload) {
   entryCount.textContent = `${entries.length}명`;
   leaderStat.textContent = entries[0] ? entries[0].character_name : "-";
   leaderMeta.textContent = entries[0]
-    ? `${entries[0].server_name} · ${entries[0].tier_label || "-"} · ${entries[0].wins ?? "-"}승 · 1위 유지일 계산 중`
+    ? `${entries[0].server_name} · ${tierWithPoints(entries[0])} · ${entries[0].wins ?? "-"}승 · 1위 유지일 계산 중`
     : "-";
   renderRankingRows();
   updateLeaderStreak(snapshot, entries[0]);
@@ -233,7 +287,7 @@ function renderRankingRows() {
     ? `${entries.length} / ${latestEntries.length}명`
     : `${latestEntries.length}명`;
   if (entries.length === 0) {
-    rankingRows.innerHTML = `<tr><td class="empty" colspan="6">검색 결과가 없습니다.</td></tr>`;
+    rankingRows.innerHTML = `<tr><td class="empty" colspan="7">검색 결과가 없습니다.</td></tr>`;
     return;
   }
 
@@ -250,7 +304,8 @@ function renderRankingRows() {
           </span>
         </td>
         <td>${escapeHtml(entry.server_name)}</td>
-        <td><span class="tier-pill ${tierClass(entry.tier_label)}">${escapeHtml(entry.tier_label || "-")}</span></td>
+        <td><span class="tier-pill ${tierClass(entry.tier_label)}">${tierIconHtml(entry)}<span>${escapeHtml(entry.tier_label || "-")}</span></span></td>
+        <td>${escapeHtml(pointsDisplay(entry))}</td>
         <td>${entry.wins ?? "-"}</td>
         <td>${movementBadge(entry)}</td>
       </tr>
@@ -283,7 +338,7 @@ async function updateLeaderStreak(snapshot, leader) {
     streak = 1;
   }
   if (token !== leaderStreakToken) return;
-  leaderMeta.textContent = `${leader.server_name} · ${leader.tier_label || "-"} · ${leader.wins ?? "-"}승 · 1위 ${streak}일차`;
+  leaderMeta.textContent = `${leader.server_name} · ${tierWithPoints(leader)} · ${leader.wins ?? "-"}승 · 1위 ${streak}일차`;
 }
 
 async function leaderStreakDays(snapshotId, leaderKey) {
@@ -313,6 +368,88 @@ async function loadLatest() {
   const payload = await api("/api/latest");
   renderLatest(payload);
   setCurrentSnapshot(payload.snapshot?.id);
+}
+
+async function loadMapRotation() {
+  try {
+    await loadMapNames();
+    renderMapRotation(await api("/api/map-rotation"));
+  } catch (error) {
+    renderMapRotation(localMapRotationPayload());
+  }
+}
+
+function renderMapRotation(payload) {
+  const current = payload.current || {};
+  const next = (payload.upcoming || [])[0] || {};
+  currentMapName.textContent = mapDisplayName(current.map);
+  currentMapTime.textContent = current.time_label || "-";
+  nextMapName.textContent = mapDisplayName(next.map);
+  nextMapTime.textContent = next.time_label || "-";
+}
+
+function mapDisplayName(mapName) {
+  const key = String(mapName || "");
+  const displayName = String(mapNameLookup[key] || "").trim();
+  return displayName || key || "-";
+}
+
+function localMapRotationPayload() {
+  const intervalMs = 60 * 60 * 1000;
+  const startTime = new Date(MAP_ROTATION_CONFIG.startTime);
+  const intervals = Math.floor((Date.now() - startTime.getTime()) / intervalMs);
+  const currentStart = new Date(startTime.getTime() + intervals * intervalMs);
+  const startIndex = MAP_ROTATION_CONFIG.maps.indexOf(MAP_ROTATION_CONFIG.startMap);
+  const currentIndex = (startIndex + intervals) % MAP_ROTATION_CONFIG.maps.length;
+  const slots = Array.from({ length: 7 }, (_, index) =>
+    localMapSlot(currentIndex + index, new Date(currentStart.getTime() + index * intervalMs), intervalMs)
+  );
+  return {
+    source_url: "https://cc.shilin.net/",
+    timezone: "Asia/Seoul",
+    interval_minutes: 60,
+    current: slots[0],
+    upcoming: slots.slice(1),
+  };
+}
+
+function localMapSlot(mapIndex, start, intervalMs) {
+  const end = new Date(start.getTime() + intervalMs);
+  return {
+    map: MAP_ROTATION_CONFIG.maps[((mapIndex % MAP_ROTATION_CONFIG.maps.length) + MAP_ROTATION_CONFIG.maps.length) % MAP_ROTATION_CONFIG.maps.length],
+    start: formatKstIso(start),
+    end: formatKstIso(end),
+    date_label: formatKstDate(start),
+    time_label: `${formatKstTime(start)} - ${formatKstTime(end)} KST`,
+  };
+}
+
+function formatKstIso(date) {
+  const parts = kstDateParts(date);
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}+09:00`;
+}
+
+function formatKstDate(date) {
+  const parts = kstDateParts(date);
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function formatKstTime(date) {
+  const parts = kstDateParts(date);
+  return `${parts.hour}:${parts.minute}`;
+}
+
+function kstDateParts(date) {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+  return Object.fromEntries(formatter.formatToParts(date).map((part) => [part.type, part.value]));
 }
 
 async function loadSnapshots() {
@@ -361,7 +498,8 @@ async function selectCharacter(key, options = {}) {
   currentHistory = history;
   const latest = history[history.length - 1];
   selectedCharacter.innerHTML = latest ? selectedCharacterHtml(latest, history.length) : "";
-  renderChart(history);
+  seasonExtremes.innerHTML = latest ? seasonExtremesHtml(history, latest.season) : "";
+  updateChart(history);
   if (scrollRanking) {
     scrollRankingIntoView(key);
   }
@@ -369,8 +507,81 @@ async function selectCharacter(key, options = {}) {
 
 function selectedCharacterHtml(latest, sampleCount) {
   return `
-    <span>${escapeHtml(latest.character_name)} @ ${escapeHtml(latest.server_name)} · ${sampleCount}개 스냅샷</span>
+    <span>${escapeHtml(latest.character_name)} @ ${escapeHtml(latest.server_name)} · </span>
+    <span class="selected-tier">${tierIconHtml(latest)}<span>${escapeHtml(tierWithPoints(latest))}</span></span>
+    <span> · ${sampleCount}개 스냅샷</span>
   `;
+}
+
+function seasonExtremesHtml(history, season) {
+  const seasonHistory = history.filter((row) => row.season === season);
+  if (seasonHistory.length === 0) return "";
+
+  const bestRank = seasonHistory.reduce((best, row) => betterTier(row, best) ? row : best, seasonHistory[0]);
+  const worstRank = seasonHistory.reduce((worst, row) => worseTier(row, worst) ? row : worst, seasonHistory[0]);
+  const bestRanking = seasonHistory.reduce((best, row) => row.rank < best.rank ? row : best, seasonHistory[0]);
+  const worstRanking = seasonHistory.reduce((worst, row) => row.rank > worst.rank ? row : worst, seasonHistory[0]);
+
+  return `
+    <div class="extreme-card">
+      <span>이번 시즌 최고 랭크</span>
+      <strong>${tierIconHtml(bestRank)}${escapeHtml(tierWithPoints(bestRank))}</strong>
+      <small>이번 시즌 최고 랭킹 #${escapeHtml(bestRanking.rank)} · ${escapeHtml(formatSnapshotDate(bestRanking.source_time_text || bestRanking.scraped_at))}</small>
+    </div>
+    <div class="extreme-card">
+      <span>이번 시즌 최저 랭크</span>
+      <strong>${tierIconHtml(worstRank)}${escapeHtml(tierWithPoints(worstRank))}</strong>
+      <small>이번 시즌 최저 랭킹 #${escapeHtml(worstRanking.rank)} · ${escapeHtml(formatSnapshotDate(worstRanking.source_time_text || worstRanking.scraped_at))}</small>
+    </div>
+  `;
+}
+
+function betterTier(row, best) {
+  const rowScore = tierScore(row.tier_label);
+  const bestScore = tierScore(best.tier_label);
+  if (rowScore !== bestScore) return rowScore > bestScore;
+  const rowPoints = pointsValue(row);
+  const bestPoints = pointsValue(best);
+  if (rowPoints !== bestPoints) return rowPoints > bestPoints;
+  return row.rank < best.rank;
+}
+
+function worseTier(row, worst) {
+  const rowScore = tierScore(row.tier_label);
+  const worstScore = tierScore(worst.tier_label);
+  if (rowScore !== worstScore) return rowScore < worstScore;
+  const rowPoints = pointsValue(row);
+  const worstPoints = pointsValue(worst);
+  if (rowPoints !== worstPoints) return rowPoints < worstPoints;
+  return row.rank > worst.rank;
+}
+
+function tierWithPoints(entry) {
+  const tier = entry.tier_label || "-";
+  const points = pointsDisplay(entry);
+  return points === "-" ? tier : `${tier} · 평점 ${points}`;
+}
+
+function pointsDisplay(entry) {
+  const points = entry.points_text ?? entry.points;
+  const text = String(points ?? "").trim();
+  return text ? text : "-";
+}
+
+function pointsValue(entry) {
+  const parsed = Number.parseInt(String(pointsDisplay(entry)).replaceAll(",", ""), 10);
+  return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+}
+
+function tierScore(tier) {
+  const value = normalizeTier(tier);
+  if (value === "crystal") return 6;
+  if (value === "diamond") return 5;
+  if (value === "platinum") return 4;
+  if (value === "gold") return 3;
+  if (value === "silver") return 2;
+  if (value === "bronze") return 1;
+  return 0;
 }
 
 function scrollRankingIntoView(key) {
@@ -396,6 +607,28 @@ function cssEscape(value) {
     return window.CSS.escape(value);
   }
   return String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+}
+
+function updateChart(history, options = {}) {
+  const animate = options.animate !== false && !prefersReducedMotion();
+  window.clearTimeout(chartTransitionTimer);
+  if (!animate) {
+    canvas.classList.remove("chart-transitioning");
+    renderChart(history);
+    return;
+  }
+
+  canvas.classList.add("chart-transitioning");
+  chartTransitionTimer = window.setTimeout(() => {
+    renderChart(history);
+    window.requestAnimationFrame(() => {
+      canvas.classList.remove("chart-transitioning");
+    });
+  }, 110);
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 function renderChart(history) {
@@ -448,14 +681,9 @@ function renderChart(history) {
     ctx.fill();
   });
 
-  drawTierChangeMarkers(points, chartSize.height);
+  const tierChangeIndexes = drawTierChangeMarkers(points, chartSize.width, chartSize.height);
   drawDateLabels(points, chartSize.height);
-
-  ctx.fillStyle = styles.getPropertyValue("--chart-text").trim() || "#dbeafe";
-  ctx.font = "700 12px sans-serif";
-  points.slice(-6).forEach((point) => {
-    ctx.fillText(`#${point.row.rank}`, point.x - 12, point.y - 12);
-  });
+  drawRankLabels(points, tierChangeIndexes, chartSize.width, chartSize.height);
 
   ctx.fillStyle = styles.getPropertyValue("--chart-muted").trim() || "#93a4b8";
   ctx.font = "12px sans-serif";
@@ -463,19 +691,24 @@ function renderChart(history) {
   ctx.fillText(`worst #${maxRank}`, padding, chartSize.height - 14);
 }
 
-function drawTierChangeMarkers(points, chartHeight) {
+function drawTierChangeMarkers(points, chartWidth, chartHeight) {
   const styles = getComputedStyle(document.body);
   const changes = points.filter((point, index) => {
     if (index === 0) return false;
     return normalizeTier(point.row.tier_label) !== normalizeTier(points[index - 1].row.tier_label);
   });
+  const changeIndexes = new Set(changes.map((point) => points.indexOf(point)));
 
   ctx.font = "700 11px sans-serif";
+  ctx.textBaseline = "alphabetic";
   changes.forEach((point, index) => {
     const label = point.row.tier_label || "계급 변경";
     const labelWidth = ctx.measureText(label).width;
-    const labelX = Math.min(Math.max(point.x - labelWidth / 2, 8), canvas.clientWidth - labelWidth - 8);
-    const labelY = Math.max(24, Math.min(point.y - 24 - (index % 2) * 18, chartHeight - 54));
+    const labelX = Math.min(Math.max(point.x - labelWidth / 2, 8), chartWidth - labelWidth - 8);
+    const labelBelow = point.y < 78;
+    const labelY = labelBelow
+      ? Math.min(point.y + 34 + (index % 2) * 16, chartHeight - 54)
+      : Math.max(24, Math.min(point.y - 24 - (index % 2) * 18, chartHeight - 54));
 
     ctx.fillStyle = styles.getPropertyValue("--chart-marker").trim() || "#ff8fb3";
     ctx.beginPath();
@@ -490,10 +723,30 @@ function drawTierChangeMarkers(points, chartHeight) {
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(point.x, point.y);
-    ctx.lineTo(point.x, labelY + 5);
+    ctx.lineTo(point.x, labelBelow ? labelY - 13 : labelY + 5);
     ctx.stroke();
 
     ctx.fillStyle = styles.getPropertyValue("--chart-marker-text").trim() || "#ffd4df";
+    ctx.fillText(label, labelX, labelY);
+  });
+  return changeIndexes;
+}
+
+function drawRankLabels(points, tierChangeIndexes, chartWidth, chartHeight) {
+  const styles = getComputedStyle(document.body);
+  ctx.fillStyle = styles.getPropertyValue("--chart-text").trim() || "#dbeafe";
+  ctx.font = "700 12px sans-serif";
+  ctx.textBaseline = "alphabetic";
+  points.slice(-6).forEach((point) => {
+    const pointIndex = points.indexOf(point);
+    const hasTierLabel = tierChangeIndexes.has(pointIndex);
+    const placeBelow = (hasTierLabel && point.y >= 78) || point.y < 34;
+    const label = `#${point.row.rank}`;
+    const labelWidth = ctx.measureText(label).width;
+    const labelX = Math.min(Math.max(point.x - labelWidth / 2, 8), chartWidth - labelWidth - 8);
+    const labelY = placeBelow
+      ? Math.min(point.y + 22, chartHeight - 44)
+      : Math.max(point.y - 12, 16);
     ctx.fillText(label, labelX, labelY);
   });
 }
@@ -651,7 +904,10 @@ loadSnapshots()
     snapshotMeta.textContent = error.message;
   });
 
-renderChart([]);
+loadMapRotation();
+window.setInterval(loadMapRotation, 60 * 1000);
+
+updateChart([], { animate: false });
 window.addEventListener("resize", () => renderChart(currentHistory));
 
 document.addEventListener("contextmenu", (event) => event.preventDefault());
