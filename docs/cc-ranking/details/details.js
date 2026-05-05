@@ -17,12 +17,17 @@ const THEME_ICONS = {
 };
 const DEFAULT_THEME = "dark";
 const THEME_SWITCH_MS = 360;
+const UI_FONT_STACK = '"Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 const API_BASE = String(window.CC_API_BASE || "").replace(/\/$/, "");
 const configuredStaticBase = String(window.CC_STATIC_DATA_BASE || "static/data").replace(/\/$/, "");
 const STATIC_DATA_BASE = configuredStaticBase === "static/data" ? "../static/data" : configuredStaticBase;
 let staticDataPromise = null;
 let currentHistory = [];
 let themeSwitchTimer = null;
+
+function canvasFont(size, weight = "") {
+  return `${weight ? `${weight} ` : ""}${size}px ${UI_FONT_STACK}`;
+}
 
 async function api(path, options = {}) {
   try {
@@ -274,7 +279,7 @@ function renderChart(history) {
       if (!points.length) return;
 
       const lastPoints = points.slice(-8);
-      ctx.font = "bold 12px sans-serif";
+      ctx.font = canvasFont(12, "bold");
       ctx.fillStyle = textColor;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -290,7 +295,7 @@ function renderChart(history) {
         ctx.fillText(label, point.x, labelY);
       });
 
-      ctx.font = "bold 11px sans-serif";
+      ctx.font = canvasFont(11, "bold");
       points.forEach((point, idx) => {
         if (idx === 0) return;
         const currentTier = tierLabels[idx];
@@ -328,13 +333,13 @@ function renderChart(history) {
         const latestDelta = numberValue(latestDeltaPoint.win_delta);
         const maxDelta = Math.max(...winDeltaData.filter(v => Number.isFinite(v)));
         const summaryLabel = `일일 승리 +${latestDelta} · max +${maxDelta}`;
-        ctx.font = "12px sans-serif";
+        ctx.font = canvasFont(12);
         ctx.fillStyle = styles.getPropertyValue("--chart-bar-text").trim() || "#f7c76a";
         ctx.textAlign = "right";
         ctx.fillText(summaryLabel, right, top - 14);
       }
 
-      ctx.font = "12px sans-serif";
+      ctx.font = canvasFont(12);
       ctx.fillStyle = mutedColor;
       ctx.textAlign = "left";
       ctx.fillText(`best #${minRank}`, left, top - 14);
@@ -343,7 +348,7 @@ function renderChart(history) {
       ctx.fillText(`worst #${maxRank}`, (left + right) / 2, top - 14);
 
       const bars = chart.getDatasetMeta(1).data;
-      ctx.font = "bold 10px sans-serif";
+      ctx.font = canvasFont(10, "bold");
       ctx.fillStyle = styles.getPropertyValue("--chart-bar-text").trim() || "#f7c76a";
       ctx.textAlign = "center";
       bars.forEach((bar, idx) => {
@@ -425,7 +430,7 @@ function renderChart(history) {
           grid: { display: false },
           ticks: {
             color: mutedColor,
-            font: { size: 11 },
+            font: { size: 11, family: UI_FONT_STACK },
             maxRotation: 0,
             autoSkip: true,
             maxTicksLimit: 10

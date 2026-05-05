@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FF14 CC Rankings</title>
-    <link rel="stylesheet" href="styles.css?v=20260506-tier-hues">
+    <link rel="stylesheet" href="styles.css?v=20260506-ranking-filters">
   </head>
   <body>
     <header class="topbar">
@@ -47,7 +47,33 @@
           <button id="nextSnapshot" class="nav-button" type="button">다음</button>
         </div>
       </div>
-      <input id="searchInput" type="search" placeholder="캐릭터 또는 서버 검색">
+      <div class="ranking-search-tools">
+        <input id="searchInput" type="search" placeholder="캐릭터 또는 서버 검색">
+        <button id="filterToggle" class="filter-toggle" type="button" aria-expanded="false" aria-controls="rankingFilters" aria-label="필터 열기" title="필터 열기">
+          <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+            <path d="M3 5h18l-6.8 7.7V18l-4.4 2.6v-7L3 5z"></path>
+          </svg>
+        </button>
+        <div id="rankingFilters" class="ranking-filters" hidden>
+          <label>
+            <span>서버</span>
+            <input id="serverFilterInput" type="text" inputmode="search" autocomplete="off" placeholder="예: 모그리">
+          </label>
+          <label>
+            <span>닉네임</span>
+            <input id="nameFilterInput" type="text" inputmode="search" autocomplete="off" placeholder="캐릭터명">
+          </label>
+          <label>
+            <span>승수</span>
+            <input id="winsFilterInput" type="number" inputmode="numeric" min="0" step="1" placeholder="최소">
+          </label>
+          <label>
+            <span>최근</span>
+            <input id="recentDaysInput" type="number" inputmode="numeric" min="1" step="1" placeholder="N일">
+          </label>
+          <button id="filterReset" class="filter-reset" type="button">초기화</button>
+        </div>
+      </div>
     </section>
 
     <section class="map-rotation" style="display: none;" aria-label="현재 맵 로테이션">
@@ -111,6 +137,6 @@
 
     <script src="chart.umd.min.js"></script>
     <script src="config.js?v=20260505-perfect-scrollbars"></script>
-    <script src="app.js?v=20260506-glass-smooth"></script>
+    <script src="app.js?v=20260506-ranking-filters"></script>
   </body>
 </html>

@@ -7,6 +7,13 @@ const snapshotSelect = document.querySelector("#snapshotSelect");
 const prevSnapshot = document.querySelector("#prevSnapshot");
 const nextSnapshot = document.querySelector("#nextSnapshot");
 const searchInput = document.querySelector("#searchInput");
+const filterToggle = document.querySelector("#filterToggle");
+const rankingFilters = document.querySelector("#rankingFilters");
+const serverFilterInput = document.querySelector("#serverFilterInput");
+const nameFilterInput = document.querySelector("#nameFilterInput");
+const winsFilterInput = document.querySelector("#winsFilterInput");
+const recentDaysInput = document.querySelector("#recentDaysInput");
+const filterReset = document.querySelector("#filterReset");
 const sortHeaders = [...document.querySelectorAll("[data-sort-key]")];
 const selectedCharacter = document.querySelector("#selectedCharacter");
 const seasonExtremes = document.querySelector("#seasonExtremes");
@@ -32,6 +39,8 @@ let rankingSort = { key: "rank", direction: "asc" };
 let chartTransitionTimer = null;
 let characterRequestToken = 0;
 let themeSwitchTimer = null;
+let staticHistoryData = null;
+let staticHistoryLoading = false;
 const SKELETON_ROW_COUNT = 12;
 
 const THEMES = ["dark", "light"];
@@ -43,12 +52,17 @@ const DEFAULT_THEME = "dark";
 const THEME_SWITCH_MS = 360;
 const HEART_STORAGE_KEY = "ccRankingProjectHeart";
 const HEART_CLIENT_KEY = "ccRankingProjectHeartClient";
+const UI_FONT_STACK = '"Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 
 const API_BASE = String(window.CC_API_BASE || "").replace(/\/$/, "");
 const STATIC_DATA_BASE = String(window.CC_STATIC_DATA_BASE || "static/data").replace(/\/$/, "");
 let staticDataPromise = null;
 let mapNamesPromise = null;
 let mapNameLookup = {};
+
+function canvasFont(size, weight = "") {
+  return `${weight ? `${weight} ` : ""}${size}px ${UI_FONT_STACK}`;
+}
 
 const MAP_ROTATION_CONFIG = {
   maps: ["Palaistra", "Volcanic Heart", "Bayside Battleground", "Cloud Nine", "Clockwork Castletown", "Archeia Harmonias", "Red Sands"],
@@ -491,7 +505,7 @@ function renderLatest(payload) {
 
 function renderRankingRows() {
   const entries = filteredRankingEntries();
-  entryCount.textContent = searchInput.value.trim()
+  entryCount.textContent = hasActiveRankingFilters()
     ? `${entries.length} / ${rankingCountText(latestEntries)}`
     : rankingCountText(latestEntries);
   updateSortHeaders();
@@ -644,11 +658,111 @@ function rankCellHtml(entry) {
 
 function filteredRankingEntries() {
   const query = searchInput.value.trim().toLowerCase();
-  const entries = !query ? latestEntries : latestEntries.filter((entry) => (
-    String(entry.character_name).toLowerCase().includes(query)
-    || String(entry.server_name).toLowerCase().includes(query)
-  ));
+  const filters = rankingFilterValues();
+  if (filters.recentDays && filters.minWins != null && !staticHistoryData && !staticHistoryLoading) {
+    loadStaticHistoryForFilters();
+  }
+  const entries = latestEntries.filter((entry) => matchesRankingFilters(entry, query, filters));
   return sortedRankingEntries(entries);
+}
+
+function rankingFilterValues() {
+  const minWins = numberValue(winsFilterInput.value);
+  const recentDays = numberValue(recentDaysInput.value);
+  return {
+    server: serverFilterInput.value.trim().toLowerCase(),
+    name: nameFilterInput.value.trim().toLowerCase(),
+    minWins: Number.isFinite(minWins) ? minWins : null,
+    recentDays: Number.isFinite(recentDays) && recentDays > 0 ? recentDays : null,
+  };
+}
+
+function hasActiveRankingFilters() {
+  const filters = rankingFilterValues();
+  return Boolean(
+    searchInput.value.trim()
+    || hasActiveAdvancedFilters(filters)
+  );
+}
+
+function hasActiveAdvancedFilters(filters = rankingFilterValues()) {
+  return Boolean(
+    filters.server
+    || filters.name
+    || filters.minWins != null
+    || filters.recentDays,
+  );
+}
+
+function updateFilterToggleLabel(expanded) {
+  filterToggle.setAttribute("aria-label", expanded ? "필터 닫기" : "필터 열기");
+  filterToggle.setAttribute("title", expanded ? "필터 닫기" : "필터 열기");
+}
+
+function matchesRankingFilters(entry, query, filters) {
+  const characterName = String(entry.character_name || "").toLowerCase();
+  const serverName = String(entry.server_name || "").toLowerCase();
+  if (query && !characterName.includes(query) && !serverName.includes(query)) return false;
+  if (filters.server && !serverName.includes(filters.server)) return false;
+  if (filters.name && !characterName.includes(filters.name)) return false;
+  if (filters.minWins == null) return true;
+  if (filters.recentDays && !staticHistoryData) return true;
+  const wins = filters.recentDays
+    ? recentWinsForEntry(entry, filters.recentDays)
+    : numberValue(entry.wins);
+  return Number.isFinite(wins) && wins >= filters.minWins;
+}
+
+function loadStaticHistoryForFilters() {
+  staticHistoryLoading = true;
+  loadStaticData()
+    .then((data) => {
+      staticHistoryData = data;
+    })
+    .catch(() => {
+      staticHistoryData = { history_by_key: {}, history_by_id: {} };
+    })
+    .finally(() => {
+      staticHistoryLoading = false;
+      renderRankingRows();
+    });
+}
+
+function recentWinsForEntry(entry, days) {
+  const history = historyForEntry(entry);
+  if (history.length === 0) return Number.NaN;
+  const currentTime = entryTimeMs(entry);
+  if (!Number.isFinite(currentTime)) return Number.NaN;
+  const startTime = currentTime - days * 24 * 60 * 60 * 1000;
+  return history.reduce((total, row) => {
+    const rowTime = entryTimeMs(row);
+    if (!Number.isFinite(rowTime) || rowTime < startTime || rowTime > currentTime) return total;
+    const delta = numberValue(row.win_delta);
+    return Number.isFinite(delta) ? total + Math.max(0, delta) : total;
+  }, 0);
+}
+
+function historyForEntry(entry) {
+  if (!staticHistoryData) return [];
+  const id = characterIdForEntry(entry);
+  return (staticHistoryData.history_by_id || {})[id]
+    || (staticHistoryData.history_by_key || {})[entry.character_key]
+    || [];
+}
+
+function entryTimeMs(entry) {
+  const sourceTime = String(entry.source_time_text || entry.source_time || "").trim();
+  const sourceMatch = sourceTime.match(/(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}):(\d{2}))?/);
+  if (sourceMatch) {
+    const [, year, month, day, hour = "0", minute = "0"] = sourceMatch;
+    return new Date(`${year}-${month}-${day}T${hour}:${minute}:00+09:00`).getTime();
+  }
+  const snapshot = snapshots.find((item) => String(item.id) === String(entry.snapshot_id));
+  if (snapshot) {
+    return entryTimeMs(snapshot);
+  }
+  const scrapedTime = Date.parse(entry.scraped_at || "");
+  return Number.isFinite(scrapedTime) ? scrapedTime : Number.NaN;
 }
 
 function characterIdForEntry(entry) {
@@ -1017,7 +1131,7 @@ function renderChart(history) {
       if (!points.length) return;
 
       const lastPoints = points.slice(-6);
-      ctx.font = "bold 12px sans-serif";
+      ctx.font = canvasFont(12, "bold");
       ctx.fillStyle = textColor;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -1033,7 +1147,7 @@ function renderChart(history) {
         ctx.fillText(label, point.x, labelY);
       });
 
-      ctx.font = "bold 11px sans-serif";
+      ctx.font = canvasFont(11, "bold");
       points.forEach((point, idx) => {
         if (idx === 0) return;
         const currentTier = tierLabels[idx];
@@ -1071,13 +1185,13 @@ function renderChart(history) {
         const latestDelta = numberValue(latestDeltaPoint.win_delta);
         const maxDelta = Math.max(...winDeltaData.filter(v => Number.isFinite(v)));
         const summaryLabel = `일일 승리 +${latestDelta} · max +${maxDelta}`;
-        ctx.font = "12px sans-serif";
+        ctx.font = canvasFont(12);
         ctx.fillStyle = styles.getPropertyValue("--chart-bar-text").trim() || "#f7c76a";
         ctx.textAlign = "right";
         ctx.fillText(summaryLabel, right, top - 14);
       }
 
-      ctx.font = "12px sans-serif";
+      ctx.font = canvasFont(12);
       ctx.fillStyle = mutedColor;
       ctx.textAlign = "left";
       ctx.fillText(`best #${minRank}`, left, top - 14);
@@ -1086,7 +1200,7 @@ function renderChart(history) {
       ctx.fillText(`worst #${maxRank}`, (left + right) / 2, top - 14);
 
       const bars = chart.getDatasetMeta(1).data;
-      ctx.font = "bold 10px sans-serif";
+      ctx.font = canvasFont(10, "bold");
       ctx.fillStyle = styles.getPropertyValue("--chart-bar-text").trim() || "#f7c76a";
       ctx.textAlign = "center";
       bars.forEach((bar, idx) => {
@@ -1168,7 +1282,7 @@ function renderChart(history) {
           grid: { display: false },
           ticks: {
             color: mutedColor,
-            font: { size: 11 },
+            font: { size: 11, family: UI_FONT_STACK },
             maxRotation: 0,
             autoSkip: true,
             maxTicksLimit: 5
@@ -1234,7 +1348,7 @@ function drawChartPlaceholder() {
         const { ctx, chartArea: { width, height, top, left } } = chart;
         ctx.save();
         ctx.fillStyle = mutedColor;
-        ctx.font = "13px sans-serif";
+        ctx.font = canvasFont(13);
         ctx.textAlign = "left";
         ctx.fillText("캐릭터를 선택하면 이 영역에 순위 추이가 표시됩니다.", 24, height + top - 24);
         ctx.restore();
@@ -1266,6 +1380,7 @@ function escapeHtml(value) {
 let searchTimer = null;
 applyTheme(storedTheme());
 applyProjectHeart(storedProjectHeart());
+updateFilterToggleLabel(false);
 renderDashboardSkeleton();
 
 themeToggle.addEventListener("click", () => {
@@ -1283,6 +1398,31 @@ projectHeart.addEventListener("click", () => {
 searchInput.addEventListener("input", () => {
   window.clearTimeout(searchTimer);
   searchTimer = window.setTimeout(() => renderRankingRows(), 120);
+});
+
+filterToggle.addEventListener("click", () => {
+  const expanded = filterToggle.getAttribute("aria-expanded") === "true";
+  const nextExpanded = !expanded;
+  filterToggle.setAttribute("aria-expanded", String(nextExpanded));
+  updateFilterToggleLabel(nextExpanded);
+  rankingFilters.hidden = expanded;
+});
+
+[serverFilterInput, nameFilterInput, winsFilterInput, recentDaysInput].forEach((input) => {
+  input.addEventListener("input", () => {
+    filterToggle.classList.toggle("is-active", hasActiveAdvancedFilters());
+    window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(() => renderRankingRows(), 120);
+  });
+});
+
+filterReset.addEventListener("click", () => {
+  serverFilterInput.value = "";
+  nameFilterInput.value = "";
+  winsFilterInput.value = "";
+  recentDaysInput.value = "";
+  filterToggle.classList.remove("is-active");
+  renderRankingRows();
 });
 
 sortHeaders.forEach((header) => {
