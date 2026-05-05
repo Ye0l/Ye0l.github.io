@@ -12,6 +12,7 @@ const searchInput = document.querySelector("#searchInput");
 const sortHeaders = [...document.querySelectorAll("[data-sort-key]")];
 const selectedCharacter = document.querySelector("#selectedCharacter");
 const seasonExtremes = document.querySelector("#seasonExtremes");
+const detailPanel = document.querySelector(".detail-panel");
 const currentMapName = document.querySelector("#currentMapName");
 const currentMapTime = document.querySelector("#currentMapTime");
 const nextMapName = document.querySelector("#nextMapName");
@@ -33,6 +34,7 @@ let rankingSort = { key: "rank", direction: "asc" };
 const snapshotPayloadCache = new Map();
 let leaderStreakToken = 0;
 let chartTransitionTimer = null;
+let characterRequestToken = 0;
 const SKELETON_ROW_COUNT = 12;
 
 const THEMES = ["dark", "light"];
@@ -378,6 +380,7 @@ function renderSnapshotSkeleton() {
 }
 
 function renderCharacterSkeleton() {
+  detailPanel.classList.add("is-history-loading");
   selectedCharacter.innerHTML = `
     <span class="skeleton-line skeleton-selected-name"></span>
     <span class="skeleton-line skeleton-selected-tier"></span>
@@ -396,6 +399,16 @@ function renderCharacterSkeleton() {
     </div>
   `;
   canvas.classList.add("chart-loading");
+}
+
+function beginCharacterHistoryLoading() {
+  detailPanel.classList.add("is-history-loading");
+  canvas.classList.add("chart-loading");
+}
+
+function endCharacterHistoryLoading() {
+  detailPanel.classList.remove("is-history-loading");
+  canvas.classList.remove("chart-loading");
 }
 
 function renderMapSkeleton() {
@@ -456,6 +469,7 @@ function renderLatest(payload) {
     snapshotPayloadCache.set(String(snapshot.id), payload);
   }
   if (!snapshot) {
+    endCharacterHistoryLoading();
     seasonBadge.textContent = "Season -";
     snapshotMeta.textContent = "저장된 스냅샷이 없습니다.";
     totalMeta.textContent = "표시 인원 -";
@@ -848,12 +862,20 @@ function setCurrentSnapshot(snapshotId) {
 async function selectCharacter(key, options = {}) {
   const { scrollRanking = true } = options;
   selectedKey = key;
-  renderCharacterSkeleton();
+  const requestToken = ++characterRequestToken;
+  const hasRenderedDetail = currentHistory.length > 0 || selectedCharacter.innerHTML.trim() || seasonExtremes.innerHTML.trim();
+  if (hasRenderedDetail) {
+    beginCharacterHistoryLoading();
+  } else {
+    renderCharacterSkeleton();
+  }
   try {
     const payload = await api(`/api/history?key=${encodeURIComponent(key)}`);
+    if (requestToken !== characterRequestToken) return;
     const history = payload.history || [];
     currentHistory = history;
     const latest = history[history.length - 1];
+    endCharacterHistoryLoading();
     selectedCharacter.innerHTML = latest ? selectedCharacterHtml(latest, history.length) : "";
     seasonExtremes.innerHTML = latest ? seasonExtremesHtml(history, latest.season) : "";
     updateChart(history);
@@ -861,7 +883,8 @@ async function selectCharacter(key, options = {}) {
       scrollRankingIntoView(key);
     }
   } catch (error) {
-    canvas.classList.remove("chart-loading");
+    if (requestToken !== characterRequestToken) return;
+    endCharacterHistoryLoading();
     updateChart(currentHistory, { animate: false });
     selectedCharacter.textContent = error.message;
     seasonExtremes.innerHTML = "";

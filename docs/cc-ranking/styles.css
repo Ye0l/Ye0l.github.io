@@ -1436,6 +1436,7 @@ input[type="search"]:focus {
   min-height: 22px;
   padding: 4px 16px 8px;
   font-size: 13px;
+  transition: opacity 180ms ease;
 }
 
 .selected-tier {
@@ -1484,6 +1485,11 @@ canvas.chart-transitioning {
 
 canvas.chart-loading {
   opacity: 0.42;
+}
+
+.detail-panel.is-history-loading .selected,
+.detail-panel.is-history-loading .season-extremes {
+  opacity: 0.58;
 }
 
 .details-layout {
@@ -1581,6 +1587,7 @@ body[data-theme="light"] .details-stat-grid div {
   gap: 10px;
   min-height: 78px;
   padding: 0 16px;
+  transition: opacity 180ms ease;
 }
 
 .extreme-card {
