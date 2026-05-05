@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FF14 CC Character Details</title>
+    <link rel="stylesheet" href="../styles.css?v=20260505-details-id2">
+  </head>
+  <body class="details-page">
+    <header class="topbar">
+      <div class="topbar-copy">
+        <span class="eyebrow">FFXIV KR PvP Archive</span>
+        <div class="title-row">
+          <h1 id="detailsTitle">Character Details</h1>
+          <span id="seasonBadge" class="season-badge">Season -</span>
+        </div>
+        <p class="meta-line">
+          <span id="detailsMeta">캐릭터 기록을 불러오는 중</span>
+          <span><a class="official-link" href="../">전체 랭킹</a></span>
+          <span><a class="official-link" href="https://www.ff14.co.kr/ranking/CrystallineConflict" target="_blank" rel="noopener noreferrer">공식 랭킹 페이지</a></span>
+        </p>
+      </div>
+      <div class="topbar-actions">
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="테마 변경" title="테마 변경">
+          <span id="themeIcon" aria-hidden="true">☾</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="details-layout">
+      <section class="details-summary-panel" aria-label="캐릭터 요약">
+        <div id="characterSummary" class="details-summary">
+          <div class="details-stat-grid" aria-hidden="true">
+            <div>
+              <span class="skeleton-line skeleton-banner-label"></span>
+              <strong><span class="skeleton-line skeleton-banner-value"></span></strong>
+            </div>
+            <div>
+              <span class="skeleton-line skeleton-banner-label"></span>
+              <strong><span class="skeleton-line skeleton-banner-value"></span></strong>
+            </div>
+            <div>
+              <span class="skeleton-line skeleton-banner-label"></span>
+              <strong><span class="skeleton-line skeleton-banner-value"></span></strong>
+            </div>
+            <div>
+              <span class="skeleton-line skeleton-banner-label"></span>
+              <strong><span class="skeleton-line skeleton-banner-value"></span></strong>
+            </div>
+            <div>
+              <span class="skeleton-line skeleton-banner-label"></span>
+              <strong><span class="skeleton-line skeleton-banner-value"></span></strong>
+            </div>
+            <div>
+              <span class="skeleton-line skeleton-banner-label"></span>
+              <strong><span class="skeleton-line skeleton-banner-value"></span></strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel details-graph-panel">
+        <div class="panel-head">
+          <h2>순위 그래프</h2>
+          <span>rank graph</span>
+        </div>
+        <canvas id="rankChart" width="960" height="420"></canvas>
+      </section>
+
+      <section class="panel details-history-panel">
+        <div class="panel-head">
+          <h2>스냅샷 기록</h2>
+          <span id="historyCount">-</span>
+        </div>
+        <div class="details-history-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>기준일</th>
+                <th>순위</th>
+                <th>티어</th>
+                <th>평점</th>
+                <th>승리</th>
+                <th>변동</th>
+              </tr>
+            </thead>
+            <tbody id="historyRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer" aria-label="제작자 정보">
+      <span class="footer-label">Made by</span>
+      <strong>Caitsith@모그리</strong>
+      <a href="mailto:yeol@kstr.dev">yeol@kstr.dev</a>
+    </footer>
+
+    <script src="../config.js?v=20260505-details-id2"></script>
+    <script src="details.js?v=20260505-details-id2"></script>
+  </body>
+</html>

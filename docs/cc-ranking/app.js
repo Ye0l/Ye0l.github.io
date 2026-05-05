@@ -80,7 +80,7 @@ async function loadStaticData() {
         const latestSeason = seasons.find((season) => season.season === manifest.latest_season)
           || seasons[seasons.length - 1];
         if (!latestSeason) {
-          return { snapshots: [], entries_by_snapshot: {}, characters: [], history_by_key: {} };
+          return { snapshots: [], entries_by_snapshot: {}, characters: [], history_by_key: {}, history_by_id: {} };
         }
         return fetchStaticJson(latestSeason.path, cacheKey, "data");
       });
@@ -148,8 +148,11 @@ async function staticApi(path) {
     return { characters };
   }
   if (url.pathname === "/api/history") {
-    const key = url.searchParams.get("key") || "";
-    return { history: (data.history_by_key || {})[key] || [] };
+    const id = url.searchParams.get("id") || "";
+    const key = url.searchParams.get("key") || characterKeyFromId(id);
+    return {
+      history: (data.history_by_id || {})[id] || (data.history_by_key || {})[key] || [],
+    };
   }
   throw new Error(`No static fallback for ${url.pathname}`);
 }
@@ -164,6 +167,7 @@ function latestStaticSnapshot(data) {
 }
 
 function movementText(entry) {
+  if (entry.movement_direction === "out" || entry.is_dropped) return "OUT";
   if (entry.movement_direction === "new") return "NEW";
   if (!entry.movement_direction || entry.movement_value == null) return "-";
   const arrow = entry.movement_direction === "up" ? "▲" : "▼";
@@ -171,6 +175,7 @@ function movementText(entry) {
 }
 
 function rankClass(rank) {
+  if (rank == null) return "rank-dropped";
   if (rank === 1) return "rank-first";
   if (rank === 2) return "rank-second";
   if (rank === 3) return "rank-third";
@@ -214,7 +219,9 @@ function movementBadge(entry) {
       ? "movement-down"
       : entry.movement_direction === "new"
         ? "movement-new"
-        : "movement-flat";
+        : entry.movement_direction === "out" || entry.is_dropped
+          ? "movement-out"
+          : "movement-flat";
   return `<span class="movement-chip ${movementClass}">${escapeHtml(text)}</span>`;
 }
 
@@ -437,7 +444,7 @@ function renderLatest(payload) {
   seasonBadge.textContent = snapshot.season ? `Season ${snapshot.season}` : "Season -";
   snapshotMeta.textContent = snapshot.source_time_text || snapshot.scraped_at || "-";
   totalMeta.textContent = `총 저장 인원 ${snapshot.entry_count || entries.length}명`;
-  entryCount.textContent = `${entries.length}명`;
+  entryCount.textContent = rankingCountText(entries);
   leaderStat.textContent = entries[0] ? entries[0].character_name : "-";
   leaderMeta.textContent = entries[0]
     ? `${entries[0].server_name} · ${tierWithPoints(entries[0])} · ${entries[0].wins ?? "-"}승 · 1위 유지일 계산 중`
@@ -452,8 +459,8 @@ function renderLatest(payload) {
 function renderRankingRows() {
   const entries = filteredRankingEntries();
   entryCount.textContent = searchInput.value.trim()
-    ? `${entries.length} / ${latestEntries.length}명`
-    : `${latestEntries.length}명`;
+    ? `${entries.length} / ${rankingCountText(latestEntries)}`
+    : rankingCountText(latestEntries);
   if (entries.length === 0) {
     rankingRows.innerHTML = `<tr><td class="empty" colspan="7">검색 결과가 없습니다.</td></tr>`;
     return;
@@ -461,13 +468,14 @@ function renderRankingRows() {
 
   rankingRows.innerHTML = entries.map((entry) => {
     const isNew = entry.movement_direction === "new";
-    const rowClass = isNew ? "is-new" : "";
+    const isDropped = Boolean(entry.is_dropped);
+    const rowClass = [isNew ? "is-new" : "", isDropped ? "is-dropped" : ""].filter(Boolean).join(" ");
     return `
       <tr class="${rowClass}" data-key="${escapeHtml(entry.character_key)}">
-        <td><span class="rank-badge ${rankClass(entry.rank)}">${entry.rank}</span></td>
+        <td>${rankCellHtml(entry)}</td>
         <td>
           <span class="name-cell">
-            <span>${escapeHtml(entry.character_name)}</span>
+            <a class="character-detail-link" href="details/?id=${encodeURIComponent(characterIdForEntry(entry))}">${escapeHtml(entry.character_name)}</a>
             ${isNew ? '<span class="new-pill">NEW</span>' : ""}
           </span>
         </td>
@@ -481,10 +489,26 @@ function renderRankingRows() {
   }).join("");
 
   [...rankingRows.querySelectorAll("tr[data-key]")].forEach((row) => {
+    row.querySelector(".character-detail-link")?.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
     row.addEventListener("click", () => {
       selectCharacter(row.dataset.key, { scrollRanking: false });
     });
   });
+}
+
+function rankingCountText(entries) {
+  const droppedCount = entries.filter((entry) => entry.is_dropped).length;
+  const officialCount = entries.length - droppedCount;
+  return droppedCount > 0 ? `${officialCount}명 + 순위권 밖 ${droppedCount}명` : `${officialCount}명`;
+}
+
+function rankCellHtml(entry) {
+  if (entry.is_dropped || entry.rank == null) {
+    return '<span class="rank-badge rank-dropped" aria-label="순위권 밖"></span>';
+  }
+  return `<span class="rank-badge ${rankClass(entry.rank)}">${escapeHtml(entry.rank)}</span>`;
 }
 
 function filteredRankingEntries() {
@@ -494,6 +518,33 @@ function filteredRankingEntries() {
     String(entry.character_name).toLowerCase().includes(query)
     || String(entry.server_name).toLowerCase().includes(query)
   ));
+}
+
+function characterIdForEntry(entry) {
+  return entry.character_id || characterIdForKey(entry.character_key);
+}
+
+function characterIdForKey(key) {
+  const bytes = new TextEncoder().encode(String(key || ""));
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return `c1_${btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "")}`;
+}
+
+function characterKeyFromId(value) {
+  const text = String(value || "");
+  if (!text.startsWith("c1_")) return text;
+  const encoded = text.slice(3).replaceAll("-", "+").replaceAll("_", "/");
+  const padded = encoded.padEnd(encoded.length + ((4 - encoded.length % 4) % 4), "=");
+  try {
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  } catch (error) {
+    return "";
+  }
 }
 
 async function updateLeaderStreak(snapshot, leader) {
@@ -745,7 +796,7 @@ function worseTier(row, worst) {
 function tierWithPoints(entry) {
   const tier = entry.tier_label || "-";
   const points = pointsDisplay(entry);
-  return points === "-" ? tier : `${tier} · 평점 ${points}`;
+  return points === "-" ? tier : `${tier} · ${points}`;
 }
 
 function pointsDisplay(entry) {
