@@ -11,6 +11,9 @@
   --accent: #66e3d3;
   --accent-dark: #20b6aa;
   --warn: #fb7185;
+  --heart: #fb7185;
+  --heart-bg: rgba(251, 113, 133, 0.1);
+  --heart-line: rgba(251, 113, 133, 0.34);
   --gold: #f7c76a;
   --body-bg:
     radial-gradient(circle at 18% -10%, rgba(102, 227, 211, 0.22), transparent 30%),
@@ -58,6 +61,9 @@ body[data-theme="light"] {
   --line: rgba(71, 85, 105, 0.2);
   --accent: #0f9f95;
   --accent-dark: #0c766d;
+  --heart: #e11d48;
+  --heart-bg: rgba(225, 29, 72, 0.08);
+  --heart-line: rgba(225, 29, 72, 0.28);
   --body-bg:
     radial-gradient(circle at 18% -10%, rgba(20, 184, 166, 0.16), transparent 30%),
     radial-gradient(circle at 80% 0%, rgba(245, 158, 11, 0.12), transparent 28%),
@@ -145,6 +151,7 @@ body {
     background 220ms ease,
     color 220ms ease,
     scrollbar-color 220ms ease;
+  overscroll-behavior-x: none;
 }
 
 .panel,
@@ -154,6 +161,7 @@ body {
 .snapshot-select-wrap select,
 .nav-button,
 .theme-toggle,
+.heart-button,
 .season-badge,
 .rank-badge,
 .tier-pill,
@@ -420,7 +428,7 @@ body[data-theme="light"] code::-webkit-scrollbar-thumb {
   padding: 30px 34px 18px;
 }
 
-.topbar > div {
+.topbar-copy {
   min-width: 0;
 }
 
@@ -510,11 +518,16 @@ h2 {
   box-shadow: 0 0 24px rgba(102, 227, 211, 0.11);
 }
 
+.topbar-actions,
 .actions,
 .page-nav {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.topbar-actions {
+  flex: 0 0 auto;
 }
 
 .theme-toggle {
@@ -533,6 +546,93 @@ h2 {
 .theme-toggle:hover {
   border-color: var(--accent);
   background: var(--control-bg-strong);
+}
+
+.heart-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 126px;
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  padding: 0 14px;
+  background: var(--control-bg);
+  color: var(--muted);
+  box-shadow: none;
+}
+
+.heart-button:active {
+  transform: none;
+}
+
+.heart-button:hover {
+  border-color: var(--heart-line);
+  background: var(--heart-bg);
+  color: var(--text);
+}
+
+.heart-button.is-liked {
+  border-color: var(--heart-line);
+  background: var(--heart-bg);
+  color: var(--heart);
+}
+
+.heart-button.is-heart-offline .heart-count {
+  opacity: 0.55;
+}
+
+.heart-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+}
+
+.heart-icon svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  overflow: visible;
+}
+
+.heart-icon path {
+  fill: transparent;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linejoin: round;
+  transition:
+    fill 180ms ease,
+    stroke 180ms ease;
+}
+
+.heart-button:not(.is-liked) .heart-icon {
+  color: var(--muted);
+}
+
+.heart-button.is-liked .heart-icon {
+  color: var(--heart);
+}
+
+.heart-button.is-liked .heart-icon path {
+  fill: currentColor;
+}
+
+.heart-button-text {
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.heart-count {
+  min-width: 3ch;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  text-align: right;
+  white-space: nowrap;
 }
 
 button {
@@ -821,6 +921,9 @@ button:disabled {
 .table-wrap {
   max-height: calc(100vh - 140px);
   overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: auto;
 }
 
 table {
@@ -854,12 +957,41 @@ tbody tr {
   position: relative;
 }
 
-.bottom-text {
-  width: 100%;
-  text-align: right;
-  font-size: small;
-  padding: .5rem;
+.site-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin: 8px 18px 18px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  padding-top: 12px;
   color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.site-footer strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.site-footer a {
+  color: var(--accent);
+  font-weight: 800;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.site-footer a:hover {
+  color: var(--text);
+}
+
+.footer-label {
+  color: var(--muted);
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .rank-badge,
@@ -1356,7 +1488,7 @@ tr.focus-flash td {
   align-items: center;
   gap: 8px;
   min-height: 22px;
-  padding: 0 16px 8px;
+  padding: 4px 16px 8px;
   font-size: 13px;
 }
 
@@ -1545,6 +1677,12 @@ code {
   .season-extremes {
     grid-template-columns: 1fr;
   }
+
+  .site-footer {
+    justify-content: center;
+    margin: 6px 18px 20px;
+    text-align: center;
+  }
 }
 
 @media (max-width: 980px) {
@@ -1556,12 +1694,12 @@ code {
     padding: 24px 18px 16px;
   }
 
-  .topbar > div {
+  .topbar-copy {
     width: 100%;
-    padding-right: 58px;
+    padding-right: 190px;
   }
 
-  .theme-toggle {
+  .topbar-actions {
     position: absolute;
     top: 24px;
     right: 18px;
@@ -1625,6 +1763,27 @@ code {
   }
 
   .table-wrap {
-    max-height: 520px;
+    max-height: min(520px, 62svh);
+    overflow-x: auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+}
+
+@media (max-width: 520px) {
+  .topbar-copy {
+    padding-right: 104px;
+  }
+
+  .heart-button {
+    width: 42px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .heart-count,
+  .heart-button-text {
+    display: none;
   }
 }

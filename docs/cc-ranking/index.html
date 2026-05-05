@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FF14 CC Rankings</title>
-    <link rel="stylesheet" href="styles.css?v=20260505-default-leader">
+    <link rel="stylesheet" href="styles.css?v=20260505-heart-svg">
   </head>
   <body>
     <header class="topbar">
-      <div>
+      <div class="topbar-copy">
         <span class="eyebrow">FFXIV KR PvP Archive</span>
         <div class="title-row">
           <h1>Crystalline Conflict Rankings</h1>
@@ -20,9 +20,20 @@
           <span><a class="official-link" href="https://www.ff14.co.kr/ranking/CrystallineConflict" target="_blank" rel="noopener noreferrer">공식 랭킹 페이지</a></span>
         </p>
       </div>
-      <button id="themeToggle" class="theme-toggle" type="button" aria-label="테마 변경" title="테마 변경">
-        <span id="themeIcon" aria-hidden="true">☾</span>
-      </button>
+      <div class="topbar-actions">
+        <button id="projectHeart" class="heart-button" type="button" aria-pressed="false" aria-label="프로젝트가 마음에 들었다면 눌러주세요" title="프로젝트가 마음에 들었다면 눌러주세요">
+          <span class="heart-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>
+            </svg>
+          </span>
+          <span class="heart-button-text">좋아요</span>
+          <span id="projectHeartCount" class="heart-count" aria-hidden="true">-</span>
+        </button>
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="테마 변경" title="테마 변경">
+          <span id="themeIcon" aria-hidden="true">☾</span>
+        </button>
+      </div>
     </header>
 
     <section class="snapshot-nav" aria-label="스냅샷 이동">
@@ -96,11 +107,13 @@
       </aside>
     </main>
 
-    <div class="bottom-text">
-      Made by Caitsith@모그리&lt;yeol@kstr.dev&gt;
-    </div>
+    <footer class="site-footer" aria-label="제작자 정보">
+      <span class="footer-label">Made by</span>
+      <strong>Caitsith@모그리</strong>
+      <a href="mailto:yeol@kstr.dev">yeol@kstr.dev</a>
+    </footer>
 
-    <script src="config.js?v=20260505-default-leader"></script>
-    <script src="app.js?v=20260505-default-leader"></script>
+    <script src="config.js?v=20260505-heart-svg"></script>
+    <script src="app.js?v=20260505-heart-svg"></script>
   </body>
 </html>

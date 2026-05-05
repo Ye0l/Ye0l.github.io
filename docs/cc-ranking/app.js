@@ -17,6 +17,8 @@ const nextMapName = document.querySelector("#nextMapName");
 const nextMapTime = document.querySelector("#nextMapTime");
 const themeToggle = document.querySelector("#themeToggle");
 const themeIcon = document.querySelector("#themeIcon");
+const projectHeart = document.querySelector("#projectHeart");
+const projectHeartCount = document.querySelector("#projectHeartCount");
 const canvas = document.querySelector("#rankChart");
 const ctx = canvas.getContext("2d");
 
@@ -38,6 +40,8 @@ const THEME_ICONS = {
   rose: "◆",
 };
 const DEFAULT_THEME = "dark";
+const HEART_STORAGE_KEY = "ccRankingProjectHeart";
+const HEART_CLIENT_KEY = "ccRankingProjectHeartClient";
 
 const API_BASE = String(window.CC_API_BASE || "").replace(/\/$/, "");
 const STATIC_DATA_BASE = String(window.CC_STATIC_DATA_BASE || "static/data").replace(/\/$/, "");
@@ -110,6 +114,9 @@ async function staticApi(path) {
   const url = new URL(path, window.location.origin);
   if (url.pathname === "/api/map-rotation") {
     return localMapRotationPayload();
+  }
+  if (url.pathname === "/api/project-heart") {
+    return { count: null };
   }
 
   const data = await loadStaticData();
@@ -249,6 +256,93 @@ function readCookie(name) {
 
 function writeCookie(name, value) {
   document.cookie = `${name}=${encodeURIComponent(value)}; max-age=31536000; path=/; SameSite=Lax`;
+}
+
+function storedProjectHeart() {
+  try {
+    return window.localStorage.getItem(HEART_STORAGE_KEY) === "1";
+  } catch (error) {
+    return readCookie(HEART_STORAGE_KEY) === "1";
+  }
+}
+
+function projectHeartClientId() {
+  try {
+    let value = window.localStorage.getItem(HEART_CLIENT_KEY);
+    if (!value) {
+      value = makeClientId();
+      window.localStorage.setItem(HEART_CLIENT_KEY, value);
+    }
+    return value;
+  } catch (error) {
+    let value = readCookie(HEART_CLIENT_KEY);
+    if (!value) {
+      value = makeClientId();
+      writeCookie(HEART_CLIENT_KEY, value);
+    }
+    return value;
+  }
+}
+
+function makeClientId() {
+  if (window.crypto?.randomUUID) {
+    return window.crypto.randomUUID().replaceAll("-", "");
+  }
+  const random = new Uint32Array(4);
+  if (window.crypto?.getRandomValues) {
+    window.crypto.getRandomValues(random);
+  } else {
+    random.forEach((_, index) => {
+      random[index] = Math.floor(Math.random() * 0xffffffff);
+    });
+  }
+  return Array.from(random, (part) => part.toString(36).padStart(7, "0")).join("");
+}
+
+function updateProjectHeartCount(count) {
+  if (count == null || Number.isNaN(Number(count))) {
+    projectHeartCount.textContent = "-";
+    projectHeart.classList.add("is-heart-offline");
+    return;
+  }
+  projectHeart.classList.remove("is-heart-offline");
+  projectHeartCount.textContent = Number(count).toLocaleString("ko-KR");
+}
+
+function applyProjectHeart(isLiked, options = {}) {
+  projectHeart.classList.toggle("is-liked", isLiked);
+  projectHeart.setAttribute("aria-pressed", isLiked ? "true" : "false");
+  const countText = projectHeartCount.textContent && projectHeartCount.textContent !== "-" ? ` ${projectHeartCount.textContent}명` : "";
+  projectHeart.title = isLiked ? `하트를 눌렀습니다${countText}` : `프로젝트가 마음에 들었다면 눌러주세요${countText}`;
+  projectHeart.setAttribute("aria-label", projectHeart.title);
+  if (options.persist === false) return;
+  try {
+    window.localStorage.setItem(HEART_STORAGE_KEY, isLiked ? "1" : "0");
+  } catch (error) {
+    writeCookie(HEART_STORAGE_KEY, isLiked ? "1" : "0");
+  }
+}
+
+async function loadProjectHeartCount() {
+  const payload = await api("/api/project-heart");
+  updateProjectHeartCount(payload.count);
+  applyProjectHeart(storedProjectHeart(), { persist: false });
+  if (storedProjectHeart()) {
+    saveProjectHeart(true).catch(() => {});
+  }
+}
+
+async function saveProjectHeart(isLiked) {
+  const payload = await api("/api/project-heart", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      client_id: projectHeartClientId(),
+      liked: isLiked,
+    }),
+  });
+  updateProjectHeartCount(payload.count);
+  applyProjectHeart(Boolean(payload.liked), { persist: false });
 }
 
 function renderDashboardSkeleton() {
@@ -956,10 +1050,19 @@ function escapeHtml(value) {
 
 let searchTimer = null;
 applyTheme(storedTheme());
+applyProjectHeart(storedProjectHeart());
 renderDashboardSkeleton();
 
 themeToggle.addEventListener("click", () => {
   applyTheme(nextTheme(document.body.dataset.theme));
+});
+
+projectHeart.addEventListener("click", () => {
+  const isLiked = !projectHeart.classList.contains("is-liked");
+  applyProjectHeart(isLiked);
+  saveProjectHeart(isLiked).catch(() => {
+    applyProjectHeart(storedProjectHeart(), { persist: false });
+  });
 });
 
 searchInput.addEventListener("input", () => {
@@ -1000,6 +1103,7 @@ loadSnapshots()
 
 loadMapRotation();
 window.setInterval(loadMapRotation, 60 * 1000);
+loadProjectHeartCount().catch(() => updateProjectHeartCount(null));
 
 window.addEventListener("resize", () => renderChart(currentHistory));
 
