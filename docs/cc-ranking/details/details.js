@@ -10,12 +10,10 @@ const canvas = document.querySelector("#rankChart");
 const ctx = canvas.getContext("2d");
 let chartInstance = null;
 
-const THEMES = ["dark", "light", "crystal", "rose"];
+const THEMES = ["dark", "light"];
 const THEME_ICONS = {
   dark: "☾",
   light: "☀",
-  crystal: "✦",
-  rose: "◆",
 };
 const DEFAULT_THEME = "dark";
 const API_BASE = String(window.CC_API_BASE || "").replace(/\/$/, "");
@@ -96,6 +94,7 @@ async function loadCharacter(characterId) {
 
   const latest = history[history.length - 1];
   detailsTitle.textContent = latest.character_name;
+  detailsTitle.className = `details-title ${tierClass(latest.tier_label)}`;
   seasonBadge.textContent = latest.season ? `Season ${latest.season}` : "Season -";
   detailsMeta.textContent = `${latest.server_name} · 최신 #${latest.rank} · ${formatSnapshotDate(latest.source_time_text || latest.scraped_at)}`;
   historyCount.textContent = `${history.length}개`;
@@ -259,7 +258,7 @@ function renderChart(history) {
   const minRank = Math.min(...rankData);
   const maxRank = Math.max(...rankData);
   const spread = Math.max(10, maxRank - minRank);
-  const yMin = Math.max(1, minRank - Math.max(2, Math.floor(spread * 0.25)));
+  const yMin = Math.max(0.2, minRank - Math.max(2, Math.floor(spread * 0.25)));
   const yMax = maxRank + Math.max(2, Math.floor(spread * 0.25));
   const winDeltaMax = Math.max(...winDeltaData.filter(v => Number.isFinite(v)), 1);
 
@@ -276,16 +275,16 @@ function renderChart(history) {
       ctx.font = "bold 12px sans-serif";
       ctx.fillStyle = textColor;
       ctx.textAlign = "center";
-      ctx.textBaseline = "alphabetic";
-      
+      ctx.textBaseline = "middle";
+
       lastPoints.forEach((point) => {
         const idx = points.indexOf(point);
         const rank = data.datasets[0].data[idx];
         const label = `#${rank}`;
         const hasTierChange = idx > 0 && normalizeTier(tierLabels[idx]) !== normalizeTier(tierLabels[idx-1]);
-        
-        const placeBelow = (hasTierChange && point.y >= 78) || point.y < 34;
-        const labelY = placeBelow ? Math.min(point.y + 22, height + top - 4) : Math.max(point.y - 12, top + 16);
+
+        const placeBelow = (hasTierChange && point.y >= 80) || point.y < 60;
+        const labelY = placeBelow ? Math.min(point.y + 28, height + top - 12) : Math.max(point.y - 20, top + 12);
         ctx.fillText(label, point.x, labelY);
       });
 
@@ -366,12 +365,14 @@ function renderChart(history) {
           data: rankData,
           borderColor: lineColor,
           backgroundColor: pointColor,
+          borderDash: [5, 5],
           borderWidth: 3,
           pointRadius: 5,
           pointHoverRadius: 7,
           pointBackgroundColor: pointColor,
           tension: 0,
-          yAxisID: 'y'
+          yAxisID: 'y',
+          clip: false
         },
         {
           label: 'Daily Wins',
@@ -462,7 +463,7 @@ function drawChartPlaceholder() {
         data: [65, 46, 54, 28, 35],
         borderColor: previewColor,
         backgroundColor: pointColor,
-        borderDash: [8, 8],
+        borderDash: [5, 5],
         borderWidth: 3,
         pointRadius: 4,
         pointBackgroundColor: pointColor,

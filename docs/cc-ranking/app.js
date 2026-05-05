@@ -35,12 +35,10 @@ let leaderStreakToken = 0;
 let chartTransitionTimer = null;
 const SKELETON_ROW_COUNT = 12;
 
-const THEMES = ["dark", "light", "crystal", "rose"];
+const THEMES = ["dark", "light"];
 const THEME_ICONS = {
   dark: "☾",
   light: "☀",
-  crystal: "✦",
-  rose: "◆",
 };
 const DEFAULT_THEME = "dark";
 const HEART_STORAGE_KEY = "ccRankingProjectHeart";
@@ -425,7 +423,34 @@ function renderLatest(payload) {
   document.body.classList.remove("is-loading");
   canvas.classList.remove("chart-loading");
   const snapshot = payload.snapshot;
-  const entries = payload.entries || [];
+  let entries = payload.entries || [];
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.has("dev") || params.has("mock")) {
+    const tiers = [
+      { label: "Ultima", code: "tier8", color: "Moogle" },
+      { label: "Omega", code: "tier7", color: "Chocobo" },
+      { label: "Crystal", code: "tier6", color: "Bahamut" },
+      { label: "Diamond", code: "tier5", color: "Shinryu" },
+      { label: "Platinum", code: "tier4", color: "Garuda" },
+      { label: "Gold", code: "tier3", color: "Ifrit" },
+      { label: "Silver", code: "tier2", color: "Titan" },
+      { label: "Bronze", code: "tier1", color: "Ramuh" },
+    ];
+    entries = tiers.map((t, i) => ({
+      character_name: `Mock ${t.label} User`,
+      character_key: `mock-${t.label.toLowerCase()}`,
+      server_name: t.color,
+      tier_label: t.label,
+      tier_code: t.code,
+      rank: i + 1,
+      wins: 100 * (8 - i),
+      movement_direction: i % 2 === 0 ? "up" : "flat",
+      movement_value: i,
+      crystal_points: 1000 * (8 - i),
+    }));
+  }
+
   latestEntries = entries;
   if (snapshot) {
     snapshotPayloadCache.set(String(snapshot.id), payload);
@@ -433,7 +458,7 @@ function renderLatest(payload) {
   if (!snapshot) {
     seasonBadge.textContent = "Season -";
     snapshotMeta.textContent = "저장된 스냅샷이 없습니다.";
-    totalMeta.textContent = "총 저장 인원 -";
+    totalMeta.textContent = "표시 인원 -";
     entryCount.textContent = "";
     leaderStat.textContent = "-";
     leaderMeta.textContent = "-";
@@ -446,7 +471,7 @@ function renderLatest(payload) {
 
   seasonBadge.textContent = snapshot.season ? `Season ${snapshot.season}` : "Season -";
   snapshotMeta.textContent = snapshot.source_time_text || snapshot.scraped_at || "-";
-  totalMeta.textContent = `총 저장 인원 ${snapshot.entry_count || entries.length}명`;
+  totalMeta.textContent = `표시 인원 ${rankingCountText(entries)}`;
   entryCount.textContent = rankingCountText(entries);
   leaderStat.textContent = entries[0] ? entries[0].character_name : "-";
   leaderMeta.textContent = entries[0]
@@ -473,7 +498,10 @@ function renderRankingRows() {
   rankingRows.innerHTML = entries.map((entry) => {
     const isNew = entry.movement_direction === "new";
     const isDropped = Boolean(entry.is_dropped);
-    const rowClass = [isNew ? "is-new" : "", isDropped ? "is-dropped" : ""].filter(Boolean).join(" ");
+    const rowClass = [
+      isNew ? "is-new" : "",
+      isDropped ? "is-dropped" : "",
+    ].filter(Boolean).join(" ");
     return `
       <tr class="${rowClass}" data-key="${escapeHtml(entry.character_key)}">
         <td>${rankCellHtml(entry)}</td>
@@ -997,7 +1025,7 @@ function renderChart(history) {
   const minRank = Math.min(...rankData);
   const maxRank = Math.max(...rankData);
   const spread = Math.max(10, maxRank - minRank);
-  const yMin = Math.max(1, minRank - Math.max(2, Math.floor(spread * 0.25)));
+  const yMin = Math.max(0.2, minRank - Math.max(2, Math.floor(spread * 0.25)));
   const yMax = maxRank + Math.max(2, Math.floor(spread * 0.25));
   const winDeltaMax = Math.max(...winDeltaData.filter(v => Number.isFinite(v)), 1);
 
@@ -1014,16 +1042,16 @@ function renderChart(history) {
       ctx.font = "bold 12px sans-serif";
       ctx.fillStyle = textColor;
       ctx.textAlign = "center";
-      ctx.textBaseline = "alphabetic";
-      
+      ctx.textBaseline = "middle";
+
       lastPoints.forEach((point) => {
         const idx = points.indexOf(point);
         const rank = data.datasets[0].data[idx];
         const label = `#${rank}`;
         const hasTierChange = idx > 0 && normalizeTier(tierLabels[idx]) !== normalizeTier(tierLabels[idx-1]);
-        
-        const placeBelow = (hasTierChange && point.y >= 78) || point.y < 34;
-        const labelY = placeBelow ? Math.min(point.y + 22, height + top - 4) : Math.max(point.y - 12, top + 16);
+
+        const placeBelow = (hasTierChange && point.y >= 80) || point.y < 60;
+        const labelY = placeBelow ? Math.min(point.y + 28, height + top - 12) : Math.max(point.y - 20, top + 12);
         ctx.fillText(label, point.x, labelY);
       });
 
@@ -1104,12 +1132,14 @@ function renderChart(history) {
           data: rankData,
           borderColor: lineColor,
           backgroundColor: pointColor,
+          borderDash: [5, 5],
           borderWidth: 3,
           pointRadius: 5,
           pointHoverRadius: 7,
           pointBackgroundColor: pointColor,
           tension: 0,
-          yAxisID: 'y'
+          yAxisID: 'y',
+          clip: false
         },
         {
           label: 'Daily Wins',
@@ -1200,7 +1230,7 @@ function drawChartPlaceholder() {
         data: [65, 46, 54, 28],
         borderColor: previewColor,
         backgroundColor: pointColor,
-        borderDash: [8, 8],
+        borderDash: [5, 5],
         borderWidth: 3,
         pointRadius: 4,
         pointBackgroundColor: pointColor,
