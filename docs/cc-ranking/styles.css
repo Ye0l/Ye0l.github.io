@@ -85,9 +85,15 @@ body[data-theme="light"] {
   --leader-label-text: #854d0e;
   --leader-label-line: rgba(180, 83, 9, 0.36);
   --chart-bg: #f8fafc;
+  --chart-line: #0f9f95;
+  --chart-point: #b45309;
   --chart-grid: rgba(71, 85, 105, 0.16);
   --chart-text: #1e293b;
   --chart-muted: #64748b;
+  --chart-preview: rgba(15, 118, 110, 0.36);
+  --chart-marker: #be185d;
+  --chart-marker-line: rgba(190, 24, 93, 0.3);
+  --chart-marker-text: #9d174d;
   --skeleton-base: rgba(100, 116, 139, 0.13);
   --skeleton-glint: rgba(255, 255, 255, 0.78);
 }
@@ -1660,7 +1666,27 @@ canvas.chart-loading {
 .details-history-wrap::-webkit-scrollbar-thumb {
   border: 2px solid rgba(15, 23, 42, 0.72);
   border-radius: 999px;
-  background: var(--scrollbar-thumb);
+  background: rgba(102, 227, 211, 0.44);
+}
+
+body[data-theme="light"] .details-summary {
+  background:
+    linear-gradient(135deg, rgba(20, 184, 166, 0.12), rgba(245, 158, 11, 0.08)),
+    #ffffff;
+  box-shadow: 0 12px 30px rgba(30, 41, 59, 0.08);
+}
+
+body[data-theme="light"] .details-stat-grid div {
+  border-right-color: rgba(100, 116, 139, 0.16);
+}
+
+body[data-theme="light"] .details-history-wrap::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.78);
+}
+
+body[data-theme="light"] .details-history-wrap::-webkit-scrollbar-thumb {
+  border-color: rgba(226, 232, 240, 0.78);
+  background: rgba(100, 116, 139, 0.46);
 }
 
 .season-extremes {
