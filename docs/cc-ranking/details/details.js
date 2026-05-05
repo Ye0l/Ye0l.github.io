@@ -16,11 +16,13 @@ const THEME_ICONS = {
   light: "☀",
 };
 const DEFAULT_THEME = "dark";
+const THEME_SWITCH_MS = 360;
 const API_BASE = String(window.CC_API_BASE || "").replace(/\/$/, "");
 const configuredStaticBase = String(window.CC_STATIC_DATA_BASE || "static/data").replace(/\/$/, "");
 const STATIC_DATA_BASE = configuredStaticBase === "static/data" ? "../static/data" : configuredStaticBase;
 let staticDataPromise = null;
 let currentHistory = [];
+let themeSwitchTimer = null;
 
 async function api(path, options = {}) {
   try {
@@ -512,8 +514,15 @@ function storedTheme() {
   }
 }
 
-function applyTheme(theme) {
+function applyTheme(theme, options = {}) {
   const nextThemeValue = THEMES.includes(theme) ? theme : DEFAULT_THEME;
+  if (options.animate && document.body.dataset.theme !== nextThemeValue) {
+    window.clearTimeout(themeSwitchTimer);
+    document.body.classList.add("is-theme-switching");
+    themeSwitchTimer = window.setTimeout(() => {
+      document.body.classList.remove("is-theme-switching");
+    }, THEME_SWITCH_MS);
+  }
   document.body.dataset.theme = nextThemeValue;
   themeIcon.textContent = THEME_ICONS[nextThemeValue] || THEME_ICONS[DEFAULT_THEME];
   themeToggle.dataset.theme = nextThemeValue;
@@ -552,7 +561,7 @@ function escapeHtml(value) {
 }
 
 themeToggle.addEventListener("click", () => {
-  applyTheme(nextTheme(document.body.dataset.theme));
+  applyTheme(nextTheme(document.body.dataset.theme), { animate: true });
 });
 
 document.addEventListener("contextmenu", (event) => event.preventDefault());

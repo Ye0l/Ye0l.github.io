@@ -3,8 +3,6 @@ const seasonBadge = document.querySelector("#seasonBadge");
 const snapshotMeta = document.querySelector("#snapshotMeta");
 const totalMeta = document.querySelector("#totalMeta");
 const entryCount = document.querySelector("#entryCount");
-const leaderStat = document.querySelector("#leaderStat");
-const leaderMeta = document.querySelector("#leaderMeta");
 const snapshotSelect = document.querySelector("#snapshotSelect");
 const prevSnapshot = document.querySelector("#prevSnapshot");
 const nextSnapshot = document.querySelector("#nextSnapshot");
@@ -31,10 +29,9 @@ let currentSnapshotIndex = -1;
 let currentHistory = [];
 let latestEntries = [];
 let rankingSort = { key: "rank", direction: "asc" };
-const snapshotPayloadCache = new Map();
-let leaderStreakToken = 0;
 let chartTransitionTimer = null;
 let characterRequestToken = 0;
+let themeSwitchTimer = null;
 const SKELETON_ROW_COUNT = 12;
 
 const THEMES = ["dark", "light"];
@@ -43,6 +40,7 @@ const THEME_ICONS = {
   light: "☀",
 };
 const DEFAULT_THEME = "dark";
+const THEME_SWITCH_MS = 360;
 const HEART_STORAGE_KEY = "ccRankingProjectHeart";
 const HEART_CLIENT_KEY = "ccRankingProjectHeartClient";
 
@@ -238,8 +236,15 @@ function storedTheme() {
   }
 }
 
-function applyTheme(theme) {
+function applyTheme(theme, options = {}) {
   const nextTheme = THEMES.includes(theme) ? theme : DEFAULT_THEME;
+  if (options.animate && document.body.dataset.theme !== nextTheme) {
+    window.clearTimeout(themeSwitchTimer);
+    document.body.classList.add("is-theme-switching");
+    themeSwitchTimer = window.setTimeout(() => {
+      document.body.classList.remove("is-theme-switching");
+    }, THEME_SWITCH_MS);
+  }
   document.body.dataset.theme = nextTheme;
   themeIcon.textContent = THEME_ICONS[nextTheme] || THEME_ICONS[DEFAULT_THEME];
   themeToggle.dataset.theme = nextTheme;
@@ -361,8 +366,6 @@ function renderDashboardSkeleton() {
   snapshotMeta.innerHTML = '<span class="skeleton-line skeleton-meta"></span>';
   totalMeta.innerHTML = '<span class="skeleton-line skeleton-total"></span>';
   entryCount.innerHTML = '<span class="skeleton-line skeleton-count"></span>';
-  leaderStat.innerHTML = '<span class="skeleton-line skeleton-leader-name"></span>';
-  leaderMeta.innerHTML = '<span class="skeleton-line skeleton-leader-meta"></span>';
   snapshotSelect.innerHTML = "<option>불러오는 중</option>";
   snapshotSelect.disabled = true;
   prevSnapshot.disabled = true;
@@ -374,8 +377,6 @@ function renderDashboardSkeleton() {
 
 function renderSnapshotSkeleton() {
   entryCount.innerHTML = '<span class="skeleton-line skeleton-count"></span>';
-  leaderStat.innerHTML = '<span class="skeleton-line skeleton-leader-name"></span>';
-  leaderMeta.innerHTML = '<span class="skeleton-line skeleton-leader-meta"></span>';
   rankingRows.innerHTML = skeletonRowsHtml(SKELETON_ROW_COUNT);
 }
 
@@ -465,17 +466,12 @@ function renderLatest(payload) {
   }
 
   latestEntries = entries;
-  if (snapshot) {
-    snapshotPayloadCache.set(String(snapshot.id), payload);
-  }
   if (!snapshot) {
     endCharacterHistoryLoading();
     seasonBadge.textContent = "Season -";
     snapshotMeta.textContent = "저장된 스냅샷이 없습니다.";
     totalMeta.textContent = "표시 인원 -";
     entryCount.textContent = "";
-    leaderStat.textContent = "-";
-    leaderMeta.textContent = "-";
     selectedCharacter.innerHTML = "";
     seasonExtremes.innerHTML = "";
     rankingRows.innerHTML = `<tr><td class="empty" colspan="7">아직 데이터가 없습니다.</td></tr>`;
@@ -487,12 +483,7 @@ function renderLatest(payload) {
   snapshotMeta.textContent = snapshot.source_time_text || snapshot.scraped_at || "-";
   totalMeta.textContent = `표시 인원 ${rankingCountText(entries)}`;
   entryCount.textContent = rankingCountText(entries);
-  leaderStat.textContent = entries[0] ? entries[0].character_name : "-";
-  leaderMeta.textContent = entries[0]
-    ? `${entries[0].server_name} · ${tierWithPoints(entries[0])} · ${entries[0].wins ?? "-"}승 · 1위 유지일 계산 중`
-    : "-";
   renderRankingRows();
-  updateLeaderStreak(snapshot, entries[0]);
   if (currentHistory.length === 0) {
     updateChart([], { animate: false });
   }
@@ -685,42 +676,6 @@ function characterKeyFromId(value) {
   } catch (error) {
     return "";
   }
-}
-
-async function updateLeaderStreak(snapshot, leader) {
-  const token = ++leaderStreakToken;
-  if (!snapshot || !leader) return;
-  let streak = 1;
-  try {
-    streak = await leaderStreakDays(snapshot.id, leader.character_key);
-  } catch (error) {
-    streak = 1;
-  }
-  if (token !== leaderStreakToken) return;
-  leaderMeta.textContent = `${leader.server_name} · ${tierWithPoints(leader)} · ${leader.wins ?? "-"}승 · 1위 ${streak}일차`;
-}
-
-async function leaderStreakDays(snapshotId, leaderKey) {
-  const index = snapshots.findIndex((snapshot) => String(snapshot.id) === String(snapshotId));
-  if (index < 0) return 1;
-  let streak = 0;
-  for (let cursor = index; cursor < snapshots.length; cursor += 1) {
-    const payload = await snapshotPayload(snapshots[cursor].id);
-    const topEntry = (payload.entries || [])[0];
-    if (!topEntry || topEntry.character_key !== leaderKey) break;
-    streak += 1;
-  }
-  return Math.max(1, streak);
-}
-
-async function snapshotPayload(snapshotId) {
-  const key = String(snapshotId);
-  if (!snapshotPayloadCache.has(key)) {
-    snapshotPayloadCache.set(key, api(`/api/snapshot?id=${encodeURIComponent(snapshotId)}`));
-  }
-  const payload = await snapshotPayloadCache.get(key);
-  snapshotPayloadCache.set(key, payload);
-  return payload;
 }
 
 async function loadLatest() {
@@ -1314,7 +1269,7 @@ applyProjectHeart(storedProjectHeart());
 renderDashboardSkeleton();
 
 themeToggle.addEventListener("click", () => {
-  applyTheme(nextTheme(document.body.dataset.theme));
+  applyTheme(nextTheme(document.body.dataset.theme), { animate: true });
 });
 
 projectHeart.addEventListener("click", () => {
