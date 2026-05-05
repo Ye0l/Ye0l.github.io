@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FF14 CC Character Details</title>
-    <link rel="stylesheet" href="../styles.css?v=20260505-details-light">
+    <link rel="stylesheet" href="../styles.css?v=20260505-perfect-scrollbars">
   </head>
   <body class="details-page">
     <header class="topbar">
@@ -64,7 +64,9 @@
           <h2>순위 그래프</h2>
           <span>rank graph</span>
         </div>
-        <canvas id="rankChart" width="960" height="420"></canvas>
+        <div class="chart-container">
+          <canvas id="rankChart"></canvas>
+        </div>
       </section>
 
       <section class="panel details-history-panel">
@@ -96,7 +98,8 @@
       <a href="mailto:yeol@kstr.dev">yeol@kstr.dev</a>
     </footer>
 
-    <script src="../config.js?v=20260505-details-light"></script>
-    <script src="details.js?v=20260505-details-light"></script>
+    <script src="../chart.umd.min.js"></script>
+    <script src="../config.js?v=20260505-perfect-scrollbars"></script>
+    <script src="details.js?v=20260505-perfect-scrollbars"></script>
   </body>
 </html>

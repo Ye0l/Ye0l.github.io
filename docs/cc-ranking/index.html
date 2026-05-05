@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FF14 CC Rankings</title>
-    <link rel="stylesheet" href="styles.css?v=20260505-sort">
+    <link rel="stylesheet" href="styles.css?v=20260505-perfect-scrollbars">
   </head>
   <body>
     <header class="topbar">
@@ -102,7 +102,9 @@
           <span>rank graph</span>
         </div>
         <div id="selectedCharacter" class="selected"></div>
-        <canvas id="rankChart" width="520" height="260"></canvas>
+        <div class="chart-container">
+          <canvas id="rankChart"></canvas>
+        </div>
         <div id="seasonExtremes" class="season-extremes" aria-label="이번 시즌 최고 최저 기록"></div>
       </aside>
     </main>
@@ -113,7 +115,8 @@
       <a href="mailto:yeol@kstr.dev">yeol@kstr.dev</a>
     </footer>
 
-    <script src="config.js?v=20260505-heart-svg"></script>
-    <script src="app.js?v=20260505-sort"></script>
+    <script src="chart.umd.min.js"></script>
+    <script src="config.js?v=20260505-perfect-scrollbars"></script>
+    <script src="app.js?v=20260505-perfect-scrollbars"></script>
   </body>
 </html>

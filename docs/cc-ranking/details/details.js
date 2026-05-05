@@ -8,6 +8,7 @@ const themeToggle = document.querySelector("#themeToggle");
 const themeIcon = document.querySelector("#themeIcon");
 const canvas = document.querySelector("#rankChart");
 const ctx = canvas.getContext("2d");
+let chartInstance = null;
 
 const THEMES = ["dark", "light", "crystal", "rose"];
 const THEME_ICONS = {
@@ -229,193 +230,264 @@ function pointsDisplay(entry) {
 }
 
 function renderChart(history) {
-  const chartSize = resizeCanvas();
-  const styles = getComputedStyle(document.body);
-  ctx.clearRect(0, 0, chartSize.width, chartSize.height);
-  ctx.fillStyle = styles.getPropertyValue("--chart-bg").trim() || "#07111f";
-  ctx.fillRect(0, 0, chartSize.width, chartSize.height);
+  if (chartInstance) {
+    chartInstance.destroy();
+    chartInstance = null;
+  }
 
-  const padding = 46;
-  const plotWidth = chartSize.width - padding * 2;
-  const plotHeight = chartSize.height - padding * 2;
-  drawChartGrid(padding, plotWidth, plotHeight);
+  const styles = getComputedStyle(document.body);
+  const gridColor = styles.getPropertyValue("--chart-grid").trim() || "rgba(71, 85, 105, 0.16)";
+  const lineColor = styles.getPropertyValue("--chart-line").trim() || "#0f9f95";
+  const pointColor = styles.getPropertyValue("--chart-point").trim() || "#b45309";
+  const textColor = styles.getPropertyValue("--chart-text").trim() || "#1e293b";
+  const mutedColor = styles.getPropertyValue("--chart-muted").trim() || "#64748b";
+  const barFillStrong = styles.getPropertyValue("--chart-bar-fill-strong").trim() || "rgba(180, 83, 9, 0.42)";
+  const markerColor = styles.getPropertyValue("--chart-marker").trim() || "#be185d";
+  const markerLineColor = styles.getPropertyValue("--chart-marker-line").trim() || "rgba(190, 24, 93, 0.3)";
+  const markerTextColor = styles.getPropertyValue("--chart-marker-text").trim() || "#9d174d";
 
   if (history.length === 0) {
-    drawPreviewLine(padding, plotWidth, plotHeight);
+    drawChartPlaceholder();
     return;
   }
 
-  const ranks = history.map((row) => row.rank);
-  const minRank = Math.min(...ranks);
-  const maxRank = Math.max(...ranks);
-  const spread = Math.max(1, maxRank - minRank);
-  const xStep = plotWidth / Math.max(1, history.length - 1);
-  const points = history.map((row, index) => {
-    const x = history.length === 1 ? padding + plotWidth / 2 : padding + xStep * index;
-    const y = history.length === 1
-      ? padding + plotHeight / 2
-      : padding + ((row.rank - minRank) / spread) * plotHeight;
-    return { x, y, row };
+  const labels = history.map(row => formatSnapshotDate(row.source_time_text || row.scraped_at));
+  const rankData = history.map(row => row.rank);
+  const winDeltaData = history.map(row => numberValue(row.win_delta));
+  const tierLabels = history.map(row => row.tier_label);
+
+  const minRank = Math.min(...rankData);
+  const maxRank = Math.max(...rankData);
+  const spread = Math.max(10, maxRank - minRank);
+  const yMin = Math.max(1, minRank - Math.max(2, Math.floor(spread * 0.25)));
+  const yMax = maxRank + Math.max(2, Math.floor(spread * 0.25));
+  const winDeltaMax = Math.max(...winDeltaData.filter(v => Number.isFinite(v)), 1);
+
+  const customPlugin = {
+    id: 'customLabels',
+    afterDatasetsDraw(chart) {
+      const { ctx, data, chartArea: { top, bottom, left, right, height } } = chart;
+      ctx.save();
+      
+      const points = chart.getDatasetMeta(0).data;
+      if (!points.length) return;
+
+      const lastPoints = points.slice(-8);
+      ctx.font = "bold 12px sans-serif";
+      ctx.fillStyle = textColor;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "alphabetic";
+      
+      lastPoints.forEach((point) => {
+        const idx = points.indexOf(point);
+        const rank = data.datasets[0].data[idx];
+        const label = `#${rank}`;
+        const hasTierChange = idx > 0 && normalizeTier(tierLabels[idx]) !== normalizeTier(tierLabels[idx-1]);
+        
+        const placeBelow = (hasTierChange && point.y >= 78) || point.y < 34;
+        const labelY = placeBelow ? Math.min(point.y + 22, height + top - 4) : Math.max(point.y - 12, top + 16);
+        ctx.fillText(label, point.x, labelY);
+      });
+
+      ctx.font = "bold 11px sans-serif";
+      points.forEach((point, idx) => {
+        if (idx === 0) return;
+        const currentTier = tierLabels[idx];
+        const prevTier = tierLabels[idx - 1];
+        if (normalizeTier(currentTier) !== normalizeTier(prevTier)) {
+          const label = currentTier || "계급 변경";
+          const labelBelow = point.y < 78;
+          const labelY = labelBelow 
+            ? Math.min(point.y + 34 + (idx % 2) * 16, height + top - 24)
+            : Math.max(top + 24, Math.min(point.y - 24 - (idx % 2) * 18, height + top - 24));
+
+          ctx.fillStyle = markerColor;
+          ctx.beginPath();
+          ctx.moveTo(point.x, point.y - 9);
+          ctx.lineTo(point.x + 8, point.y);
+          ctx.lineTo(point.x, point.y + 9);
+          ctx.lineTo(point.x - 8, point.y);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.strokeStyle = markerLineColor;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(point.x, point.y);
+          ctx.lineTo(point.x, labelBelow ? labelY - 13 : labelY + 5);
+          ctx.stroke();
+
+          ctx.fillStyle = markerTextColor;
+          ctx.fillText(label, point.x, labelY);
+        }
+      });
+
+      const latestDeltaPoint = [...history].reverse().find(row => Number.isFinite(numberValue(row.win_delta)));
+      if (latestDeltaPoint) {
+        const latestDelta = numberValue(latestDeltaPoint.win_delta);
+        const maxDelta = Math.max(...winDeltaData.filter(v => Number.isFinite(v)));
+        const summaryLabel = `일일 승리 +${latestDelta} · max +${maxDelta}`;
+        ctx.font = "12px sans-serif";
+        ctx.fillStyle = styles.getPropertyValue("--chart-bar-text").trim() || "#f7c76a";
+        ctx.textAlign = "right";
+        ctx.fillText(summaryLabel, right, top - 14);
+      }
+
+      ctx.font = "12px sans-serif";
+      ctx.fillStyle = mutedColor;
+      ctx.textAlign = "left";
+      ctx.fillText(`best #${minRank}`, left, top - 14);
+
+      ctx.textAlign = "center";
+      ctx.fillText(`worst #${maxRank}`, (left + right) / 2, top - 14);
+
+      const bars = chart.getDatasetMeta(1).data;
+      ctx.font = "bold 10px sans-serif";
+      ctx.fillStyle = styles.getPropertyValue("--chart-bar-text").trim() || "#f7c76a";
+      ctx.textAlign = "center";
+      bars.forEach((bar, idx) => {
+        const val = winDeltaData[idx];
+        if (Number.isFinite(val) && val > 0) {
+          ctx.fillText(`+${val}`, bar.x, bar.y - 4);
+        }
+      });
+
+      ctx.restore();
+    }
+  };
+
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Rank',
+          data: rankData,
+          borderColor: lineColor,
+          backgroundColor: pointColor,
+          borderWidth: 3,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          pointBackgroundColor: pointColor,
+          tension: 0,
+          yAxisID: 'y'
+        },
+        {
+          label: 'Daily Wins',
+          type: 'bar',
+          data: winDeltaData,
+          backgroundColor: barFillStrong,
+          borderColor: 'transparent',
+          yAxisID: 'yWin',
+          barPercentage: 0.5,
+          categoryPercentage: 0.8
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: {
+        padding: {
+          top: 42,
+          bottom: 42,
+          left: 12,
+          right: 12
+        }
+      },
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            label: function(context) {
+              const idx = context.dataIndex;
+              const row = history[idx];
+              if (context.datasetIndex === 0) {
+                return `순위: #${row.rank} (${row.tier_label})`;
+              } else {
+                return `일일 승리: +${row.win_delta || 0}`;
+              }
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: mutedColor,
+            font: { size: 11 },
+            maxRotation: 0,
+            autoSkip: true,
+            maxTicksLimit: 10
+          }
+        },
+        y: {
+          reverse: true,
+          min: yMin,
+          max: yMax,
+          grid: { color: gridColor },
+          ticks: { display: false },
+          border: { display: false }
+        },
+        yWin: {
+          position: 'right',
+          display: false,
+          min: 0,
+          max: winDeltaMax * 3,
+        }
+      }
+    },
+    plugins: [customPlugin]
   });
-
-  ctx.strokeStyle = styles.getPropertyValue("--chart-line").trim() || "#66e3d3";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  points.forEach((point, index) => {
-    if (index === 0) ctx.moveTo(point.x, point.y);
-    else ctx.lineTo(point.x, point.y);
-  });
-  if (points.length > 1) ctx.stroke();
-
-  ctx.fillStyle = styles.getPropertyValue("--chart-point").trim() || "#f7c76a";
-  points.forEach((point) => {
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  const tierChangeIndexes = drawTierChangeMarkers(points, chartSize.width, chartSize.height);
-  drawDateLabels(points, chartSize.height);
-  drawRankLabels(points, tierChangeIndexes, chartSize.width, chartSize.height);
-
-  ctx.fillStyle = styles.getPropertyValue("--chart-muted").trim() || "#93a4b8";
-  ctx.font = "12px sans-serif";
-  ctx.fillText(`best #${minRank}`, padding, 22);
-  ctx.fillText(`worst #${maxRank}`, padding, chartSize.height - 14);
 }
 
-function drawTierChangeMarkers(points, chartWidth, chartHeight) {
+function drawChartPlaceholder() {
   const styles = getComputedStyle(document.body);
-  const changes = points.filter((point, index) => index > 0
-    && normalizeTier(point.row.tier_label) !== normalizeTier(points[index - 1].row.tier_label));
-  const changeIndexes = new Set(changes.map((point) => points.indexOf(point)));
+  const previewColor = styles.getPropertyValue("--chart-preview").trim() || "rgba(102, 227, 211, 0.48)";
+  const pointColor = styles.getPropertyValue("--chart-point").trim() || "rgba(247, 199, 106, 0.74)";
+  const mutedColor = styles.getPropertyValue("--chart-muted").trim() || "#93a4b8";
 
-  ctx.font = "700 11px sans-serif";
-  ctx.textBaseline = "alphabetic";
-  changes.forEach((point, index) => {
-    const label = point.row.tier_label || "계급 변경";
-    const labelWidth = ctx.measureText(label).width;
-    const labelX = Math.min(Math.max(point.x - labelWidth / 2, 8), chartWidth - labelWidth - 8);
-    const labelBelow = point.y < 78;
-    const labelY = labelBelow
-      ? Math.min(point.y + 34 + (index % 2) * 16, chartHeight - 54)
-      : Math.max(24, Math.min(point.y - 24 - (index % 2) * 18, chartHeight - 54));
-
-    ctx.fillStyle = styles.getPropertyValue("--chart-marker").trim() || "#ff8fb3";
-    ctx.beginPath();
-    ctx.moveTo(point.x, point.y - 9);
-    ctx.lineTo(point.x + 8, point.y);
-    ctx.lineTo(point.x, point.y + 9);
-    ctx.lineTo(point.x - 8, point.y);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.strokeStyle = styles.getPropertyValue("--chart-marker-line").trim() || "rgba(255, 143, 179, 0.42)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(point.x, point.y);
-    ctx.lineTo(point.x, labelBelow ? labelY - 13 : labelY + 5);
-    ctx.stroke();
-
-    ctx.fillStyle = styles.getPropertyValue("--chart-marker-text").trim() || "#ffd4df";
-    ctx.fillText(label, labelX, labelY);
-  });
-  return changeIndexes;
-}
-
-function drawRankLabels(points, tierChangeIndexes, chartWidth, chartHeight) {
-  const styles = getComputedStyle(document.body);
-  ctx.fillStyle = styles.getPropertyValue("--chart-text").trim() || "#dbeafe";
-  ctx.font = "700 12px sans-serif";
-  ctx.textBaseline = "alphabetic";
-  points.slice(-8).forEach((point) => {
-    const pointIndex = points.indexOf(point);
-    const hasTierLabel = tierChangeIndexes.has(pointIndex);
-    const placeBelow = (hasTierLabel && point.y >= 78) || point.y < 34;
-    const label = `#${point.row.rank}`;
-    const labelWidth = ctx.measureText(label).width;
-    const labelX = Math.min(Math.max(point.x - labelWidth / 2, 8), chartWidth - labelWidth - 8);
-    const labelY = placeBelow
-      ? Math.min(point.y + 22, chartHeight - 44)
-      : Math.max(point.y - 12, 16);
-    ctx.fillText(label, labelX, labelY);
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['', '', '', '', ''],
+      datasets: [{
+        data: [65, 46, 54, 28, 35],
+        borderColor: previewColor,
+        backgroundColor: pointColor,
+        borderDash: [8, 8],
+        borderWidth: 3,
+        pointRadius: 4,
+        pointBackgroundColor: pointColor,
+        tension: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false }
+      },
+      scales: {
+        x: { display: false },
+        y: { display: false }
+      },
+      animation: false
+    }
   });
 }
 
-function drawDateLabels(points, chartHeight) {
-  const labelPoints = dateLabelPoints(points);
-  const styles = getComputedStyle(document.body);
-  ctx.fillStyle = styles.getPropertyValue("--chart-muted").trim() || "#93a4b8";
-  ctx.font = "11px sans-serif";
-  labelPoints.forEach((point) => {
-    const label = formatSnapshotDate(point.row.source_time_text || point.row.scraped_at);
-    const labelWidth = ctx.measureText(label).width;
-    const labelX = Math.min(Math.max(point.x - labelWidth / 2, 8), canvas.clientWidth - labelWidth - 8);
-    ctx.fillText(label, labelX, chartHeight - 30);
-  });
-}
-
-function dateLabelPoints(points) {
-  if (points.length <= 4) return points;
-  const indexes = new Set([0, points.length - 1]);
-  indexes.add(Math.floor((points.length - 1) / 3));
-  indexes.add(Math.floor(((points.length - 1) * 2) / 3));
-  return [...indexes].sort((a, b) => a - b).map((index) => points[index]);
-}
-
-function resizeCanvas() {
-  const rect = canvas.getBoundingClientRect();
-  const ratio = window.devicePixelRatio || 1;
-  const width = Math.max(320, Math.floor(rect.width));
-  const height = Math.max(260, Math.floor(rect.height));
-  const scaledWidth = Math.floor(width * ratio);
-  const scaledHeight = Math.floor(height * ratio);
-  if (canvas.width !== scaledWidth || canvas.height !== scaledHeight) {
-    canvas.width = scaledWidth;
-    canvas.height = scaledHeight;
-    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-  }
-  return { width, height };
-}
-
-function drawChartGrid(padding, plotWidth, plotHeight) {
-  const styles = getComputedStyle(document.body);
-  ctx.strokeStyle = styles.getPropertyValue("--chart-grid").trim() || "rgba(148, 163, 184, 0.18)";
-  ctx.lineWidth = 1;
-  for (let i = 0; i < 5; i += 1) {
-    const y = padding + (plotHeight / 4) * i;
-    ctx.beginPath();
-    ctx.moveTo(padding, y);
-    ctx.lineTo(padding + plotWidth, y);
-    ctx.stroke();
-  }
-  for (let i = 0; i < 4; i += 1) {
-    const x = padding + (plotWidth / 3) * i;
-    ctx.beginPath();
-    ctx.moveTo(x, padding);
-    ctx.lineTo(x, padding + plotHeight);
-    ctx.stroke();
-  }
-}
-
-function drawPreviewLine(padding, plotWidth, plotHeight) {
-  const styles = getComputedStyle(document.body);
-  const points = [
-    [padding, padding + plotHeight * 0.65],
-    [padding + plotWidth * 0.32, padding + plotHeight * 0.46],
-    [padding + plotWidth * 0.68, padding + plotHeight * 0.54],
-    [padding + plotWidth, padding + plotHeight * 0.28],
-  ];
-  ctx.setLineDash([8, 8]);
-  ctx.strokeStyle = styles.getPropertyValue("--chart-preview").trim() || "rgba(102, 227, 211, 0.48)";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  points.forEach(([x, y], index) => {
-    if (index === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-  ctx.setLineDash([]);
+function numberValue(value) {
+  const parsed = Number.parseInt(String(value ?? "").replaceAll(",", ""), 10);
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
 
 function formatSnapshotDate(value) {
@@ -482,7 +554,6 @@ themeToggle.addEventListener("click", () => {
   applyTheme(nextTheme(document.body.dataset.theme));
 });
 
-window.addEventListener("resize", () => renderChart(currentHistory));
 document.addEventListener("contextmenu", (event) => event.preventDefault());
 document.addEventListener("dragstart", (event) => event.preventDefault());
 document.addEventListener("selectstart", (event) => event.preventDefault());
