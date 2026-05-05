@@ -965,6 +965,43 @@ th {
   z-index: 1;
 }
 
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable-th::after {
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 6px;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  vertical-align: middle;
+  opacity: 0.28;
+}
+
+.sortable-th[data-direction="asc"]::after {
+  border-bottom: 5px solid currentColor;
+  opacity: 0.9;
+}
+
+.sortable-th[data-direction="desc"]::after {
+  border-top: 5px solid currentColor;
+  opacity: 0.9;
+}
+
+.sortable-th:hover,
+.sortable-th.is-active {
+  color: var(--text);
+}
+
+.sortable-th:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -4px;
+}
+
 tr:hover td {
   background: var(--row-hover);
 }

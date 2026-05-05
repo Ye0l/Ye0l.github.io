@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FF14 CC Rankings</title>
-    <link rel="stylesheet" href="styles.css?v=20260505-dropped">
+    <link rel="stylesheet" href="styles.css?v=20260505-sort">
   </head>
   <body>
     <header class="topbar">
@@ -81,13 +81,13 @@
             <table>
               <thead>
                 <tr>
-                  <th>순위</th>
-                  <th>캐릭터</th>
-                  <th>서버</th>
-                  <th>티어</th>
-                  <th>평점</th>
-                  <th>승리</th>
-                  <th>변동</th>
+                  <th class="sortable-th" data-sort-key="rank" tabindex="0" aria-sort="ascending">순위</th>
+                  <th class="sortable-th" data-sort-key="character" tabindex="0">캐릭터</th>
+                  <th class="sortable-th" data-sort-key="server" tabindex="0">서버</th>
+                  <th class="sortable-th" data-sort-key="tier" tabindex="0">티어</th>
+                  <th class="sortable-th" data-sort-key="points" tabindex="0">평점</th>
+                  <th class="sortable-th" data-sort-key="wins" tabindex="0">승리</th>
+                  <th class="sortable-th" data-sort-key="movement" tabindex="0">변동</th>
                 </tr>
               </thead>
               <tbody id="rankingRows"></tbody>
@@ -114,6 +114,6 @@
     </footer>
 
     <script src="config.js?v=20260505-heart-svg"></script>
-    <script src="app.js?v=20260505-dropped"></script>
+    <script src="app.js?v=20260505-sort"></script>
   </body>
 </html>

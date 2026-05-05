@@ -9,6 +9,7 @@ const snapshotSelect = document.querySelector("#snapshotSelect");
 const prevSnapshot = document.querySelector("#prevSnapshot");
 const nextSnapshot = document.querySelector("#nextSnapshot");
 const searchInput = document.querySelector("#searchInput");
+const sortHeaders = [...document.querySelectorAll("[data-sort-key]")];
 const selectedCharacter = document.querySelector("#selectedCharacter");
 const seasonExtremes = document.querySelector("#seasonExtremes");
 const currentMapName = document.querySelector("#currentMapName");
@@ -27,6 +28,7 @@ let snapshots = [];
 let currentSnapshotIndex = -1;
 let currentHistory = [];
 let latestEntries = [];
+let rankingSort = { key: "rank", direction: "asc" };
 const snapshotPayloadCache = new Map();
 let leaderStreakToken = 0;
 let chartTransitionTimer = null;
@@ -461,6 +463,7 @@ function renderRankingRows() {
   entryCount.textContent = searchInput.value.trim()
     ? `${entries.length} / ${rankingCountText(latestEntries)}`
     : rankingCountText(latestEntries);
+  updateSortHeaders();
   if (entries.length === 0) {
     rankingRows.innerHTML = `<tr><td class="empty" colspan="7">검색 결과가 없습니다.</td></tr>`;
     return;
@@ -498,6 +501,100 @@ function renderRankingRows() {
   });
 }
 
+function sortedRankingEntries(entries) {
+  return entries
+    .map((entry, index) => ({ entry, index }))
+    .sort((left, right) => {
+      const result = compareRankingEntries(left.entry, right.entry, rankingSort.key, rankingSort.direction);
+      return result || left.index - right.index;
+    })
+    .map((item) => item.entry);
+}
+
+function compareRankingEntries(left, right, key, direction) {
+  if (key === "character") {
+    return compareText(left.character_name, right.character_name, direction);
+  }
+  if (key === "server") {
+    return compareText(left.server_name, right.server_name, direction);
+  }
+  if (key === "tier") {
+    return compareNumber(tierSortValue(left), tierSortValue(right), direction, { missingLast: false })
+      || compareNumber(pointsSortValue(left), pointsSortValue(right), direction)
+      || compareNumber(rankSortValue(left), rankSortValue(right), "asc");
+  }
+  if (key === "points") {
+    return compareNumber(pointsSortValue(left), pointsSortValue(right), direction)
+      || compareNumber(rankSortValue(left), rankSortValue(right), "asc");
+  }
+  if (key === "wins") {
+    return compareNumber(numberValue(left.wins), numberValue(right.wins), direction)
+      || compareNumber(rankSortValue(left), rankSortValue(right), "asc");
+  }
+  if (key === "movement") {
+    return compareNumber(movementSortValue(left), movementSortValue(right), direction, { missingLast: false })
+      || compareNumber(rankSortValue(left), rankSortValue(right), "asc");
+  }
+  return compareNumber(rankSortValue(left), rankSortValue(right), direction);
+}
+
+function compareText(left, right, direction) {
+  const result = String(left || "").localeCompare(String(right || ""), "ko", {
+    numeric: true,
+    sensitivity: "base",
+  });
+  return direction === "asc" ? result : -result;
+}
+
+function compareNumber(left, right, direction, options = {}) {
+  const { missingLast = true } = options;
+  const leftMissing = !Number.isFinite(left);
+  const rightMissing = !Number.isFinite(right);
+  if (leftMissing && rightMissing) return 0;
+  if (leftMissing) return missingLast ? 1 : -1;
+  if (rightMissing) return missingLast ? -1 : 1;
+  const result = left - right;
+  return direction === "asc" ? result : -result;
+}
+
+function rankSortValue(entry) {
+  return numberValue(entry.rank);
+}
+
+function tierSortValue(entry) {
+  return tierScore(entry.tier_label);
+}
+
+function pointsSortValue(entry) {
+  return numberValue(pointsDisplay(entry));
+}
+
+function movementSortValue(entry) {
+  if (entry.movement_direction === "out" || entry.is_dropped) return -1000000;
+  if (entry.movement_direction === "new") return 1000000;
+  const amount = numberValue(entry.movement_value);
+  if (entry.movement_direction === "up") return Number.isFinite(amount) ? amount : 0;
+  if (entry.movement_direction === "down") return Number.isFinite(amount) ? -amount : 0;
+  return 0;
+}
+
+function numberValue(value) {
+  const parsed = Number.parseInt(String(value ?? "").replaceAll(",", ""), 10);
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
+function updateSortHeaders() {
+  sortHeaders.forEach((header) => {
+    const active = header.dataset.sortKey === rankingSort.key;
+    header.classList.toggle("is-active", active);
+    header.dataset.direction = active ? rankingSort.direction : "";
+    header.setAttribute(
+      "aria-sort",
+      active ? (rankingSort.direction === "asc" ? "ascending" : "descending") : "none",
+    );
+  });
+}
+
 function rankingCountText(entries) {
   const droppedCount = entries.filter((entry) => entry.is_dropped).length;
   const officialCount = entries.length - droppedCount;
@@ -513,11 +610,11 @@ function rankCellHtml(entry) {
 
 function filteredRankingEntries() {
   const query = searchInput.value.trim().toLowerCase();
-  if (!query) return latestEntries;
-  return latestEntries.filter((entry) => (
+  const entries = !query ? latestEntries : latestEntries.filter((entry) => (
     String(entry.character_name).toLowerCase().includes(query)
     || String(entry.server_name).toLowerCase().includes(query)
   ));
+  return sortedRankingEntries(entries);
 }
 
 function characterIdForEntry(entry) {
@@ -564,7 +661,7 @@ async function leaderStreakDays(snapshotId, leaderKey) {
   const index = snapshots.findIndex((snapshot) => String(snapshot.id) === String(snapshotId));
   if (index < 0) return 1;
   let streak = 0;
-  for (let cursor = index; cursor >= 0; cursor -= 1) {
+  for (let cursor = index; cursor < snapshots.length; cursor += 1) {
     const payload = await snapshotPayload(snapshots[cursor].id);
     const topEntry = (payload.entries || [])[0];
     if (!topEntry || topEntry.character_key !== leaderKey) break;
@@ -674,7 +771,7 @@ function kstDateParts(date) {
 
 async function loadSnapshots() {
   const payload = await api("/api/snapshots");
-  snapshots = (payload.snapshots || []).slice().reverse();
+  snapshots = (payload.snapshots || []).slice();
   snapshotSelect.innerHTML = snapshots.map((snapshot, index) => `
     <option value="${snapshot.id}">${escapeHtml(formatSnapshotDate(snapshot.source_time_text || snapshot.scraped_at || `Snapshot ${snapshot.id}`))}</option>
   `).join("");
@@ -715,8 +812,8 @@ function setCurrentSnapshot(snapshotId) {
   if (currentSnapshotIndex >= 0) {
     snapshotSelect.value = String(snapshotId);
   }
-  prevSnapshot.disabled = currentSnapshotIndex <= 0;
-  nextSnapshot.disabled = currentSnapshotIndex < 0 || currentSnapshotIndex >= snapshots.length - 1;
+  prevSnapshot.disabled = currentSnapshotIndex < 0 || currentSnapshotIndex >= snapshots.length - 1;
+  nextSnapshot.disabled = currentSnapshotIndex <= 0;
 }
 
 async function selectCharacter(key, options = {}) {
@@ -1121,6 +1218,24 @@ searchInput.addEventListener("input", () => {
   searchTimer = window.setTimeout(() => renderRankingRows(), 120);
 });
 
+sortHeaders.forEach((header) => {
+  const applySort = () => {
+    const key = header.dataset.sortKey;
+    rankingSort = {
+      key,
+      direction: rankingSort.key === key && rankingSort.direction === "asc" ? "desc" : "asc",
+    };
+    renderRankingRows();
+  };
+  header.addEventListener("click", applySort);
+  header.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      applySort();
+    }
+  });
+});
+
 snapshotSelect.addEventListener("change", () => {
   loadSnapshot(snapshotSelect.value).catch((error) => {
     snapshotMeta.textContent = error.message;
@@ -1128,16 +1243,16 @@ snapshotSelect.addEventListener("change", () => {
 });
 
 prevSnapshot.addEventListener("click", () => {
-  if (currentSnapshotIndex > 0) {
-    loadSnapshot(snapshots[currentSnapshotIndex - 1].id).catch((error) => {
+  if (currentSnapshotIndex >= 0 && currentSnapshotIndex < snapshots.length - 1) {
+    loadSnapshot(snapshots[currentSnapshotIndex + 1].id).catch((error) => {
       snapshotMeta.textContent = error.message;
     });
   }
 });
 
 nextSnapshot.addEventListener("click", () => {
-  if (currentSnapshotIndex >= 0 && currentSnapshotIndex < snapshots.length - 1) {
-    loadSnapshot(snapshots[currentSnapshotIndex + 1].id).catch((error) => {
+  if (currentSnapshotIndex > 0) {
+    loadSnapshot(snapshots[currentSnapshotIndex - 1].id).catch((error) => {
       snapshotMeta.textContent = error.message;
     });
   }
