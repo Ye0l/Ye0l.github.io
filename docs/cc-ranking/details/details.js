@@ -6,6 +6,8 @@ const historyCount = document.querySelector("#historyCount");
 const historyRows = document.querySelector("#historyRows");
 const themeToggle = document.querySelector("#themeToggle");
 const themeIcon = document.querySelector("#themeIcon");
+const recommendButton = document.querySelector("#recommendButton");
+const recommendCount = document.querySelector("#recommendCount");
 const canvas = document.querySelector("#rankChart");
 const ctx = canvas.getContext("2d");
 let chartInstance = null;
@@ -17,12 +19,16 @@ const THEME_ICONS = {
 };
 const DEFAULT_THEME = "dark";
 const THEME_SWITCH_MS = 360;
+const RECOMMEND_CLIENT_KEY = "ccRankingRecommendClient";
+const RECOMMEND_STORAGE_PREFIX = "ccRankingRecommendChar_";
 const UI_FONT_STACK = '"Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 const API_BASE = String(window.CC_API_BASE || "").replace(/\/$/, "");
 const configuredStaticBase = String(window.CC_STATIC_DATA_BASE || "static/data").replace(/\/$/, "");
 const STATIC_DATA_BASE = configuredStaticBase === "static/data" ? "../static/data" : configuredStaticBase;
 let staticDataPromise = null;
 let currentHistory = [];
+let currentCharacterKey = null;
+let currentCharacterId = null;
 let themeSwitchTimer = null;
 
 function canvasFont(size, weight = "") {
@@ -92,6 +98,7 @@ function init() {
 }
 
 async function loadCharacter(characterId) {
+  currentCharacterId = characterId;
   const history = await loadCharacterHistory(characterId);
   currentHistory = history;
   if (history.length === 0) {
@@ -100,6 +107,7 @@ async function loadCharacter(characterId) {
   }
 
   const latest = history[history.length - 1];
+  currentCharacterKey = latest.character_key || characterKeyFromId(characterId);
   detailsTitle.textContent = latest.character_name;
   detailsTitle.className = `details-title ${tierClass(latest.tier_label)}`;
   seasonBadge.textContent = latest.season ? `Season ${latest.season}` : "Season -";
@@ -108,6 +116,7 @@ async function loadCharacter(characterId) {
   characterSummary.innerHTML = summaryHtml(latest, history);
   historyRows.innerHTML = history.slice().reverse().map(historyRowHtml).join("");
   renderChart(history);
+  loadRecommendation().catch(() => updateRecommendCount(null));
 }
 
 async function loadCharacterHistory(characterId) {
@@ -564,6 +573,108 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
+function recommendClientId() {
+  try {
+    let value = window.localStorage.getItem(RECOMMEND_CLIENT_KEY);
+    if (!value) {
+      value = makeClientId();
+      window.localStorage.setItem(RECOMMEND_CLIENT_KEY, value);
+    }
+    return value;
+  } catch (error) {
+    let value = readCookie(RECOMMEND_CLIENT_KEY);
+    if (!value) {
+      value = makeClientId();
+      writeCookie(RECOMMEND_CLIENT_KEY, value);
+    }
+    return value;
+  }
+}
+
+function makeClientId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID().replaceAll("-", "");
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function storedRecommendation(key) {
+  if (!key) return false;
+  try {
+    return window.localStorage.getItem(RECOMMEND_STORAGE_PREFIX + key) === "1";
+  } catch (error) {
+    return readCookie(RECOMMEND_STORAGE_PREFIX + key) === "1";
+  }
+}
+
+function currentRecommendationId() {
+  return currentCharacterKey || currentCharacterId || "";
+}
+
+function applyRecommendation(isLiked, options = {}) {
+  recommendButton.classList.toggle("is-liked", isLiked);
+  recommendButton.setAttribute("aria-pressed", isLiked ? "true" : "false");
+  const countText = recommendCount.textContent && recommendCount.textContent !== "-" ? ` ${recommendCount.textContent}명` : "";
+  recommendButton.title = isLiked ? `따봉을 날렸습니다${countText}` : `이 플레이어에게 따봉 날리기${countText}`;
+  recommendButton.setAttribute("aria-label", recommendButton.title);
+
+  const storageId = currentRecommendationId();
+  if (options.persist !== false && storageId) {
+    try {
+      window.localStorage.setItem(RECOMMEND_STORAGE_PREFIX + storageId, isLiked ? "1" : "0");
+    } catch (error) {
+      writeCookie(RECOMMEND_STORAGE_PREFIX + storageId, isLiked ? "1" : "0");
+    }
+  }
+}
+
+function updateRecommendCount(count) {
+  if (count == null) {
+    recommendCount.textContent = "-";
+    recommendButton.classList.add("is-recommend-offline");
+    return;
+  }
+  recommendButton.classList.remove("is-recommend-offline");
+  recommendCount.textContent = Number(count).toLocaleString("ko-KR");
+}
+
+async function loadRecommendation() {
+  if (!currentRecommendationId()) return;
+  const clientId = recommendClientId();
+  const idParam = currentCharacterKey
+    ? `key=${encodeURIComponent(currentCharacterKey)}`
+    : `id=${encodeURIComponent(currentCharacterId)}`;
+  const payload = await api(`/api/recommend?${idParam}&client_id=${encodeURIComponent(clientId)}`);
+  updateRecommendCount(payload.count);
+  applyRecommendation(Boolean(payload.liked), { persist: true });
+}
+
+async function saveRecommendation(isLiked) {
+  if (!currentRecommendationId()) return;
+  const body = {
+    client_id: recommendClientId(),
+    liked: isLiked,
+  };
+  if (currentCharacterKey) {
+    body.key = currentCharacterKey;
+  } else {
+    body.id = currentCharacterId;
+  }
+  const payload = await api("/api/recommend", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  updateRecommendCount(payload.count);
+  applyRecommendation(Boolean(payload.liked), { persist: true });
+}
+
+recommendButton.addEventListener("click", () => {
+  const isLiked = !recommendButton.classList.contains("is-liked");
+  applyRecommendation(isLiked);
+  saveRecommendation(isLiked).catch(() => {
+    applyRecommendation(storedRecommendation(currentRecommendationId()), { persist: false });
+  });
+});
 
 themeToggle.addEventListener("click", () => {
   applyTheme(nextTheme(document.body.dataset.theme), { animate: true });

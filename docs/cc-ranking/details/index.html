@@ -8,18 +8,6 @@
   </head>
   <body class="details-page">
     <header class="topbar">
-      <div class="topbar-copy">
-        <span class="eyebrow">FFXIV KR PvP Archive</span>
-        <div class="title-row">
-          <h1 id="detailsTitle">Character Details</h1>
-          <span id="seasonBadge" class="season-badge">Season -</span>
-        </div>
-        <p class="meta-line">
-          <span id="detailsMeta">캐릭터 기록을 불러오는 중</span>
-          <span><a class="official-link" href="../">전체 랭킹</a></span>
-          <span><a class="official-link" href="https://www.ff14.co.kr/ranking/CrystallineConflict" target="_blank" rel="noopener noreferrer">공식 랭킹 페이지</a></span>
-        </p>
-      </div>
       <div class="topbar-actions">
         <button id="themeToggle" class="theme-toggle" type="button" aria-label="테마 변경" title="테마 변경">
           <span id="themeIcon" aria-hidden="true">☾</span>
@@ -28,7 +16,27 @@
     </header>
 
     <main class="details-layout">
-      <section class="details-summary-panel" aria-label="캐릭터 요약">
+      <header class="details-hero">
+        <div class="details-hero-info">
+          <span class="eyebrow">FFXIV KR PvP Archive</span>
+          <div class="title-row">
+            <h1 id="detailsTitle">Character Details</h1>
+            <span id="seasonBadge" class="season-badge">Season -</span>
+            <button id="recommendButton" class="recommend-button" type="button" aria-pressed="false" aria-label="이 플레이어에게 따봉 날리기" title="이 플레이어에게 따봉 날리기">
+              <span class="recommend-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"></path>
+                </svg>
+              </span>
+              <span id="recommendCount" class="recommend-count" aria-hidden="true">-</span>
+            </button>
+          </div>
+          <p id="detailsMeta" class="meta-line">캐릭터 기록을 불러오는 중</p>
+          <div class="hero-links">
+            <a class="official-link" href="../">전체 랭킹</a>
+            <a class="official-link" href="https://www.ff14.co.kr/ranking/CrystallineConflict" target="_blank" rel="noopener noreferrer">공식 랭킹 페이지</a>
+          </div>
+        </div>
         <div id="characterSummary" class="details-summary">
           <div class="details-stat-grid" aria-hidden="true">
             <div>
@@ -57,39 +65,37 @@
             </div>
           </div>
         </div>
-      </section>
+      </header>
 
-      <section class="panel details-graph-panel">
-        <div class="panel-head">
-          <h2>순위 그래프</h2>
-          <span>rank graph</span>
-        </div>
-        <div class="chart-container">
-          <canvas id="rankChart"></canvas>
-        </div>
-      </section>
+      <div class="details-dashboard">
+        <section class="details-graph-panel" aria-label="순위 그래프">
+          <div class="chart-container">
+            <canvas id="rankChart"></canvas>
+          </div>
+        </section>
 
-      <section class="panel details-history-panel">
-        <div class="panel-head">
-          <h2>스냅샷 기록</h2>
-          <span id="historyCount">-</span>
-        </div>
-        <div class="details-history-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>기준일</th>
-                <th>순위</th>
-                <th>티어</th>
-                <th>평점</th>
-                <th>승리</th>
-                <th>변동</th>
-              </tr>
-            </thead>
-            <tbody id="historyRows"></tbody>
-          </table>
-        </div>
-      </section>
+        <section class="panel details-history-panel">
+          <div class="panel-head">
+            <h2>스냅샷 기록</h2>
+            <span id="historyCount">-</span>
+          </div>
+          <div class="details-history-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>기준일</th>
+                  <th>순위</th>
+                  <th>티어</th>
+                  <th>평점</th>
+                  <th>승리</th>
+                  <th>변동</th>
+                </tr>
+              </thead>
+              <tbody id="historyRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
     </main>
 
     <footer class="site-footer" aria-label="제작자 정보">
@@ -100,6 +106,6 @@
 
     <script src="../chart.umd.min.js"></script>
     <script src="../config.js?v=20260505-perfect-scrollbars"></script>
-    <script src="details.js?v=20260506-glass-smooth"></script>
+    <script src="details.js?v=20260507-recommend-api"></script>
   </body>
 </html>
