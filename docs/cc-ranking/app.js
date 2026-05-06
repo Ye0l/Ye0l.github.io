@@ -53,6 +53,7 @@ const THEME_SWITCH_MS = 360;
 const HEART_STORAGE_KEY = "ccRankingProjectHeart";
 const HEART_CLIENT_KEY = "ccRankingProjectHeartClient";
 const UI_FONT_STACK = '"Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+const OUT_OF_RANK_GRAPH_RANK = 101;
 
 const API_BASE = String(window.CC_API_BASE || "").replace(/\/$/, "");
 const STATIC_DATA_BASE = String(window.CC_STATIC_DATA_BASE || "static/data").replace(/\/$/, "");
@@ -1109,16 +1110,25 @@ function renderChart(history) {
     return;
   }
 
-  const labels = history.map(row => formatGraphDate(row.source_time_text || row.scraped_at));
-  const rankData = history.map(row => row.rank);
-  const winDeltaData = history.map(row => numberValue(row.win_delta));
-  const tierLabels = history.map(row => row.tier_label);
+  const chartHistory = chartHistoryWithAllSnapshotDates(history);
+  const labels = chartHistory.map(row => formatGraphDate(row.source_time_text || row.scraped_at));
+  const missingRankData = chartHistory.map(row => !Number.isFinite(numberValue(row.rank)));
+  const rankData = chartHistory.map(row => Number.isFinite(numberValue(row.rank)) ? numberValue(row.rank) : OUT_OF_RANK_GRAPH_RANK);
+  const winDeltaData = chartHistory.map(row => Number.isFinite(numberValue(row.win_delta)) ? numberValue(row.win_delta) : null);
+  const tierLabels = chartHistory.map(row => row.tier_label);
+  const finiteRanks = chartHistory.map(row => numberValue(row.rank)).filter(value => Number.isFinite(value));
 
-  const minRank = Math.min(...rankData);
-  const maxRank = Math.max(...rankData);
+  if (finiteRanks.length === 0) {
+    drawChartPlaceholder();
+    return;
+  }
+
+  const minRank = Math.min(...finiteRanks);
+  const maxRank = Math.max(...finiteRanks);
+  const graphMaxRank = missingRankData.some(Boolean) ? Math.max(maxRank, OUT_OF_RANK_GRAPH_RANK) : maxRank;
   const spread = Math.max(10, maxRank - minRank);
   const yMin = Math.max(0.2, minRank - Math.max(2, Math.floor(spread * 0.25)));
-  const yMax = maxRank + Math.max(2, Math.floor(spread * 0.25));
+  const yMax = graphMaxRank + Math.max(2, Math.floor(spread * 0.25));
   const winDeltaMax = Math.max(...winDeltaData.filter(v => Number.isFinite(v)), 1);
 
   const customPlugin = {
@@ -1130,7 +1140,7 @@ function renderChart(history) {
       const points = chart.getDatasetMeta(0).data;
       if (!points.length) return;
 
-      const lastPoints = points.slice(-6);
+      const lastPoints = points.filter((point) => !point.skip).slice(-6);
       ctx.font = canvasFont(12, "bold");
       ctx.fillStyle = textColor;
       ctx.textAlign = "center";
@@ -1139,8 +1149,9 @@ function renderChart(history) {
       lastPoints.forEach((point) => {
         const idx = points.indexOf(point);
         const rank = data.datasets[0].data[idx];
-        const label = `#${rank}`;
-        const hasTierChange = idx > 0 && normalizeTier(tierLabels[idx]) !== normalizeTier(tierLabels[idx-1]);
+        if (!Number.isFinite(rank)) return;
+        const label = missingRankData[idx] ? "OUT" : `#${rank}`;
+        const hasTierChange = previousKnownTier(tierLabels, idx) !== normalizeTier(tierLabels[idx]);
 
         const placeBelow = (hasTierChange && point.y >= 80) || point.y < 60;
         const labelY = placeBelow ? Math.min(point.y + 28, height + top - 12) : Math.max(point.y - 20, top + 12);
@@ -1149,9 +1160,9 @@ function renderChart(history) {
 
       ctx.font = canvasFont(11, "bold");
       points.forEach((point, idx) => {
-        if (idx === 0) return;
+        if (idx === 0 || point.skip || missingRankData[idx] || !Number.isFinite(data.datasets[0].data[idx])) return;
         const currentTier = tierLabels[idx];
-        const prevTier = tierLabels[idx - 1];
+        const prevTier = previousKnownTier(tierLabels, idx);
         if (normalizeTier(currentTier) !== normalizeTier(prevTier)) {
           const label = currentTier || "계급 변경";
           const labelBelow = point.y < 78;
@@ -1180,7 +1191,7 @@ function renderChart(history) {
         }
       });
 
-      const latestDeltaPoint = [...history].reverse().find(row => Number.isFinite(numberValue(row.win_delta)));
+      const latestDeltaPoint = [...chartHistory].reverse().find(row => Number.isFinite(numberValue(row.win_delta)));
       if (latestDeltaPoint) {
         const latestDelta = numberValue(latestDeltaPoint.win_delta);
         const maxDelta = Math.max(...winDeltaData.filter(v => Number.isFinite(v)));
@@ -1205,7 +1216,7 @@ function renderChart(history) {
       ctx.textAlign = "center";
       bars.forEach((bar, idx) => {
         const val = winDeltaData[idx];
-        if (Number.isFinite(val) && val > 0) {
+        if (bar && !bar.skip && Number.isFinite(val) && val > 0) {
           ctx.fillText(`+${val}`, bar.x, bar.y - 4);
         }
       });
@@ -1228,7 +1239,7 @@ function renderChart(history) {
           borderWidth: 3,
           pointRadius: 5,
           pointHoverRadius: 7,
-          pointBackgroundColor: pointColor,
+          pointBackgroundColor: (context) => missingRankData[context.dataIndex] ? mutedColor : pointColor,
           tension: 0,
           yAxisID: 'y',
           clip: false
@@ -1267,10 +1278,12 @@ function renderChart(history) {
           callbacks: {
             label: function(context) {
               const idx = context.dataIndex;
-              const row = history[idx];
+              const row = chartHistory[idx];
               if (context.datasetIndex === 0) {
+                if (!Number.isFinite(numberValue(row.rank))) return "순위: 100위권 밖 / 데이터 없음";
                 return `순위: #${row.rank} (${row.tier_label})`;
               } else {
+                if (!Number.isFinite(numberValue(row.win_delta))) return "일일 승리: 데이터 없음";
                 return `일일 승리: +${row.win_delta || 0}`;
               }
             }
@@ -1284,7 +1297,7 @@ function renderChart(history) {
             color: mutedColor,
             font: { size: 11, family: UI_FONT_STACK },
             maxRotation: 0,
-            autoSkip: true,
+            autoSkip: labels.length > 5,
             maxTicksLimit: 5
           }
         },
@@ -1306,6 +1319,39 @@ function renderChart(history) {
     },
     plugins: [customPlugin]
   });
+}
+
+function chartHistoryWithAllSnapshotDates(history) {
+  if (!history.length || !snapshots.length) return history;
+  const latestSeason = String(history[history.length - 1].season ?? "");
+  const historyBySnapshot = new Map(history.map((row) => [String(row.snapshot_id), row]));
+  const seasonSnapshots = snapshots
+    .filter((snapshot) => String(snapshot.season ?? "") === latestSeason)
+    .slice()
+    .reverse();
+  if (!seasonSnapshots.length) return history;
+  return seasonSnapshots.map((snapshot) => {
+    const existing = historyBySnapshot.get(String(snapshot.id));
+    if (existing) return existing;
+    return {
+      snapshot_id: snapshot.id,
+      season: snapshot.season,
+      source_time_text: snapshot.source_time_text,
+      scraped_at: snapshot.scraped_at,
+      rank: null,
+      tier_label: "",
+      win_delta: null,
+      is_missing_snapshot_entry: true,
+    };
+  });
+}
+
+function previousKnownTier(tierLabels, index) {
+  for (let i = index - 1; i >= 0; i -= 1) {
+    const tier = normalizeTier(tierLabels[i]);
+    if (tier) return tier;
+  }
+  return "";
 }
 
 function drawChartPlaceholder() {

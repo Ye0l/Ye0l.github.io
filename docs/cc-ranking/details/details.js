@@ -22,6 +22,7 @@ const THEME_SWITCH_MS = 360;
 const RECOMMEND_CLIENT_KEY = "ccRankingRecommendClient";
 const RECOMMEND_STORAGE_PREFIX = "ccRankingRecommendChar_";
 const UI_FONT_STACK = '"Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+const OUT_OF_RANK_GRAPH_RANK = 101;
 const API_BASE = String(window.CC_API_BASE || "").replace(/\/$/, "");
 const configuredStaticBase = String(window.CC_STATIC_DATA_BASE || "static/data").replace(/\/$/, "");
 const STATIC_DATA_BASE = configuredStaticBase === "static/data" ? "../static/data" : configuredStaticBase;
@@ -30,6 +31,7 @@ let currentHistory = [];
 let currentCharacterKey = null;
 let currentCharacterId = null;
 let themeSwitchTimer = null;
+let snapshots = [];
 
 function canvasFont(size, weight = "") {
   return `${weight ? `${weight} ` : ""}${size}px ${UI_FONT_STACK}`;
@@ -57,7 +59,7 @@ async function loadStaticData() {
         const seasons = manifest.seasons || [];
         const latestSeason = seasons.find((season) => season.season === manifest.latest_season)
           || seasons[seasons.length - 1];
-        if (!latestSeason) return { history_by_key: {}, history_by_id: {} };
+        if (!latestSeason) return { snapshots: [], history_by_key: {}, history_by_id: {} };
         return fetchStaticJson(latestSeason.path, cacheKey, "data");
       });
   }
@@ -83,6 +85,9 @@ async function staticApi(path) {
       history: (data.history_by_id || {})[id] || (data.history_by_key || {})[key] || [],
     };
   }
+  if (url.pathname === "/api/snapshots") {
+    return { snapshots: data.snapshots || [] };
+  }
   throw new Error(`No static fallback for ${url.pathname}`);
 }
 
@@ -99,7 +104,11 @@ function init() {
 
 async function loadCharacter(characterId) {
   currentCharacterId = characterId;
-  const history = await loadCharacterHistory(characterId);
+  const [history, snapshotPayload] = await Promise.all([
+    loadCharacterHistory(characterId),
+    api("/api/snapshots"),
+  ]);
+  snapshots = snapshotPayload.snapshots || [];
   currentHistory = history;
   if (history.length === 0) {
     renderEmpty("해당 캐릭터 기록을 찾을 수 없습니다.");
@@ -266,16 +275,25 @@ function renderChart(history) {
     return;
   }
 
-  const labels = history.map(row => formatSnapshotDate(row.source_time_text || row.scraped_at));
-  const rankData = history.map(row => row.rank);
-  const winDeltaData = history.map(row => numberValue(row.win_delta));
-  const tierLabels = history.map(row => row.tier_label);
+  const chartHistory = chartHistoryWithAllSnapshotDates(history);
+  const labels = chartHistory.map(row => formatSnapshotDate(row.source_time_text || row.scraped_at));
+  const missingRankData = chartHistory.map(row => !Number.isFinite(numberValue(row.rank)));
+  const rankData = chartHistory.map(row => Number.isFinite(numberValue(row.rank)) ? numberValue(row.rank) : OUT_OF_RANK_GRAPH_RANK);
+  const winDeltaData = chartHistory.map(row => Number.isFinite(numberValue(row.win_delta)) ? numberValue(row.win_delta) : null);
+  const tierLabels = chartHistory.map(row => row.tier_label);
+  const finiteRanks = chartHistory.map(row => numberValue(row.rank)).filter(value => Number.isFinite(value));
 
-  const minRank = Math.min(...rankData);
-  const maxRank = Math.max(...rankData);
+  if (finiteRanks.length === 0) {
+    drawChartPlaceholder();
+    return;
+  }
+
+  const minRank = Math.min(...finiteRanks);
+  const maxRank = Math.max(...finiteRanks);
+  const graphMaxRank = missingRankData.some(Boolean) ? Math.max(maxRank, OUT_OF_RANK_GRAPH_RANK) : maxRank;
   const spread = Math.max(10, maxRank - minRank);
   const yMin = Math.max(0.2, minRank - Math.max(2, Math.floor(spread * 0.25)));
-  const yMax = maxRank + Math.max(2, Math.floor(spread * 0.25));
+  const yMax = graphMaxRank + Math.max(2, Math.floor(spread * 0.25));
   const winDeltaMax = Math.max(...winDeltaData.filter(v => Number.isFinite(v)), 1);
 
   const customPlugin = {
@@ -287,7 +305,7 @@ function renderChart(history) {
       const points = chart.getDatasetMeta(0).data;
       if (!points.length) return;
 
-      const lastPoints = points.slice(-8);
+      const lastPoints = points.filter((point) => !point.skip).slice(-8);
       ctx.font = canvasFont(12, "bold");
       ctx.fillStyle = textColor;
       ctx.textAlign = "center";
@@ -296,8 +314,9 @@ function renderChart(history) {
       lastPoints.forEach((point) => {
         const idx = points.indexOf(point);
         const rank = data.datasets[0].data[idx];
-        const label = `#${rank}`;
-        const hasTierChange = idx > 0 && normalizeTier(tierLabels[idx]) !== normalizeTier(tierLabels[idx-1]);
+        if (!Number.isFinite(rank)) return;
+        const label = missingRankData[idx] ? "OUT" : `#${rank}`;
+        const hasTierChange = previousKnownTier(tierLabels, idx) !== normalizeTier(tierLabels[idx]);
 
         const placeBelow = (hasTierChange && point.y >= 80) || point.y < 60;
         const labelY = placeBelow ? Math.min(point.y + 28, height + top - 12) : Math.max(point.y - 20, top + 12);
@@ -306,9 +325,9 @@ function renderChart(history) {
 
       ctx.font = canvasFont(11, "bold");
       points.forEach((point, idx) => {
-        if (idx === 0) return;
+        if (idx === 0 || point.skip || missingRankData[idx] || !Number.isFinite(data.datasets[0].data[idx])) return;
         const currentTier = tierLabels[idx];
-        const prevTier = tierLabels[idx - 1];
+        const prevTier = previousKnownTier(tierLabels, idx);
         if (normalizeTier(currentTier) !== normalizeTier(prevTier)) {
           const label = currentTier || "계급 변경";
           const labelBelow = point.y < 78;
@@ -337,7 +356,7 @@ function renderChart(history) {
         }
       });
 
-      const latestDeltaPoint = [...history].reverse().find(row => Number.isFinite(numberValue(row.win_delta)));
+      const latestDeltaPoint = [...chartHistory].reverse().find(row => Number.isFinite(numberValue(row.win_delta)));
       if (latestDeltaPoint) {
         const latestDelta = numberValue(latestDeltaPoint.win_delta);
         const maxDelta = Math.max(...winDeltaData.filter(v => Number.isFinite(v)));
@@ -362,7 +381,7 @@ function renderChart(history) {
       ctx.textAlign = "center";
       bars.forEach((bar, idx) => {
         const val = winDeltaData[idx];
-        if (Number.isFinite(val) && val > 0) {
+        if (bar && !bar.skip && Number.isFinite(val) && val > 0) {
           ctx.fillText(`+${val}`, bar.x, bar.y - 4);
         }
       });
@@ -385,7 +404,7 @@ function renderChart(history) {
           borderWidth: 3,
           pointRadius: 5,
           pointHoverRadius: 7,
-          pointBackgroundColor: pointColor,
+          pointBackgroundColor: (context) => missingRankData[context.dataIndex] ? mutedColor : pointColor,
           tension: 0,
           yAxisID: 'y',
           clip: false
@@ -424,10 +443,12 @@ function renderChart(history) {
           callbacks: {
             label: function(context) {
               const idx = context.dataIndex;
-              const row = history[idx];
+              const row = chartHistory[idx];
               if (context.datasetIndex === 0) {
+                if (!Number.isFinite(numberValue(row.rank))) return "순위: 100위권 밖 / 데이터 없음";
                 return `순위: #${row.rank} (${row.tier_label})`;
               } else {
+                if (!Number.isFinite(numberValue(row.win_delta))) return "일일 승리: 데이터 없음";
                 return `일일 승리: +${row.win_delta || 0}`;
               }
             }
@@ -441,7 +462,7 @@ function renderChart(history) {
             color: mutedColor,
             font: { size: 11, family: UI_FONT_STACK },
             maxRotation: 0,
-            autoSkip: true,
+            autoSkip: labels.length > 5,
             maxTicksLimit: 10
           }
         },
@@ -462,6 +483,31 @@ function renderChart(history) {
       }
     },
     plugins: [customPlugin]
+  });
+}
+
+function chartHistoryWithAllSnapshotDates(history) {
+  if (!history.length || !snapshots.length) return history;
+  const latestSeason = String(history[history.length - 1].season ?? "");
+  const historyBySnapshot = new Map(history.map((row) => [String(row.snapshot_id), row]));
+  const seasonSnapshots = snapshots
+    .filter((snapshot) => String(snapshot.season ?? "") === latestSeason)
+    .slice()
+    .reverse();
+  if (!seasonSnapshots.length) return history;
+  return seasonSnapshots.map((snapshot) => {
+    const existing = historyBySnapshot.get(String(snapshot.id));
+    if (existing) return existing;
+    return {
+      snapshot_id: snapshot.id,
+      season: snapshot.season,
+      source_time_text: snapshot.source_time_text,
+      scraped_at: snapshot.scraped_at,
+      rank: null,
+      tier_label: "",
+      win_delta: null,
+      is_missing_snapshot_entry: true,
+    };
   });
 }
 
@@ -516,6 +562,14 @@ function formatSnapshotDate(value) {
 
 function normalizeTier(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function previousKnownTier(tierLabels, index) {
+  for (let i = index - 1; i >= 0; i -= 1) {
+    const tier = normalizeTier(tierLabels[i]);
+    if (tier) return tier;
+  }
+  return "";
 }
 
 function storedTheme() {
