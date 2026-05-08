@@ -18,6 +18,7 @@ const sortHeaders = [...document.querySelectorAll("[data-sort-key]")];
 const selectedCharacter = document.querySelector("#selectedCharacter");
 const seasonExtremes = document.querySelector("#seasonExtremes");
 const detailPanel = document.querySelector(".detail-panel");
+const chartContainer = document.querySelector(".chart-container");
 const detailName = document.querySelector("#detailName");
 const detailPoints = document.querySelector("#detailPoints");
 const detailWins = document.querySelector("#detailWins");
@@ -38,6 +39,8 @@ const themeToggle = document.querySelector("#themeToggle");
 const themeIcon = document.querySelector("#themeIcon");
 const projectHeart = document.querySelector("#projectHeart");
 const projectHeartCount = document.querySelector("#projectHeartCount");
+const jumpTop = document.querySelector("#jumpTop");
+const jumpBottom = document.querySelector("#jumpBottom");
 const canvas = document.querySelector("#rankChart");
 const ctx = canvas.getContext("2d");
 let chartInstance = null;
@@ -561,7 +564,7 @@ function renderRankingRows() {
       event.stopPropagation();
     });
     row.addEventListener("click", () => {
-      selectCharacter(row.dataset.key, { scrollRanking: false });
+      selectCharacter(row.dataset.key, { scrollRanking: false, scrollDetail: true });
     });
   });
 }
@@ -946,7 +949,7 @@ function setCurrentSnapshot(snapshotId) {
 }
 
 async function selectCharacter(key, options = {}) {
-  const { scrollRanking = true } = options;
+  const { scrollRanking = true, scrollDetail = false } = options;
   selectedKey = key;
   const requestToken = ++characterRequestToken;
   const hasRenderedDetail = currentHistory.length > 0 || selectedCharacter.innerHTML.trim() || seasonExtremes.innerHTML.trim();
@@ -954,6 +957,9 @@ async function selectCharacter(key, options = {}) {
     beginCharacterHistoryLoading();
   } else {
     renderCharacterSkeleton();
+  }
+  if (scrollDetail) {
+    scrollDetailIntoView();
   }
   try {
     const payload = await api(`/api/history?key=${encodeURIComponent(key)}`);
@@ -1089,6 +1095,26 @@ function tierScore(tier) {
 function scrollRankingIntoView(key) {
   const target = rankingRows.querySelector(`[data-key="${cssEscape(key)}"]`);
   scrollAndFlash(target);
+}
+
+function scrollDetailIntoView() {
+  const target = chartContainer || detailPanel;
+  if (!target) return;
+  window.requestAnimationFrame(() => {
+    target.scrollIntoView({
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+      block: "start",
+      inline: "nearest",
+    });
+  });
+}
+
+function scrollPageToEdge(edge) {
+  const top = edge === "bottom" ? document.documentElement.scrollHeight : 0;
+  window.scrollTo({
+    top,
+    behavior: prefersReducedMotion() ? "auto" : "smooth",
+  });
 }
 
 function scrollAndFlash(element) {
@@ -1589,9 +1615,17 @@ function renderHonorGrid() {
 
   honorGrid.innerHTML = html;
   honorGrid.querySelectorAll(".tile").forEach((tile) => {
-    tile.addEventListener("click", () => selectCharacter(tile.dataset.key));
+    tile.addEventListener("click", () => selectCharacter(tile.dataset.key, { scrollDetail: true }));
   });
+  revealHonorTiles();
   updateHonorGridSelection(selectedKey);
+}
+
+function revealHonorTiles() {
+  honorGrid.classList.remove("is-revealing");
+  window.requestAnimationFrame(() => {
+    honorGrid.classList.add("is-revealing");
+  });
 }
 
 function scheduleHonorRotate() {
@@ -1681,6 +1715,9 @@ projectHeart.addEventListener("click", () => {
     applyProjectHeart(storedProjectHeart(), { persist: false });
   });
 });
+
+jumpTop?.addEventListener("click", () => scrollPageToEdge("top"));
+jumpBottom?.addEventListener("click", () => scrollPageToEdge("bottom"));
 
 searchInput.addEventListener("input", () => {
   window.clearTimeout(searchTimer);
