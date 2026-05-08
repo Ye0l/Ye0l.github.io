@@ -187,7 +187,7 @@ function historyRowHtml(row) {
       <td><span class="rank-badge ${rankClass(row.rank)}">${escapeHtml(row.rank)}</span></td>
       <td><span class="tier-pill ${tierClass(row.tier_label)}">${tierIconHtml(row)}<span>${escapeHtml(row.tier_label || "-")}</span></span></td>
       <td>${pointsWithDeltaHtml(row)}</td>
-      <td>${row.wins ?? "-"}</td>
+      <td>${winsWithDeltaHtml(row)}</td>
       <td>${movementBadge(row)}</td>
     </tr>
   `;
@@ -250,6 +250,14 @@ function pointsWithDeltaHtml(entry) {
   if (delta == null) return base;
   const sign = delta >= 0 ? '+' : '';
   return `${base}<span class="pts-delta">(${sign}${delta})</span>`;
+}
+
+function winsWithDeltaHtml(entry) {
+  const base = escapeHtml(String(entry.wins ?? "-"));
+  const delta = entry.win_delta ?? null;
+  if (delta == null) return base;
+  const sign = delta >= 0 ? '+' : '';
+  return `${base}<span class="pts-delta">(${sign}${escapeHtml(String(delta))})</span>`;
 }
 
 function renderChart(history) {

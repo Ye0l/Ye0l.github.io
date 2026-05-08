@@ -553,7 +553,7 @@ function renderRankingRows() {
         <td>${escapeHtml(entry.server_name)}</td>
         <td><span class="tier-pill ${tierClass(entry.tier_label)}">${tierIconHtml(entry)}<span>${escapeHtml(entry.tier_label || "-")}</span></span></td>
         <td>${pointsWithDeltaHtml(entry)}</td>
-        <td>${entry.wins ?? "-"}</td>
+        <td>${winsWithDeltaHtml(entry)}</td>
         <td>${movementBadge(entry)}</td>
       </tr>
     `;
@@ -1003,14 +1003,22 @@ function updateDetailStats(latest) {
     if (detailDelta) { detailDelta.textContent = "-"; detailDelta.style.color = ""; }
     return;
   }
-  if (detailName) detailName.textContent = latest.character_name;
+  if (detailName) detailName.innerHTML = detailNameHtml(latest);
   if (detailPoints) detailPoints.textContent = pointsDisplay(latest);
-  if (detailWins) detailWins.textContent = latest.wins ?? "-";
+  if (detailWins) detailWins.innerHTML = winsWithDeltaHtml(latest);
   if (detailDelta) {
     const delta = latest.points_delta != null ? Number(latest.points_delta) : null;
     detailDelta.textContent = delta != null ? (delta >= 0 ? `+${delta}` : `${delta}`) : "-";
     detailDelta.style.color = delta > 0 ? "var(--up)" : delta < 0 ? "var(--down)" : "var(--fg-3)";
   }
+}
+
+function detailNameHtml(entry) {
+  const detailEntry = { ...entry, character_key: entry.character_key || selectedKey };
+  return `
+    <span class="detail-name-text">${escapeHtml(entry.character_name)}</span>
+    <a class="detail-open-link" href="details/?id=${encodeURIComponent(characterIdForEntry(detailEntry))}">상세</a>
+  `;
 }
 
 function seasonExtremesHtml(history, season) {
@@ -1074,6 +1082,14 @@ function pointsWithDeltaHtml(entry) {
   if (delta == null) return base;
   const sign = delta >= 0 ? '+' : '';
   return `${base}<span class="pts-delta">(${sign}${delta})</span>`;
+}
+
+function winsWithDeltaHtml(entry) {
+  const base = escapeHtml(String(entry.wins ?? "-"));
+  const delta = entry.win_delta ?? null;
+  if (delta == null) return base;
+  const sign = delta >= 0 ? '+' : '';
+  return `${base}<span class="pts-delta">(${sign}${escapeHtml(String(delta))})</span>`;
 }
 
 function pointsValue(entry) {
