@@ -22,6 +22,7 @@ const THEME_SWITCH_MS = 360;
 const RECOMMEND_CLIENT_KEY = "ccRankingRecommendClient";
 const RECOMMEND_STORAGE_PREFIX = "ccRankingRecommendChar_";
 const UI_FONT_STACK = '"Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+const MONO_FONT_STACK = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
 const OUT_OF_RANK_GRAPH_RANK = 101;
 const API_BASE = String(window.CC_API_BASE || "").replace(/\/$/, "");
 const configuredStaticBase = String(window.CC_STATIC_DATA_BASE || "static/data").replace(/\/$/, "");
@@ -171,7 +172,7 @@ function summaryHtml(latest, history) {
     <div class="details-stat-grid">
       <div><span>최신 순위</span><strong>#${escapeHtml(latest.rank)}</strong></div>
       <div><span>최신 티어</span><strong>${tierIconHtml(latest)}${escapeHtml(latest.tier_label || "-")}</strong></div>
-      <div><span>최신 평점</span><strong>${escapeHtml(pointsDisplay(latest))}</strong></div>
+      <div><span>최신 평점</span><strong>${pointsWithDeltaHtml(latest)}</strong></div>
       <div><span>이번 시즌 최고 랭킹</span><strong>#${escapeHtml(bestRanking.rank)}</strong></div>
       <div><span>이번 시즌 최저 랭킹</span><strong>#${escapeHtml(worstRanking.rank)}</strong></div>
       <div><span>스냅샷</span><strong>${escapeHtml(history.length)}개</strong></div>
@@ -185,30 +186,20 @@ function historyRowHtml(row) {
       <td>${escapeHtml(formatSnapshotDate(row.source_time_text || row.scraped_at))}</td>
       <td><span class="rank-badge ${rankClass(row.rank)}">${escapeHtml(row.rank)}</span></td>
       <td><span class="tier-pill ${tierClass(row.tier_label)}">${tierIconHtml(row)}<span>${escapeHtml(row.tier_label || "-")}</span></span></td>
-      <td>${escapeHtml(pointsDisplay(row))}</td>
+      <td>${pointsWithDeltaHtml(row)}</td>
       <td>${row.wins ?? "-"}</td>
       <td>${movementBadge(row)}</td>
     </tr>
   `;
 }
 
-function movementText(entry) {
-  if (entry.movement_direction === "new") return "NEW";
-  if (!entry.movement_direction || entry.movement_value == null) return "-";
-  const arrow = entry.movement_direction === "up" ? "▲" : "▼";
-  return `${arrow} ${entry.movement_value}`;
-}
-
 function movementBadge(entry) {
-  const text = movementText(entry);
-  const movementClass = entry.movement_direction === "up"
-    ? "movement-up"
-    : entry.movement_direction === "down"
-      ? "movement-down"
-      : entry.movement_direction === "new"
-        ? "movement-new"
-        : "movement-flat";
-  return `<span class="movement-chip ${movementClass}">${escapeHtml(text)}</span>`;
+  const dir = entry.movement_direction;
+  if (entry.is_dropped || dir === "out") return '<span class="move" data-dir="out">OUT</span>';
+  if (dir === "new") return '<span class="move" data-dir="new">NEW</span>';
+  if (dir === "up") return `<span class="move" data-dir="up"><span class="arrow">▲</span>${escapeHtml(String(entry.movement_value ?? ""))}</span>`;
+  if (dir === "down") return `<span class="move" data-dir="down"><span class="arrow">▼</span>${escapeHtml(String(entry.movement_value ?? ""))}</span>`;
+  return '<span class="move" data-dir="flat">—</span>';
 }
 
 function rankClass(rank) {
@@ -253,6 +244,14 @@ function pointsDisplay(entry) {
   return text ? text : "-";
 }
 
+function pointsWithDeltaHtml(entry) {
+  const base = escapeHtml(pointsDisplay(entry));
+  const delta = entry.points_delta ?? null;
+  if (delta == null) return base;
+  const sign = delta >= 0 ? '+' : '';
+  return `${base}<span class="pts-delta">(${sign}${delta})</span>`;
+}
+
 function renderChart(history) {
   if (chartInstance) {
     chartInstance.destroy();
@@ -265,10 +264,9 @@ function renderChart(history) {
   const pointColor = styles.getPropertyValue("--chart-point").trim() || "#b45309";
   const textColor = styles.getPropertyValue("--chart-text").trim() || "#1e293b";
   const mutedColor = styles.getPropertyValue("--chart-muted").trim() || "#64748b";
-  const barFillStrong = styles.getPropertyValue("--chart-bar-fill-strong").trim() || "rgba(180, 83, 9, 0.42)";
-  const markerColor = styles.getPropertyValue("--chart-marker").trim() || "#be185d";
-  const markerLineColor = styles.getPropertyValue("--chart-marker-line").trim() || "rgba(190, 24, 93, 0.3)";
-  const markerTextColor = styles.getPropertyValue("--chart-marker-text").trim() || "#9d174d";
+  const barFillStrong = styles.getPropertyValue("--chart-bar-fill-strong").trim() || "rgba(96, 165, 250, 0.22)";
+  const gradTop = styles.getPropertyValue("--chart-gradient-top").trim() || "rgba(96, 165, 250, 0.28)";
+  const gradBot = styles.getPropertyValue("--chart-gradient-bot").trim() || "rgba(96, 165, 250, 0)";
 
   if (history.length === 0) {
     drawChartPlaceholder();
@@ -295,6 +293,17 @@ function renderChart(history) {
   const yMin = Math.max(0.2, minRank - Math.max(2, Math.floor(spread * 0.25)));
   const yMax = graphMaxRank + Math.max(2, Math.floor(spread * 0.25));
   const winDeltaMax = Math.max(...winDeltaData.filter(v => Number.isFinite(v)), 1);
+
+  const gradientPlugin = {
+    id: 'areaGradient',
+    beforeDatasetsDraw(chart) {
+      const { ctx, chartArea: { top, bottom } } = chart;
+      const grad = ctx.createLinearGradient(0, top, 0, bottom);
+      grad.addColorStop(0, gradTop);
+      grad.addColorStop(1, gradBot);
+      chart.data.datasets[0].backgroundColor = grad;
+    }
+  };
 
   const customPlugin = {
     id: 'customLabels',
@@ -323,7 +332,6 @@ function renderChart(history) {
         ctx.fillText(label, point.x, labelY);
       });
 
-      ctx.font = canvasFont(11, "bold");
       points.forEach((point, idx) => {
         if (idx === 0 || point.skip || missingRankData[idx] || !Number.isFinite(data.datasets[0].data[idx])) return;
         const currentTier = tierLabels[idx];
@@ -331,28 +339,33 @@ function renderChart(history) {
         if (normalizeTier(currentTier) !== normalizeTier(prevTier)) {
           const label = currentTier || "계급 변경";
           const labelBelow = point.y < 78;
-          const labelY = labelBelow 
-            ? Math.min(point.y + 34 + (idx % 2) * 16, height + top - 24)
-            : Math.max(top + 24, Math.min(point.y - 24 - (idx % 2) * 18, height + top - 24));
+          const labelY = labelBelow
+            ? Math.min(point.y + 32 + (idx % 2) * 14, height + top - 20)
+            : Math.max(top + 20, Math.min(point.y - 22 - (idx % 2) * 14, height + top - 20));
 
-          ctx.fillStyle = markerColor;
-          ctx.beginPath();
-          ctx.moveTo(point.x, point.y - 9);
-          ctx.lineTo(point.x + 8, point.y);
-          ctx.lineTo(point.x, point.y + 9);
-          ctx.lineTo(point.x - 8, point.y);
-          ctx.closePath();
-          ctx.fill();
+          ctx.save();
 
-          ctx.strokeStyle = markerLineColor;
-          ctx.lineWidth = 1;
+          ctx.strokeStyle = lineColor;
+          ctx.lineWidth = 1.5;
           ctx.beginPath();
-          ctx.moveTo(point.x, point.y);
-          ctx.lineTo(point.x, labelBelow ? labelY - 13 : labelY + 5);
+          ctx.arc(point.x, point.y, 6, 0, Math.PI * 2);
           ctx.stroke();
 
-          ctx.fillStyle = markerTextColor;
+          ctx.strokeStyle = mutedColor;
+          ctx.lineWidth = 1;
+          ctx.setLineDash([2, 3]);
+          ctx.beginPath();
+          ctx.moveTo(point.x, labelBelow ? point.y + 8 : point.y - 8);
+          ctx.lineTo(point.x, labelBelow ? labelY - 10 : labelY + 4);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          ctx.font = canvasFont(10, "bold");
+          ctx.fillStyle = textColor;
+          ctx.textAlign = "center";
           ctx.fillText(label, point.x, labelY);
+
+          ctx.restore();
         }
       });
 
@@ -399,13 +412,14 @@ function renderChart(history) {
           label: 'Rank',
           data: rankData,
           borderColor: lineColor,
-          backgroundColor: pointColor,
-          borderDash: [5, 5],
-          borderWidth: 3,
-          pointRadius: 5,
-          pointHoverRadius: 7,
-          pointBackgroundColor: (context) => missingRankData[context.dataIndex] ? mutedColor : pointColor,
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          pointBorderWidth: 0,
+          pointBackgroundColor: (context) => missingRankData[context.dataIndex] ? mutedColor : lineColor,
           tension: 0,
+          fill: 'start',
           yAxisID: 'y',
           clip: false
         },
@@ -415,8 +429,9 @@ function renderChart(history) {
           data: winDeltaData,
           backgroundColor: barFillStrong,
           borderColor: 'transparent',
+          borderRadius: 2,
           yAxisID: 'yWin',
-          barPercentage: 0.5,
+          barPercentage: 0.42,
           categoryPercentage: 0.8
         }
       ]
@@ -460,7 +475,7 @@ function renderChart(history) {
           grid: { display: false },
           ticks: {
             color: mutedColor,
-            font: { size: 11, family: UI_FONT_STACK },
+            font: { size: 11, family: MONO_FONT_STACK },
             maxRotation: 0,
             autoSkip: labels.length > 5,
             maxTicksLimit: 10
@@ -470,7 +485,7 @@ function renderChart(history) {
           reverse: true,
           min: yMin,
           max: yMax,
-          grid: { color: gridColor },
+          grid: { color: gridColor, borderDash: [2, 4] },
           ticks: { display: false },
           border: { display: false }
         },
@@ -482,7 +497,7 @@ function renderChart(history) {
         }
       }
     },
-    plugins: [customPlugin]
+    plugins: [gradientPlugin, customPlugin]
   });
 }
 
@@ -524,11 +539,11 @@ function drawChartPlaceholder() {
       datasets: [{
         data: [65, 46, 54, 28, 35],
         borderColor: previewColor,
-        backgroundColor: pointColor,
-        borderDash: [5, 5],
-        borderWidth: 3,
-        pointRadius: 4,
-        pointBackgroundColor: pointColor,
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBorderWidth: 0,
+        pointBackgroundColor: previewColor,
         tension: 0
       }]
     },

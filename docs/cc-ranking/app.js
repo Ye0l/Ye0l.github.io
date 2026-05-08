@@ -18,6 +18,18 @@ const sortHeaders = [...document.querySelectorAll("[data-sort-key]")];
 const selectedCharacter = document.querySelector("#selectedCharacter");
 const seasonExtremes = document.querySelector("#seasonExtremes");
 const detailPanel = document.querySelector(".detail-panel");
+const detailName = document.querySelector("#detailName");
+const detailPoints = document.querySelector("#detailPoints");
+const detailWins = document.querySelector("#detailWins");
+const detailDelta = document.querySelector("#detailDelta");
+const honorGrid = document.querySelector("#honorGrid");
+const honorMeta = document.querySelector("#honorMeta");
+const honorTabs = document.querySelector("#honorTabs");
+const kpiSeason = document.querySelector("#kpiSeason");
+const kpiSnapshots = document.querySelector("#kpiSnapshots");
+const kpiTop = document.querySelector("#kpiTop");
+const kpiTopFoot = document.querySelector("#kpiTopFoot");
+const kpiSeasonFoot = document.querySelector("#kpiSeasonFoot");
 const currentMapName = document.querySelector("#currentMapName");
 const currentMapTime = document.querySelector("#currentMapTime");
 const nextMapName = document.querySelector("#nextMapName");
@@ -36,6 +48,10 @@ let currentSnapshotIndex = -1;
 let currentHistory = [];
 let latestEntries = [];
 let rankingSort = { key: "rank", direction: "asc" };
+let honorMode = 'rank';
+let honorRotateTimer = null;
+const HONOR_MODES = ['rank', 'wins', 'rise'];
+const HONOR_ROTATE_MS = 7000;
 let chartTransitionTimer = null;
 let characterRequestToken = 0;
 let themeSwitchTimer = null;
@@ -53,6 +69,7 @@ const THEME_SWITCH_MS = 360;
 const HEART_STORAGE_KEY = "ccRankingProjectHeart";
 const HEART_CLIENT_KEY = "ccRankingProjectHeartClient";
 const UI_FONT_STACK = '"Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+const MONO_FONT_STACK = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
 const OUT_OF_RANK_GRAPH_RANK = 101;
 
 const API_BASE = String(window.CC_API_BASE || "").replace(/\/$/, "");
@@ -228,17 +245,12 @@ function tierIconHtml(entry) {
 }
 
 function movementBadge(entry) {
-  const text = movementText(entry);
-  const movementClass = entry.movement_direction === "up"
-    ? "movement-up"
-    : entry.movement_direction === "down"
-      ? "movement-down"
-      : entry.movement_direction === "new"
-        ? "movement-new"
-        : entry.movement_direction === "out" || entry.is_dropped
-          ? "movement-out"
-          : "movement-flat";
-  return `<span class="movement-chip ${movementClass}">${escapeHtml(text)}</span>`;
+  const dir = entry.movement_direction;
+  if (entry.is_dropped || dir === "out") return '<span class="move" data-dir="out">OUT</span>';
+  if (dir === "new") return '<span class="move" data-dir="new">NEW</span>';
+  if (dir === "up") return `<span class="move" data-dir="up"><span class="arrow">▲</span>${escapeHtml(String(entry.movement_value ?? ""))}</span>`;
+  if (dir === "down") return `<span class="move" data-dir="down"><span class="arrow">▼</span>${escapeHtml(String(entry.movement_value ?? ""))}</span>`;
+  return '<span class="move" data-dir="flat">—</span>';
 }
 
 function storedTheme() {
@@ -377,7 +389,7 @@ async function saveProjectHeart(isLiked) {
 
 function renderDashboardSkeleton() {
   document.body.classList.add("is-loading");
-  seasonBadge.innerHTML = '<span class="skeleton-line skeleton-season"></span>';
+  seasonBadge.textContent = "-";
   snapshotMeta.innerHTML = '<span class="skeleton-line skeleton-meta"></span>';
   totalMeta.innerHTML = '<span class="skeleton-line skeleton-total"></span>';
   entryCount.innerHTML = '<span class="skeleton-line skeleton-count"></span>';
@@ -397,11 +409,11 @@ function renderSnapshotSkeleton() {
 
 function renderCharacterSkeleton() {
   detailPanel.classList.add("is-history-loading");
-  selectedCharacter.innerHTML = `
-    <span class="skeleton-line skeleton-selected-name"></span>
-    <span class="skeleton-line skeleton-selected-tier"></span>
-    <span class="skeleton-line skeleton-selected-count"></span>
-  `;
+  if (detailName) detailName.innerHTML = '<span class="skeleton-line skeleton-selected-name"></span>';
+  selectedCharacter.innerHTML = '<span class="skeleton-line skeleton-selected-tier"></span>';
+  if (detailPoints) detailPoints.innerHTML = '<span class="skeleton-line skeleton-points"></span>';
+  if (detailWins) detailWins.innerHTML = '<span class="skeleton-line skeleton-wins"></span>';
+  if (detailDelta) detailDelta.textContent = "-";
   seasonExtremes.innerHTML = `
     <div class="extreme-card skeleton-card" aria-hidden="true">
       <span class="skeleton-line skeleton-card-label"></span>
@@ -483,22 +495,26 @@ function renderLatest(payload) {
   latestEntries = entries;
   if (!snapshot) {
     endCharacterHistoryLoading();
-    seasonBadge.textContent = "Season -";
+    seasonBadge.textContent = "-";
     snapshotMeta.textContent = "저장된 스냅샷이 없습니다.";
-    totalMeta.textContent = "표시 인원 -";
+    totalMeta.textContent = "-";
     entryCount.textContent = "";
     selectedCharacter.innerHTML = "";
     seasonExtremes.innerHTML = "";
     rankingRows.innerHTML = `<tr><td class="empty" colspan="7">아직 데이터가 없습니다.</td></tr>`;
     updateChart([], { animate: false });
+    renderHonorGrid();
     return;
   }
 
-  seasonBadge.textContent = snapshot.season ? `Season ${snapshot.season}` : "Season -";
+  seasonBadge.textContent = snapshot.season ? `${snapshot.season}` : "-";
   snapshotMeta.textContent = snapshot.source_time_text || snapshot.scraped_at || "-";
-  totalMeta.textContent = `표시 인원 ${rankingCountText(entries)}`;
+  totalMeta.textContent = rankingCountText(entries);
   entryCount.textContent = rankingCountText(entries);
   renderRankingRows();
+  renderHonorGrid();
+  scheduleHonorRotate();
+  updateKpis(snapshot, entries);
   if (currentHistory.length === 0) {
     updateChart([], { animate: false });
   }
@@ -533,7 +549,7 @@ function renderRankingRows() {
         </td>
         <td>${escapeHtml(entry.server_name)}</td>
         <td><span class="tier-pill ${tierClass(entry.tier_label)}">${tierIconHtml(entry)}<span>${escapeHtml(entry.tier_label || "-")}</span></span></td>
-        <td>${escapeHtml(pointsDisplay(entry))}</td>
+        <td>${pointsWithDeltaHtml(entry)}</td>
         <td>${entry.wins ?? "-"}</td>
         <td>${movementBadge(entry)}</td>
       </tr>
@@ -946,8 +962,10 @@ async function selectCharacter(key, options = {}) {
     currentHistory = history;
     const latest = history[history.length - 1];
     endCharacterHistoryLoading();
+    updateDetailStats(latest);
     selectedCharacter.innerHTML = latest ? selectedCharacterHtml(latest, history.length) : "";
     seasonExtremes.innerHTML = latest ? seasonExtremesHtml(history, latest.season) : "";
+    updateHonorGridSelection(key);
     updateChart(history);
     if (scrollRanking) {
       scrollRankingIntoView(key);
@@ -963,10 +981,30 @@ async function selectCharacter(key, options = {}) {
 
 function selectedCharacterHtml(latest, sampleCount) {
   return `
-    <span>${escapeHtml(latest.character_name)} @ ${escapeHtml(latest.server_name)} · </span>
-    <span class="selected-tier">${tierIconHtml(latest)}<span>${escapeHtml(tierWithPoints(latest))}</span></span>
-    <span> · ${sampleCount}개 스냅샷</span>
+    <span>@${escapeHtml(latest.server_name)}</span>
+    <span class="dot-sep">·</span>
+    <span class="selected-tier">${tierIconHtml(latest)}<span>${escapeHtml(latest.tier_label || "-")}</span></span>
+    <span class="dot-sep">·</span>
+    <span>${sampleCount}개 스냅샷</span>
   `;
+}
+
+function updateDetailStats(latest) {
+  if (!latest) {
+    if (detailName) detailName.textContent = "캐릭터를 선택하세요";
+    if (detailPoints) detailPoints.textContent = "-";
+    if (detailWins) detailWins.textContent = "-";
+    if (detailDelta) { detailDelta.textContent = "-"; detailDelta.style.color = ""; }
+    return;
+  }
+  if (detailName) detailName.textContent = latest.character_name;
+  if (detailPoints) detailPoints.textContent = pointsDisplay(latest);
+  if (detailWins) detailWins.textContent = latest.wins ?? "-";
+  if (detailDelta) {
+    const delta = latest.points_delta != null ? Number(latest.points_delta) : null;
+    detailDelta.textContent = delta != null ? (delta >= 0 ? `+${delta}` : `${delta}`) : "-";
+    detailDelta.style.color = delta > 0 ? "var(--up)" : delta < 0 ? "var(--down)" : "var(--fg-3)";
+  }
 }
 
 function seasonExtremesHtml(history, season) {
@@ -1022,6 +1060,14 @@ function pointsDisplay(entry) {
   const points = entry.points_text ?? entry.points;
   const text = String(points ?? "").trim();
   return text ? text : "-";
+}
+
+function pointsWithDeltaHtml(entry) {
+  const base = escapeHtml(pointsDisplay(entry));
+  const delta = entry.points_delta ?? null;
+  if (delta == null) return base;
+  const sign = delta >= 0 ? '+' : '';
+  return `${base}<span class="pts-delta">(${sign}${delta})</span>`;
 }
 
 function pointsValue(entry) {
@@ -1100,7 +1146,9 @@ function renderChart(history) {
   const pointColor = styles.getPropertyValue("--chart-point").trim() || "#f7c76a";
   const textColor = styles.getPropertyValue("--chart-text").trim() || "#dbeafe";
   const mutedColor = styles.getPropertyValue("--chart-muted").trim() || "#93a4b8";
-  const barFillStrong = styles.getPropertyValue("--chart-bar-fill-strong").trim() || "rgba(247, 199, 106, 0.52)";
+  const barFillStrong = styles.getPropertyValue("--chart-bar-fill-strong").trim() || "rgba(96, 165, 250, 0.22)";
+  const gradTop = styles.getPropertyValue("--chart-gradient-top").trim() || "rgba(96, 165, 250, 0.14)";
+  const gradBot = styles.getPropertyValue("--chart-gradient-bot").trim() || "rgba(96, 165, 250, 0)";
   const markerColor = styles.getPropertyValue("--chart-marker").trim() || "#ff8fb3";
   const markerLineColor = styles.getPropertyValue("--chart-marker-line").trim() || "rgba(255, 143, 179, 0.42)";
   const markerTextColor = styles.getPropertyValue("--chart-marker-text").trim() || "#ffd4df";
@@ -1131,6 +1179,17 @@ function renderChart(history) {
   const yMax = graphMaxRank + Math.max(2, Math.floor(spread * 0.25));
   const winDeltaMax = Math.max(...winDeltaData.filter(v => Number.isFinite(v)), 1);
 
+  const gradientPlugin = {
+    id: 'areaGradient',
+    beforeDatasetsDraw(chart) {
+      const { ctx, chartArea: { top, bottom } } = chart;
+      const grad = ctx.createLinearGradient(0, top, 0, bottom);
+      grad.addColorStop(0, gradTop);
+      grad.addColorStop(1, gradBot);
+      chart.data.datasets[0].backgroundColor = grad;
+    }
+  };
+
   const customPlugin = {
     id: 'customLabels',
     afterDatasetsDraw(chart) {
@@ -1158,7 +1217,6 @@ function renderChart(history) {
         ctx.fillText(label, point.x, labelY);
       });
 
-      ctx.font = canvasFont(11, "bold");
       points.forEach((point, idx) => {
         if (idx === 0 || point.skip || missingRankData[idx] || !Number.isFinite(data.datasets[0].data[idx])) return;
         const currentTier = tierLabels[idx];
@@ -1166,28 +1224,36 @@ function renderChart(history) {
         if (normalizeTier(currentTier) !== normalizeTier(prevTier)) {
           const label = currentTier || "계급 변경";
           const labelBelow = point.y < 78;
-          const labelY = labelBelow 
-            ? Math.min(point.y + 34 + (idx % 2) * 16, height + top - 24)
-            : Math.max(top + 24, Math.min(point.y - 24 - (idx % 2) * 18, height + top - 24));
+          const labelY = labelBelow
+            ? Math.min(point.y + 32 + (idx % 2) * 14, height + top - 20)
+            : Math.max(top + 20, Math.min(point.y - 22 - (idx % 2) * 14, height + top - 20));
 
-          ctx.fillStyle = markerColor;
-          ctx.beginPath();
-          ctx.moveTo(point.x, point.y - 9);
-          ctx.lineTo(point.x + 8, point.y);
-          ctx.lineTo(point.x, point.y + 9);
-          ctx.lineTo(point.x - 8, point.y);
-          ctx.closePath();
-          ctx.fill();
+          ctx.save();
 
-          ctx.strokeStyle = markerLineColor;
-          ctx.lineWidth = 1;
+          // Ring around the line dot
+          ctx.strokeStyle = lineColor;
+          ctx.lineWidth = 1.5;
           ctx.beginPath();
-          ctx.moveTo(point.x, point.y);
-          ctx.lineTo(point.x, labelBelow ? labelY - 13 : labelY + 5);
+          ctx.arc(point.x, point.y, 6, 0, Math.PI * 2);
           ctx.stroke();
 
-          ctx.fillStyle = markerTextColor;
+          // Dashed connector
+          ctx.strokeStyle = mutedColor;
+          ctx.lineWidth = 1;
+          ctx.setLineDash([2, 3]);
+          ctx.beginPath();
+          ctx.moveTo(point.x, labelBelow ? point.y + 8 : point.y - 8);
+          ctx.lineTo(point.x, labelBelow ? labelY - 10 : labelY + 4);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Label
+          ctx.font = canvasFont(10, "bold");
+          ctx.fillStyle = textColor;
+          ctx.textAlign = "center";
           ctx.fillText(label, point.x, labelY);
+
+          ctx.restore();
         }
       });
 
@@ -1234,13 +1300,14 @@ function renderChart(history) {
           label: 'Rank',
           data: rankData,
           borderColor: lineColor,
-          backgroundColor: pointColor,
-          borderDash: [5, 5],
-          borderWidth: 3,
-          pointRadius: 5,
-          pointHoverRadius: 7,
-          pointBackgroundColor: (context) => missingRankData[context.dataIndex] ? mutedColor : pointColor,
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          pointBorderWidth: 0,
+          pointBackgroundColor: (context) => missingRankData[context.dataIndex] ? mutedColor : lineColor,
           tension: 0,
+          fill: 'start',
           yAxisID: 'y',
           clip: false
         },
@@ -1250,8 +1317,9 @@ function renderChart(history) {
           data: winDeltaData,
           backgroundColor: barFillStrong,
           borderColor: 'transparent',
+          borderRadius: 2,
           yAxisID: 'yWin',
-          barPercentage: 0.5,
+          barPercentage: 0.42,
           categoryPercentage: 0.8
         }
       ]
@@ -1295,7 +1363,7 @@ function renderChart(history) {
           grid: { display: false },
           ticks: {
             color: mutedColor,
-            font: { size: 11, family: UI_FONT_STACK },
+            font: { size: 11, family: MONO_FONT_STACK },
             maxRotation: 0,
             autoSkip: labels.length > 5,
             maxTicksLimit: 5
@@ -1305,7 +1373,7 @@ function renderChart(history) {
           reverse: true,
           min: yMin,
           max: yMax,
-          grid: { color: gridColor },
+          grid: { color: gridColor, borderDash: [2, 4] },
           ticks: { display: false },
           border: { display: false }
         },
@@ -1317,7 +1385,7 @@ function renderChart(history) {
         }
       }
     },
-    plugins: [customPlugin]
+    plugins: [gradientPlugin, customPlugin]
   });
 }
 
@@ -1367,11 +1435,11 @@ function drawChartPlaceholder() {
       datasets: [{
         data: [65, 46, 54, 28],
         borderColor: previewColor,
-        backgroundColor: pointColor,
-        borderDash: [5, 5],
-        borderWidth: 3,
-        pointRadius: 4,
-        pointBackgroundColor: pointColor,
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBorderWidth: 0,
+        pointBackgroundColor: previewColor,
         tension: 0
       }]
     },
@@ -1401,6 +1469,179 @@ function drawChartPlaceholder() {
       }
     }]
   });
+}
+
+function normalizeTierLabel(tier) {
+  const t = normalizeTier(tier);
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : "";
+}
+
+function honorMoveChip(entry) {
+  const dir = entry.movement_direction;
+  if (entry.is_dropped || dir === "out") return '<span class="move" data-dir="out">OUT</span>';
+  if (dir === "new") return '<span class="move" data-dir="new">NEW</span>';
+  if (dir === "up") return `<span class="move" data-dir="up"><span class="arrow">▲</span>${escapeHtml(String(entry.movement_value ?? ""))}</span>`;
+  if (dir === "down") return `<span class="move" data-dir="down"><span class="arrow">▼</span>${escapeHtml(String(entry.movement_value ?? ""))}</span>`;
+  return '<span class="move" data-dir="flat">—</span>';
+}
+
+function renderHonorGrid() {
+  if (!honorGrid) return;
+
+  if (honorTabs) {
+    honorTabs.querySelectorAll('.honor-tab').forEach(btn => {
+      btn.classList.toggle('is-active', btn.dataset.mode === honorMode);
+    });
+  }
+
+  const all = latestEntries.filter((e) => !e.is_dropped);
+  let top10;
+  if (honorMode === 'wins') {
+    top10 = all
+      .filter(e => numberValue(e.win_delta) > 0)
+      .sort((a, b) => numberValue(b.win_delta) - numberValue(a.win_delta))
+      .slice(0, 10);
+  } else if (honorMode === 'rise') {
+    top10 = all
+      .filter(e => e.movement_direction === 'up' && numberValue(e.movement_value) > 0)
+      .sort((a, b) => numberValue(b.movement_value) - numberValue(a.movement_value))
+      .slice(0, 10);
+  } else {
+    top10 = all.slice(0, 10);
+  }
+
+  if (top10.length === 0) { honorGrid.innerHTML = ""; return; }
+
+  const hero = top10[0];
+
+  let heroRankLine, heroStats, heroWatermark;
+  if (honorMode === 'wins') {
+    heroWatermark = String(hero.win_delta ?? '-');
+    heroRankLine = `<span class="hash">+</span>${escapeHtml(heroWatermark)} · <span style="font-family:var(--font-display);font-weight:700;letter-spacing:.14em">WINS</span>`;
+    heroStats = `
+      <div class="stat"><div class="l">오늘 승리</div><div class="v" style="color:var(--up)">+${escapeHtml(heroWatermark)}</div></div>
+      <div class="stat"><div class="l">순위</div><div class="v">#${escapeHtml(String(hero.rank))}</div></div>
+      <div class="stat"><div class="l">Points</div><div class="v">${escapeHtml(pointsDisplay(hero))}</div></div>
+    `;
+  } else if (honorMode === 'rise') {
+    heroWatermark = String(hero.movement_value ?? '-');
+    heroRankLine = `<span class="hash">↑</span>${escapeHtml(heroWatermark)} · <span style="font-family:var(--font-display);font-weight:700;letter-spacing:.14em">RISE</span>`;
+    heroStats = `
+      <div class="stat"><div class="l">순위 상승</div><div class="v" style="color:var(--up)">↑${escapeHtml(heroWatermark)}</div></div>
+      <div class="stat"><div class="l">현재 순위</div><div class="v">#${escapeHtml(String(hero.rank))}</div></div>
+      <div class="stat"><div class="l">Points</div><div class="v">${escapeHtml(pointsDisplay(hero))}</div></div>
+    `;
+  } else {
+    heroWatermark = '1';
+    heroRankLine = `<span class="hash">#</span>01 · <span style="font-family:var(--font-display);font-weight:700;letter-spacing:.14em">CHAMPION</span>`;
+    heroStats = `
+      <div class="stat"><div class="l">Points</div><div class="v">${escapeHtml(pointsDisplay(hero))}</div></div>
+      <div class="stat"><div class="l">Wins</div><div class="v">${escapeHtml(String(hero.wins ?? "-"))}</div></div>
+      <div class="stat"><div class="l">+Δ Today</div><div class="v" style="color:var(--up)">${hero.points_delta != null ? `+${hero.points_delta}` : "-"}</div></div>
+    `;
+  }
+
+  const rankOrInfo = honorMode !== 'rank'
+    ? ` · <span style="opacity:0.55">Rank #${escapeHtml(String(hero.rank))}</span>` : '';
+  let html = `
+    <div class="tile is-hero" data-rank-display="${escapeHtml(heroWatermark)}" data-key="${escapeHtml(hero.character_key)}">
+      <div class="tile-rank">${heroRankLine}</div>
+      <div class="tile-name">${escapeHtml(hero.character_name)}</div>
+      <div class="tile-server">@${escapeHtml(hero.server_name)} · <span class="tier" data-tier="${escapeHtml(normalizeTierLabel(hero.tier_label))}">${escapeHtml(hero.tier_label || "-")}</span>${rankOrInfo}</div>
+      <div class="tile-stats">${heroStats}</div>
+      <div class="tile-foot">
+        <span class="tile-points">${escapeHtml(pointsDisplay(hero))}<span class="pts-unit"> pts</span></span>
+        ${honorMoveChip(hero)}
+      </div>
+    </div>
+  `;
+
+  top10.slice(1).forEach((e) => {
+    let tileRankLine, tileWatermark, tileServer;
+    const tierBadge = e.tier_label
+      ? ` · <span class="tier" data-tier="${escapeHtml(normalizeTierLabel(e.tier_label))}">${escapeHtml(e.tier_label)}</span>`
+      : '';
+    if (honorMode === 'wins') {
+      tileWatermark = String(e.win_delta ?? '-');
+      tileRankLine = `<span class="hash">+</span>${escapeHtml(tileWatermark)}<span style="color:var(--fg-3);font-size:9px;margin-left:4px;letter-spacing:.06em">WINS</span>`;
+      tileServer = `@${escapeHtml(e.server_name)} · <span style="opacity:0.55">#${escapeHtml(String(e.rank))}</span>${tierBadge}`;
+    } else if (honorMode === 'rise') {
+      tileWatermark = String(e.movement_value ?? '-');
+      tileRankLine = `<span class="hash">↑</span>${escapeHtml(tileWatermark)}`;
+      tileServer = `@${escapeHtml(e.server_name)} · <span style="opacity:0.55">#${escapeHtml(String(e.rank))}</span>${tierBadge}`;
+    } else {
+      tileWatermark = String(e.rank);
+      tileRankLine = `<span class="hash">#</span>${escapeHtml(String(e.rank).padStart(2, "0"))}`;
+      tileServer = `@${escapeHtml(e.server_name)}${tierBadge}`;
+    }
+    html += `
+      <div class="tile" data-rank-display="${escapeHtml(tileWatermark)}" data-key="${escapeHtml(e.character_key)}">
+        <div class="tile-rank">${tileRankLine}</div>
+        <div class="tile-name">${escapeHtml(e.character_name)}</div>
+        <div class="tile-server">${tileServer}</div>
+        <div class="tile-foot">
+          <span class="tile-points">${escapeHtml(pointsDisplay(e))}<span class="pts-unit"> pts</span></span>
+          ${honorMoveChip(e)}
+        </div>
+      </div>
+    `;
+  });
+
+  honorGrid.innerHTML = html;
+  honorGrid.querySelectorAll(".tile").forEach((tile) => {
+    tile.addEventListener("click", () => selectCharacter(tile.dataset.key));
+  });
+  updateHonorGridSelection(selectedKey);
+}
+
+function scheduleHonorRotate() {
+  clearTimeout(honorRotateTimer);
+  honorRotateTimer = setTimeout(() => {
+    honorMode = HONOR_MODES[(HONOR_MODES.indexOf(honorMode) + 1) % HONOR_MODES.length];
+    renderHonorGrid();
+    updateHonorGridSelection(selectedKey);
+    scheduleHonorRotate();
+  }, HONOR_ROTATE_MS);
+}
+
+function updateHonorGridSelection(key) {
+  if (!honorGrid) return;
+  honorGrid.querySelectorAll(".tile").forEach((tile) => {
+    tile.dataset.selected = String(tile.dataset.key === key);
+  });
+}
+
+function updateKpis(snapshot, entries) {
+  if (kpiSeason && snapshot && snapshot.season) {
+    kpiSeason.childNodes[0].textContent = snapshot.season;
+  }
+  if (kpiSeasonFoot && snapshot) {
+    const dateStr = formatSnapshotDate(snapshot.source_time_text || snapshot.scraped_at || "");
+    kpiSeasonFoot.textContent = `기준: ${dateStr}`;
+  }
+  if (honorMeta && snapshot) {
+    const dateStr = formatSnapshotDate(snapshot.source_time_text || snapshot.scraped_at || "");
+    honorMeta.textContent = `SEASON ${snapshot.season || "-"} · ${dateStr}`;
+  }
+  if (kpiSnapshots && snapshots.length > 0) {
+    kpiSnapshots.childNodes[0].textContent = snapshots.length;
+    const snapshotFootEl = document.querySelector("#kpiSnapshotFoot");
+    if (snapshotFootEl) {
+      const byId = [...snapshots].sort((a, b) => a.id - b.id);
+      const oldest = formatSnapshotDate(byId[0].source_time_text || byId[0].scraped_at || "");
+      const newest = formatSnapshotDate(byId[byId.length - 1].source_time_text || byId[byId.length - 1].scraped_at || "");
+      snapshotFootEl.textContent = `${oldest} → ${newest}`;
+    }
+  }
+  if (entries && entries.length > 0) {
+    const top = entries.find((e) => !e.is_dropped);
+    if (top && kpiTop) {
+      kpiTop.textContent = top.character_name;
+    }
+    if (top && kpiTopFoot) {
+      kpiTopFoot.textContent = `@${top.server_name} · ${top.tier_label || "-"} · ${pointsDisplay(top)}`;
+    }
+  }
 }
 
 function formatGraphDate(value) {
@@ -1510,6 +1751,18 @@ nextSnapshot.addEventListener("click", () => {
     });
   }
 });
+
+if (honorTabs) {
+  honorTabs.querySelectorAll('.honor-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      clearTimeout(honorRotateTimer);
+      honorMode = btn.dataset.mode;
+      renderHonorGrid();
+      updateHonorGridSelection(selectedKey);
+      scheduleHonorRotate();
+    });
+  });
+}
 
 loadSnapshots()
   .then(() => {

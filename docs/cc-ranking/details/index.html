@@ -4,12 +4,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FF14 CC Character Details</title>
-    <link rel="stylesheet" href="../styles.css?v=20260506-unified-fonts">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../styles.css?v=20260508-points-delta">
   </head>
   <body class="details-page">
+  <div class="page">
     <header class="topbar">
       <div class="topbar-actions">
-        <button id="themeToggle" class="theme-toggle" type="button" aria-label="테마 변경" title="테마 변경">
+        <button id="themeToggle" class="icon-btn" type="button" aria-label="테마 변경" title="테마 변경">
           <span id="themeIcon" aria-hidden="true">☾</span>
         </button>
       </div>
@@ -99,13 +103,13 @@
     </main>
 
     <footer class="site-footer" aria-label="제작자 정보">
-      <span class="footer-label">Made by</span>
-      <strong>Caitsith@모그리</strong>
+      <span>FFXIV KR · PvP Archive · Made by <strong>Caitsith@모그리</strong></span>
       <a href="mailto:yeol@kstr.dev">yeol@kstr.dev</a>
     </footer>
+  </div>
 
     <script src="../chart.umd.min.js"></script>
     <script src="../config.js?v=20260505-perfect-scrollbars"></script>
-    <script src="details.js?v=20260507-recommend-api"></script>
+    <script src="details.js?v=20260508-points-delta"></script>
   </body>
 </html>

@@ -3,39 +3,64 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>FF14 CC Rankings</title>
-    <link rel="stylesheet" href="styles.css?v=20260506-unified-fonts">
+    <title>CC Ranking — Crystalline Conflict</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=20260508-points-delta">
   </head>
   <body>
+
+  <div class="page">
+
+    <!-- ─── TOP BAR ─────────────────────────────────────────── -->
     <header class="topbar">
       <div class="topbar-copy">
-        <span class="eyebrow">FFXIV KR PvP Archive</span>
-        <div class="title-row">
-          <h1>Crystalline Conflict Rankings</h1>
-          <span id="seasonBadge" class="season-badge">Season -</span>
-        </div>
-        <p class="meta-line">
-          <span id="snapshotMeta">저장된 스냅샷을 불러오는 중</span>
-          <span id="totalMeta">표시 인원 -</span>
-          <span><a class="official-link" href="https://www.ff14.co.kr/ranking/CrystallineConflict" target="_blank" rel="noopener noreferrer">공식 랭킹 페이지</a></span>
-        </p>
+        <span class="eyebrow">FFXIV KR · PvP Archive</span>
+        <h1>Crystalline <em>Conflict</em></h1>
+      </div>
+      <div class="top-meta">
+        <span class="live-chip">LIVE · S<span id="seasonBadge">-</span></span>
+        <span class="season-chip">UPDATED&nbsp;<strong id="snapshotMeta">-</strong></span>
       </div>
       <div class="topbar-actions">
-        <button id="projectHeart" class="heart-button" type="button" aria-pressed="false" aria-label="프로젝트가 마음에 들었다면 눌러주세요" title="프로젝트가 마음에 들었다면 눌러주세요">
-          <span class="heart-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>
-            </svg>
-          </span>
-          <span class="heart-button-text">좋아요</span>
-          <span id="projectHeartCount" class="heart-count" aria-hidden="true">-</span>
-        </button>
-        <button id="themeToggle" class="theme-toggle" type="button" aria-label="테마 변경" title="테마 변경">
+        <button id="themeToggle" class="icon-btn" type="button" aria-label="테마 변경" title="테마 변경">
           <span id="themeIcon" aria-hidden="true">☾</span>
+        </button>
+        <button id="projectHeart" class="icon-btn heart-icon-btn" type="button" aria-pressed="false" aria-label="프로젝트가 마음에 들었다면 눌러주세요" title="프로젝트가 마음에 들었다면 눌러주세요">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+          <span id="projectHeartCount" class="heart-count" aria-hidden="true">-</span>
         </button>
       </div>
     </header>
 
+    <!-- ─── KPI STRIP ───────────────────────────────────────── -->
+    <section class="kpis" aria-label="시즌 요약">
+      <div class="kpi">
+        <span class="kpi-label">Season</span>
+        <span class="kpi-value" id="kpiSeason">-<span class="unit">/ Crystalline</span></span>
+        <span class="kpi-foot" id="kpiSeasonFoot">진행 중</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Snapshots</span>
+        <span class="kpi-value" id="kpiSnapshots">-<span class="unit">개</span></span>
+        <span class="kpi-foot" id="kpiSnapshotFoot">-</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Top Player</span>
+        <span class="kpi-value kpi-player" id="kpiTop">-</span>
+        <span class="kpi-foot" id="kpiTopFoot">-</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">표시 인원</span>
+        <span class="kpi-value kpi-player" id="totalMeta">-</span>
+        <span class="kpi-foot" id="kpiUpdateFoot">랭킹 집계 인원</span>
+      </div>
+    </section>
+
+    <!-- ─── SNAPSHOT NAV ─────────────────────────────────────── -->
     <section class="snapshot-nav" aria-label="스냅샷 이동">
       <div class="snapshot-control" role="group" aria-label="스냅샷 기준 시점과 이동">
         <div class="snapshot-select-wrap">
@@ -47,35 +72,9 @@
           <button id="nextSnapshot" class="nav-button" type="button">다음</button>
         </div>
       </div>
-      <div class="ranking-search-tools">
-        <input id="searchInput" type="search" placeholder="캐릭터 또는 서버 검색">
-        <button id="filterToggle" class="filter-toggle" type="button" aria-expanded="false" aria-controls="rankingFilters" aria-label="필터 열기" title="필터 열기">
-          <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-            <path d="M3 5h18l-6.8 7.7V18l-4.4 2.6v-7L3 5z"></path>
-          </svg>
-        </button>
-        <div id="rankingFilters" class="ranking-filters" hidden>
-          <label>
-            <span>서버</span>
-            <input id="serverFilterInput" type="text" inputmode="search" autocomplete="off" placeholder="예: 모그리">
-          </label>
-          <label>
-            <span>닉네임</span>
-            <input id="nameFilterInput" type="text" inputmode="search" autocomplete="off" placeholder="캐릭터명">
-          </label>
-          <label>
-            <span>승수</span>
-            <input id="winsFilterInput" type="number" inputmode="numeric" min="0" step="1" placeholder="최소">
-          </label>
-          <label>
-            <span>최근</span>
-            <input id="recentDaysInput" type="number" inputmode="numeric" min="1" step="1" placeholder="N일">
-          </label>
-          <button id="filterReset" class="filter-reset" type="button">초기화</button>
-        </div>
-      </div>
     </section>
 
+    <!-- ─── MAP ROTATION ─────────────────────────────────────── -->
     <section class="map-rotation" style="display: none;" aria-label="현재 맵 로테이션">
       <div>
         <span class="map-label">현재 맵</span>
@@ -90,24 +89,71 @@
       <a href="https://cc.shilin.net/" target="_blank" rel="noopener noreferrer">source</a>
     </section>
 
+    <!-- ─── HONOR GRID (Top-10) ─────────────────────────────── -->
+    <div class="section-head">
+      <h2>Hall of Crystal</h2>
+      <div class="honor-tabs" id="honorTabs" role="tablist" aria-label="랭킹 종류">
+        <button class="honor-tab" data-mode="rank" role="tab" type="button">상위 랭크</button>
+        <button class="honor-tab" data-mode="wins" role="tab" type="button">최다 승리</button>
+        <button class="honor-tab" data-mode="rise" role="tab" type="button">최다 상승</button>
+      </div>
+      <span class="section-meta" id="honorMeta">SEASON -</span>
+    </div>
+    <section class="honor-grid" id="honorGrid" aria-label="상위 10인">
+      <!-- JS populates this -->
+    </section>
+
+    <!-- ─── FULL RANKING ─────────────────────────────────────── -->
+    <div class="section-head" style="margin-top:28px">
+      <h2>Full Ranking</h2>
+      <span class="section-meta" id="entryCount"></span>
+    </div>
+
+    <!-- ─── FILTER BAR ────────────────────────────────────────── -->
+    <div class="filter-bar">
+      <div class="search-wrap grow">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input class="f-input" id="searchInput" type="search" placeholder="캐릭터명 또는 서버 검색" autocomplete="off">
+      </div>
+      <button class="icon-btn filter-btn" id="filterToggle" type="button" aria-expanded="false" aria-controls="rankingFilters" aria-label="필터 열기" title="필터 열기">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M3 5h18l-6.8 7.7V18l-4.4 2.6v-7L3 5z"/></svg>
+      </button>
+      <div id="rankingFilters" class="ranking-filters" hidden>
+        <label>
+          <span>서버</span>
+          <input id="serverFilterInput" type="text" inputmode="search" autocomplete="off" placeholder="예: 모그리">
+        </label>
+        <label>
+          <span>닉네임</span>
+          <input id="nameFilterInput" type="text" inputmode="search" autocomplete="off" placeholder="캐릭터명">
+        </label>
+        <label>
+          <span>승수</span>
+          <input id="winsFilterInput" type="number" inputmode="numeric" min="0" step="1" placeholder="최소">
+        </label>
+        <label>
+          <span>최근</span>
+          <input id="recentDaysInput" type="number" inputmode="numeric" min="1" step="1" placeholder="N일">
+        </label>
+        <button id="filterReset" class="filter-reset" type="button">초기화</button>
+      </div>
+    </div>
+
+    <!-- ─── TABLE + DETAIL SPLIT ────────────────────────────── -->
     <main class="layout">
       <div class="ranking-column">
         <section class="panel ranking-panel">
-          <div class="panel-head">
-            <h2>전체 랭킹</h2>
-            <span id="entryCount"></span>
-          </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th class="sortable-th" data-sort-key="rank" tabindex="0" aria-sort="ascending">순위</th>
-                  <th class="sortable-th" data-sort-key="character" tabindex="0">캐릭터</th>
-                  <th class="sortable-th" data-sort-key="server" tabindex="0">서버</th>
-                  <th class="sortable-th" data-sort-key="tier" tabindex="0">티어</th>
-                  <th class="sortable-th" data-sort-key="points" tabindex="0">평점</th>
-                  <th class="sortable-th" data-sort-key="wins" tabindex="0">승리</th>
-                  <th class="sortable-th" data-sort-key="movement" tabindex="0">변동</th>
+                  <th class="sortable-th" data-sort-key="rank" tabindex="0" aria-sort="ascending">Rank</th>
+                  <th class="sortable-th" data-sort-key="character" tabindex="0">Character</th>
+                  <th class="sortable-th" data-sort-key="server" tabindex="0">Server</th>
+                  <th class="sortable-th" data-sort-key="tier" tabindex="0">Tier</th>
+                  <th class="sortable-th" data-sort-key="points" tabindex="0" style="text-align:right">Points</th>
+                  <th class="sortable-th" data-sort-key="wins" tabindex="0" style="text-align:right">Wins</th>
+                  <th class="sortable-th" data-sort-key="movement" tabindex="0">Move</th>
                 </tr>
               </thead>
               <tbody id="rankingRows"></tbody>
@@ -117,26 +163,35 @@
       </div>
 
       <aside class="panel detail-panel">
-        <div class="panel-head">
-          <h2>순위 그래프</h2>
-          <span>rank graph</span>
+        <div class="detail">
+          <div class="detail-head">
+            <span class="detail-eyebrow"><span class="dot"></span>Selected · Rank Trace</span>
+            <span class="detail-name" id="detailName">캐릭터를 선택하세요</span>
+            <div class="detail-sub" id="selectedCharacter"></div>
+          </div>
+          <div class="stat-grid">
+            <div class="cell"><div class="l">Points</div><div class="v" id="detailPoints">-</div></div>
+            <div class="cell"><div class="l">Wins</div><div class="v" id="detailWins">-</div></div>
+            <div class="cell"><div class="l">+Δ Today</div><div class="v" id="detailDelta">-</div></div>
+          </div>
+          <div class="chart-container">
+            <canvas id="rankChart"></canvas>
+          </div>
+          <div class="season-extremes" id="seasonExtremes" aria-label="이번 시즌 최고 최저 기록"></div>
         </div>
-        <div id="selectedCharacter" class="selected"></div>
-        <div class="chart-container">
-          <canvas id="rankChart"></canvas>
-        </div>
-        <div id="seasonExtremes" class="season-extremes" aria-label="이번 시즌 최고 최저 기록"></div>
       </aside>
     </main>
 
+    <!-- ─── FOOTER ─────────────────────────────────────────── -->
     <footer class="site-footer" aria-label="제작자 정보">
-      <span class="footer-label">Made by</span>
-      <strong>Caitsith@모그리</strong>
+      <span>FFXIV KR · PvP Archive · Made by <strong>Caitsith@모그리</strong></span>
       <a href="mailto:yeol@kstr.dev">yeol@kstr.dev</a>
     </footer>
 
-    <script src="chart.umd.min.js"></script>
-    <script src="config.js?v=20260505-perfect-scrollbars"></script>
-    <script src="app.js?v=20260506-ranking-filters"></script>
+  </div>
+
+  <script src="chart.umd.min.js"></script>
+  <script src="config.js?v=20260505-perfect-scrollbars"></script>
+  <script src="app.js?v=20260508-points-delta"></script>
   </body>
 </html>
