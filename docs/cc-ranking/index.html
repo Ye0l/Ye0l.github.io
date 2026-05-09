@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=20260509-detail-link">
+    <link rel="stylesheet" href="styles.css?v=20260510-honor-rotate">
   </head>
   <body>
 
@@ -21,7 +21,7 @@
       </div>
       <div class="top-meta">
         <span class="live-chip">LIVE · S<span id="seasonBadge">-</span></span>
-        <span class="season-chip">UPDATED&nbsp;<strong id="snapshotMeta">-</strong></span>
+        <span class="season-chip">PLAYERS&nbsp;<strong id="totalMeta">-</strong></span>
       </div>
       <div class="topbar-actions">
         <button id="themeToggle" class="icon-btn" type="button" aria-label="테마 변경" title="테마 변경">
@@ -37,28 +37,21 @@
     </header>
 
     <!-- ─── KPI STRIP ───────────────────────────────────────── -->
-    <section class="kpis" aria-label="시즌 요약">
+    <section class="kpis" aria-label="랭킹 요약">
       <div class="kpi">
-        <span class="kpi-label">Season</span>
-        <span class="kpi-value" id="kpiSeason">-<span class="unit">/ Crystalline</span></span>
-        <span class="kpi-foot" id="kpiSeasonFoot">진행 중</span>
+        <span class="kpi-label">신규 진입</span>
+        <span class="kpi-value" id="kpiNewEntries">-<span class="unit">명</span></span>
+        <span class="kpi-foot">Top100 신규 진입 유저 수</span>
       </div>
       <div class="kpi">
-        <span class="kpi-label">Snapshots</span>
-        <span class="kpi-value" id="kpiSnapshots">-<span class="unit">개</span></span>
-        <span class="kpi-foot" id="kpiSnapshotFoot">-</span>
-      </div>
-      <div class="kpi">
-        <span class="kpi-label">Top Player</span>
-        <span class="kpi-value kpi-player" id="kpiTop">-</span>
-        <span class="kpi-foot" id="kpiTopFoot">-</span>
-      </div>
-      <div class="kpi">
-        <span class="kpi-label">표시 인원</span>
-        <span class="kpi-value kpi-player" id="totalMeta">-</span>
-        <span class="kpi-foot" id="kpiUpdateFoot">랭킹 집계 인원</span>
+        <span class="kpi-label">승리 증가</span>
+        <span class="kpi-value" id="kpiWinGain">-<span class="unit">승</span></span>
+        <span class="kpi-foot">Top100 합계</span>
       </div>
     </section>
+    <p class="kpi-note">
+      스냅샷 <strong id="kpiSnapshots">-</strong>개 · <span id="kpiSnapshotFoot">-</span> · 기준 <span id="snapshotMeta">-</span>
+    </p>
 
     <!-- ─── SNAPSHOT NAV ─────────────────────────────────────── -->
     <section class="snapshot-nav" aria-label="스냅샷 이동">
@@ -97,7 +90,10 @@
         <button class="honor-tab" data-mode="wins" role="tab" type="button">최다 승리</button>
         <button class="honor-tab" data-mode="rise" role="tab" type="button">최다 상승</button>
       </div>
-      <span class="section-meta" id="honorMeta">SEASON -</span>
+      <div class="honor-rotate" aria-label="Hall of Crystal 자동 전환">
+        <span class="honor-progress" id="honorMeta" aria-hidden="true"><span></span></span>
+        <button class="honor-rotate-toggle" id="honorRotateToggle" type="button" data-state="pause" aria-pressed="false" aria-label="자동 전환 일시정지" title="자동 전환 일시정지"></button>
+      </div>
     </div>
     <section class="honor-grid" id="honorGrid" aria-label="상위 10인">
       <!-- JS populates this -->
@@ -207,6 +203,6 @@
 
   <script src="chart.umd.min.js"></script>
   <script src="config.js?v=20260505-perfect-scrollbars"></script>
-  <script src="app.js?v=20260509-detail-link-fix"></script>
+  <script src="app.js?v=20260510-honor-rotate"></script>
   </body>
 </html>

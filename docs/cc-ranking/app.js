@@ -26,11 +26,11 @@ const detailDelta = document.querySelector("#detailDelta");
 const honorGrid = document.querySelector("#honorGrid");
 const honorMeta = document.querySelector("#honorMeta");
 const honorTabs = document.querySelector("#honorTabs");
-const kpiSeason = document.querySelector("#kpiSeason");
+const honorHead = honorTabs?.closest(".section-head");
+const honorRotateToggle = document.querySelector("#honorRotateToggle");
 const kpiSnapshots = document.querySelector("#kpiSnapshots");
-const kpiTop = document.querySelector("#kpiTop");
-const kpiTopFoot = document.querySelector("#kpiTopFoot");
-const kpiSeasonFoot = document.querySelector("#kpiSeasonFoot");
+const kpiNewEntries = document.querySelector("#kpiNewEntries");
+const kpiWinGain = document.querySelector("#kpiWinGain");
 const currentMapName = document.querySelector("#currentMapName");
 const currentMapTime = document.querySelector("#currentMapTime");
 const nextMapName = document.querySelector("#nextMapName");
@@ -53,8 +53,13 @@ let latestEntries = [];
 let rankingSort = { key: "rank", direction: "asc" };
 let honorMode = 'rank';
 let honorRotateTimer = null;
+let honorCountdownTimer = null;
+let honorRotateDueAt = 0;
+let honorRotateRemainingMs = 0;
+let honorRotatePaused = false;
+let honorGridHovering = false;
 const HONOR_MODES = ['rank', 'wins', 'rise'];
-const HONOR_ROTATE_MS = 7000;
+const HONOR_ROTATE_MS = 10000;
 let chartTransitionTimer = null;
 let characterRequestToken = 0;
 let themeSwitchTimer = null;
@@ -567,6 +572,7 @@ function renderRankingRows() {
       selectCharacter(row.dataset.key, { scrollRanking: false, scrollDetail: true });
     });
   });
+  updateRankingSelection(selectedKey);
 }
 
 function sortedRankingEntries(entries) {
@@ -667,6 +673,10 @@ function rankingCountText(entries) {
   const droppedCount = entries.filter((entry) => entry.is_dropped).length;
   const officialCount = entries.length - droppedCount;
   return droppedCount > 0 ? `${officialCount}명 + 순위권 밖 ${droppedCount}명` : `${officialCount}명`;
+}
+
+function officialTop100Entries(entries) {
+  return entries.filter((entry) => !entry.is_dropped && numberValue(entry.rank) <= 100);
 }
 
 function rankCellHtml(entry) {
@@ -972,6 +982,7 @@ async function selectCharacter(key, options = {}) {
     selectedCharacter.innerHTML = latest ? selectedCharacterHtml(latest, history.length) : "";
     seasonExtremes.innerHTML = latest ? seasonExtremesHtml(history, latest.season) : "";
     updateHonorGridSelection(key);
+    updateRankingSelection(key);
     updateChart(history);
     if (scrollRanking) {
       scrollRankingIntoView(key);
@@ -1587,9 +1598,10 @@ function renderHonorGrid() {
     ? ` · <span style="opacity:0.55">Rank #${escapeHtml(String(hero.rank))}</span>` : '';
   let html = `
     <div class="tile is-hero" data-rank-display="${escapeHtml(heroWatermark)}" data-key="${escapeHtml(hero.character_key)}">
+      <div class="tile-hero-tier-icon">${tierIconHtml(hero)}</div>
       <div class="tile-rank">${heroRankLine}</div>
       <div class="tile-name">${escapeHtml(hero.character_name)}</div>
-      <div class="tile-server">@${escapeHtml(hero.server_name)} · <span class="tier" data-tier="${escapeHtml(normalizeTierLabel(hero.tier_label))}">${escapeHtml(hero.tier_label || "-")}</span>${rankOrInfo}</div>
+      <div class="tile-server">@${escapeHtml(hero.server_name)} · <span class="tier" data-tier="${escapeHtml(normalizeTierLabel(hero.tier_label))}">${tierIconHtml(hero)}<span>${escapeHtml(hero.tier_label || "-")}</span></span>${rankOrInfo}</div>
       <div class="tile-stats">${heroStats}</div>
       <div class="tile-foot">
         <span class="tile-points">${escapeHtml(pointsDisplay(hero))}<span class="pts-unit"> pts</span></span>
@@ -1601,23 +1613,25 @@ function renderHonorGrid() {
   top10.slice(1).forEach((e) => {
     let tileRankLine, tileWatermark, tileServer;
     const tierBadge = e.tier_label
-      ? ` · <span class="tier" data-tier="${escapeHtml(normalizeTierLabel(e.tier_label))}">${escapeHtml(e.tier_label)}</span>`
+      ? `<span class="tile-meta-tier tier" data-tier="${escapeHtml(normalizeTierLabel(e.tier_label))}">${tierIconHtml(e)}<span>${escapeHtml(e.tier_label)}</span></span>`
       : '';
+    const serverMeta = `<span class="tile-meta-server">@${escapeHtml(e.server_name)}</span>`;
+    const rankMeta = `<span class="tile-meta-rank">#${escapeHtml(String(e.rank))}</span>`;
     if (honorMode === 'wins') {
       tileWatermark = String(e.win_delta ?? '-');
       tileRankLine = `<span class="hash">+</span>${escapeHtml(tileWatermark)}<span style="color:var(--fg-3);font-size:9px;margin-left:4px;letter-spacing:.06em">WINS</span>`;
-      tileServer = `@${escapeHtml(e.server_name)} · <span style="opacity:0.55">#${escapeHtml(String(e.rank))}</span>${tierBadge}`;
+      tileServer = `${rankMeta}${tierBadge}${serverMeta}`;
     } else if (honorMode === 'rise') {
       tileWatermark = String(e.movement_value ?? '-');
       tileRankLine = `<span class="hash">↑</span>${escapeHtml(tileWatermark)}`;
-      tileServer = `@${escapeHtml(e.server_name)} · <span style="opacity:0.55">#${escapeHtml(String(e.rank))}</span>${tierBadge}`;
+      tileServer = `${rankMeta}${tierBadge}${serverMeta}`;
     } else {
       tileWatermark = String(e.rank);
       tileRankLine = `<span class="hash">#</span>${escapeHtml(String(e.rank).padStart(2, "0"))}`;
-      tileServer = `@${escapeHtml(e.server_name)}${tierBadge}`;
+      tileServer = `${rankMeta}${tierBadge}${serverMeta}`;
     }
     html += `
-      <div class="tile" data-rank-display="${escapeHtml(tileWatermark)}" data-key="${escapeHtml(e.character_key)}">
+      <div class="tile is-row" data-rank-display="${escapeHtml(tileWatermark)}" data-key="${escapeHtml(e.character_key)}">
         <div class="tile-rank">${tileRankLine}</div>
         <div class="tile-name">${escapeHtml(e.character_name)}</div>
         <div class="tile-server">${tileServer}</div>
@@ -1644,14 +1658,69 @@ function revealHonorTiles() {
   });
 }
 
-function scheduleHonorRotate() {
+function honorRotationBlocked() {
+  return honorRotatePaused || honorGridHovering;
+}
+
+function updateHonorRotateUi() {
+  const remaining = honorRotationBlocked()
+    ? honorRotateRemainingMs || HONOR_ROTATE_MS
+    : Math.max(0, honorRotateDueAt - Date.now());
+  if (honorMeta) {
+    const progress = 1 - Math.min(1, Math.max(0, remaining / HONOR_ROTATE_MS));
+    honorMeta.style.setProperty("--honor-progress", String(progress));
+  }
+  if (honorRotateToggle) {
+    honorRotateToggle.dataset.state = honorRotatePaused ? "play" : "pause";
+    honorRotateToggle.setAttribute("aria-pressed", String(honorRotatePaused));
+    honorRotateToggle.setAttribute("aria-label", honorRotatePaused ? "자동 전환 재생" : "자동 전환 일시정지");
+    honorRotateToggle.title = honorRotatePaused ? "자동 전환 재생" : "자동 전환 일시정지";
+  }
+}
+
+function startHonorCountdown() {
+  cancelAnimationFrame(honorCountdownTimer);
+  const tick = () => {
+    updateHonorRotateUi();
+    honorCountdownTimer = requestAnimationFrame(tick);
+  };
+  honorCountdownTimer = requestAnimationFrame(tick);
+}
+
+function pauseHonorRotate() {
+  if (honorRotateDueAt > 0) {
+    honorRotateRemainingMs = Math.max(1, honorRotateDueAt - Date.now());
+  }
   clearTimeout(honorRotateTimer);
-  honorRotateTimer = setTimeout(() => {
-    honorMode = HONOR_MODES[(HONOR_MODES.indexOf(honorMode) + 1) % HONOR_MODES.length];
-    renderHonorGrid();
-    updateHonorGridSelection(selectedKey);
-    scheduleHonorRotate();
-  }, HONOR_ROTATE_MS);
+  honorRotateTimer = null;
+  updateHonorRotateUi();
+}
+
+function resumeHonorRotate() {
+  if (honorRotationBlocked()) {
+    updateHonorRotateUi();
+    return;
+  }
+  scheduleHonorRotate(honorRotateRemainingMs || HONOR_ROTATE_MS);
+}
+
+function advanceHonorMode() {
+  honorMode = HONOR_MODES[(HONOR_MODES.indexOf(honorMode) + 1) % HONOR_MODES.length];
+  renderHonorGrid();
+  updateHonorGridSelection(selectedKey);
+  scheduleHonorRotate(HONOR_ROTATE_MS);
+}
+
+function scheduleHonorRotate(delay = HONOR_ROTATE_MS) {
+  clearTimeout(honorRotateTimer);
+  honorRotateRemainingMs = delay;
+  if (honorRotationBlocked()) {
+    updateHonorRotateUi();
+    return;
+  }
+  honorRotateDueAt = Date.now() + delay;
+  honorRotateTimer = setTimeout(advanceHonorMode, delay);
+  startHonorCountdown();
 }
 
 function updateHonorGridSelection(key) {
@@ -1661,17 +1730,16 @@ function updateHonorGridSelection(key) {
   });
 }
 
+function updateRankingSelection(key) {
+  if (!rankingRows) return;
+  rankingRows.querySelectorAll("tr[data-key]").forEach((row) => {
+    row.dataset.selected = String(row.dataset.key === key);
+  });
+}
+
 function updateKpis(snapshot, entries) {
-  if (kpiSeason && snapshot && snapshot.season) {
-    kpiSeason.childNodes[0].textContent = snapshot.season;
-  }
-  if (kpiSeasonFoot && snapshot) {
-    const dateStr = formatSnapshotDate(snapshot.source_time_text || snapshot.scraped_at || "");
-    kpiSeasonFoot.textContent = `기준: ${dateStr}`;
-  }
   if (honorMeta && snapshot) {
-    const dateStr = formatSnapshotDate(snapshot.source_time_text || snapshot.scraped_at || "");
-    honorMeta.textContent = `SEASON ${snapshot.season || "-"} · ${dateStr}`;
+    updateHonorRotateUi();
   }
   if (kpiSnapshots && snapshots.length > 0) {
     kpiSnapshots.childNodes[0].textContent = snapshots.length;
@@ -1684,12 +1752,17 @@ function updateKpis(snapshot, entries) {
     }
   }
   if (entries && entries.length > 0) {
-    const top = entries.find((e) => !e.is_dropped);
-    if (top && kpiTop) {
-      kpiTop.textContent = top.character_name;
+    const officialTop100 = officialTop100Entries(entries);
+    if (kpiNewEntries) {
+      const newCount = officialTop100.filter((entry) => entry.movement_direction === "new").length;
+      kpiNewEntries.childNodes[0].textContent = newCount.toLocaleString("ko-KR");
     }
-    if (top && kpiTopFoot) {
-      kpiTopFoot.textContent = `@${top.server_name} · ${top.tier_label || "-"} · ${pointsDisplay(top)}`;
+    if (kpiWinGain) {
+      const deltas = officialTop100
+        .map((entry) => numberValue(entry.win_delta))
+        .filter((value) => Number.isFinite(value) && value > 0);
+      const winGain = deltas.reduce((total, value) => total + value, 0);
+      kpiWinGain.childNodes[0].textContent = deltas.length > 0 ? `+${winGain.toLocaleString("ko-KR")}` : "-";
     }
   }
 }
@@ -1809,11 +1882,38 @@ if (honorTabs) {
   honorTabs.querySelectorAll('.honor-tab').forEach(btn => {
     btn.addEventListener('click', () => {
       clearTimeout(honorRotateTimer);
+      honorRotateRemainingMs = HONOR_ROTATE_MS;
       honorMode = btn.dataset.mode;
       renderHonorGrid();
       updateHonorGridSelection(selectedKey);
-      scheduleHonorRotate();
+      scheduleHonorRotate(HONOR_ROTATE_MS);
     });
+  });
+}
+
+function bindHonorHoverPause(element) {
+  if (!element) return;
+  element.addEventListener("mouseenter", () => {
+    honorGridHovering = true;
+    pauseHonorRotate();
+  });
+  element.addEventListener("mouseleave", () => {
+    honorGridHovering = false;
+    resumeHonorRotate();
+  });
+}
+
+bindHonorHoverPause(honorHead);
+bindHonorHoverPause(honorGrid);
+
+if (honorRotateToggle) {
+  honorRotateToggle.addEventListener("click", () => {
+    honorRotatePaused = !honorRotatePaused;
+    if (honorRotatePaused) {
+      pauseHonorRotate();
+    } else {
+      resumeHonorRotate();
+    }
   });
 }
 
