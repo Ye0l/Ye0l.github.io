@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=20260510-honor-rotate">
+    <link rel="stylesheet" href="styles.css?v=20260510-detail-view-link">
   </head>
   <body>
 
@@ -109,7 +109,7 @@
     <div class="filter-bar">
       <div class="search-wrap grow">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input class="f-input" id="searchInput" type="search" placeholder="캐릭터명 또는 서버 검색" autocomplete="off">
+        <input class="f-input" id="searchInput" type="search" placeholder="캐릭터명 검색" autocomplete="off">
       </div>
       <button class="icon-btn filter-btn" id="filterToggle" type="button" aria-expanded="false" aria-controls="rankingFilters" aria-label="필터 열기" title="필터 열기">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M3 5h18l-6.8 7.7V18l-4.4 2.6v-7L3 5z"/></svg>
@@ -117,7 +117,9 @@
       <div id="rankingFilters" class="ranking-filters" hidden>
         <label>
           <span>서버</span>
-          <input id="serverFilterInput" type="text" inputmode="search" autocomplete="off" placeholder="예: 모그리">
+          <select id="serverFilterInput">
+            <option value="">전체 서버</option>
+          </select>
         </label>
         <label>
           <span>닉네임</span>
@@ -203,6 +205,6 @@
 
   <script src="chart.umd.min.js"></script>
   <script src="config.js?v=20260505-perfect-scrollbars"></script>
-  <script src="app.js?v=20260510-honor-rotate"></script>
+  <script src="app.js?v=20260510-detail-view-link"></script>
   </body>
 </html>

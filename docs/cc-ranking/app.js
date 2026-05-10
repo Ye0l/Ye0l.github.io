@@ -501,6 +501,7 @@ function renderLatest(payload) {
   }
 
   latestEntries = entries;
+  renderServerFilterOptions(entries);
   if (!snapshot) {
     endCharacterHistoryLoading();
     seasonBadge.textContent = "-";
@@ -707,6 +708,18 @@ function rankingFilterValues() {
   };
 }
 
+function renderServerFilterOptions(entries = latestEntries) {
+  const selected = serverFilterInput.value;
+  const servers = [...new Set(entries.map((entry) => String(entry.server_name || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "ko"));
+  serverFilterInput.innerHTML = [
+    '<option value="">전체 서버</option>',
+    ...servers.map((server) => `<option value="${escapeHtml(server)}">${escapeHtml(server)}</option>`),
+  ].join("");
+  serverFilterInput.value = servers.includes(selected) ? selected : "";
+  filterToggle.classList.toggle("is-active", hasActiveAdvancedFilters());
+}
+
 function hasActiveRankingFilters() {
   const filters = rankingFilterValues();
   return Boolean(
@@ -732,8 +745,8 @@ function updateFilterToggleLabel(expanded) {
 function matchesRankingFilters(entry, query, filters) {
   const characterName = String(entry.character_name || "").toLowerCase();
   const serverName = String(entry.server_name || "").toLowerCase();
-  if (query && !characterName.includes(query) && !serverName.includes(query)) return false;
-  if (filters.server && !serverName.includes(filters.server)) return false;
+  if (query && !characterName.includes(query)) return false;
+  if (filters.server && serverName !== filters.server) return false;
   if (filters.name && !characterName.includes(filters.name)) return false;
   if (filters.minWins == null) return true;
   if (filters.recentDays && !staticHistoryData) return true;
@@ -1028,7 +1041,7 @@ function detailNameHtml(entry) {
   const detailEntry = { ...entry, character_key: entry.character_key || selectedKey };
   return `
     <span class="detail-name-text">${escapeHtml(entry.character_name)}</span>
-    <a class="detail-open-link" href="details/?id=${encodeURIComponent(characterIdForEntry(detailEntry))}">상세</a>
+    <a class="detail-open-link" href="details/?id=${encodeURIComponent(characterIdForEntry(detailEntry))}">상세보기<span class="detail-open-icon" aria-hidden="true"></span></a>
   `;
 }
 
@@ -1600,8 +1613,8 @@ function renderHonorGrid() {
     <div class="tile is-hero" data-rank-display="${escapeHtml(heroWatermark)}" data-key="${escapeHtml(hero.character_key)}">
       <div class="tile-hero-tier-icon">${tierIconHtml(hero)}</div>
       <div class="tile-rank">${heroRankLine}</div>
-      <div class="tile-name">${escapeHtml(hero.character_name)}</div>
-      <div class="tile-server">@${escapeHtml(hero.server_name)} · <span class="tier" data-tier="${escapeHtml(normalizeTierLabel(hero.tier_label))}">${tierIconHtml(hero)}<span>${escapeHtml(hero.tier_label || "-")}</span></span>${rankOrInfo}</div>
+      <div class="tile-name"><span class="tile-character-name">${escapeHtml(hero.character_name)}</span><span class="tile-meta-server">@${escapeHtml(hero.server_name)}</span></div>
+      <div class="tile-server"><span class="tier" data-tier="${escapeHtml(normalizeTierLabel(hero.tier_label))}">${tierIconHtml(hero)}<span>${escapeHtml(hero.tier_label || "-")}</span></span>${rankOrInfo}</div>
       <div class="tile-stats">${heroStats}</div>
       <div class="tile-foot">
         <span class="tile-points">${escapeHtml(pointsDisplay(hero))}<span class="pts-unit"> pts</span></span>
@@ -1620,20 +1633,20 @@ function renderHonorGrid() {
     if (honorMode === 'wins') {
       tileWatermark = String(e.win_delta ?? '-');
       tileRankLine = `<span class="hash">+</span>${escapeHtml(tileWatermark)}<span style="color:var(--fg-3);font-size:9px;margin-left:4px;letter-spacing:.06em">WINS</span>`;
-      tileServer = `${rankMeta}${tierBadge}${serverMeta}`;
+      tileServer = `${rankMeta}${tierBadge}`;
     } else if (honorMode === 'rise') {
       tileWatermark = String(e.movement_value ?? '-');
       tileRankLine = `<span class="hash">↑</span>${escapeHtml(tileWatermark)}`;
-      tileServer = `${rankMeta}${tierBadge}${serverMeta}`;
+      tileServer = `${rankMeta}${tierBadge}`;
     } else {
       tileWatermark = String(e.rank);
       tileRankLine = `<span class="hash">#</span>${escapeHtml(String(e.rank).padStart(2, "0"))}`;
-      tileServer = `${rankMeta}${tierBadge}${serverMeta}`;
+      tileServer = `${rankMeta}${tierBadge}`;
     }
     html += `
       <div class="tile is-row" data-rank-display="${escapeHtml(tileWatermark)}" data-key="${escapeHtml(e.character_key)}">
         <div class="tile-rank">${tileRankLine}</div>
-        <div class="tile-name">${escapeHtml(e.character_name)}</div>
+        <div class="tile-name"><span class="tile-character-name">${escapeHtml(e.character_name)}</span>${serverMeta}</div>
         <div class="tile-server">${tileServer}</div>
         <div class="tile-foot">
           <span class="tile-points">${escapeHtml(pointsDisplay(e))}<span class="pts-unit"> pts</span></span>
@@ -1822,7 +1835,8 @@ filterToggle.addEventListener("click", () => {
 });
 
 [serverFilterInput, nameFilterInput, winsFilterInput, recentDaysInput].forEach((input) => {
-  input.addEventListener("input", () => {
+  const eventName = input.tagName === "SELECT" ? "change" : "input";
+  input.addEventListener(eventName, () => {
     filterToggle.classList.toggle("is-active", hasActiveAdvancedFilters());
     window.clearTimeout(searchTimer);
     searchTimer = window.setTimeout(() => renderRankingRows(), 120);
