@@ -303,7 +303,8 @@ body[data-theme="light"]::-webkit-scrollbar-thumb {
 }
 @media (prefers-reduced-motion: reduce) {
   .skeleton-line,
-  .honor-grid.is-revealing .tile {
+  .honor-grid.is-revealing .tile,
+  .tier-glow::after {
     animation: none !important;
   }
 }
@@ -963,6 +964,7 @@ body[data-theme="light"] .tile.is-hero {
 
 /* ─── Tier pill (honor grid / detail panel) ──────────────── */
 .tier {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -973,7 +975,10 @@ body[data-theme="light"] .tile.is-hero {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
-  text-transform: uppercase;
+}
+.tier > * {
+  position: relative;
+  z-index: 1;
 }
 .tier[data-tier="Crystal"]  { color: var(--tier-crystal);  border-color: rgba(96, 165, 250, 0.70);  background: rgba(96, 165, 250, 0.08); }
 .tier[data-tier="Diamond"]  { color: var(--tier-diamond);  border-color: rgba(185, 220, 255, 0.30); }
@@ -1312,16 +1317,13 @@ tbody tr:last-child td { border-bottom: 0; }
 }
 .rank-dropped  { background: transparent; color: transparent; }
 .mini-rank     { min-width: 44px; height: 24px; padding: 0 7px; font-size: 11px; }
-.rank-first    { background: transparent; color: var(--aurum);   text-shadow: 0 0 12px rgba(245,210,122,0.32); font-size: 16px; font-weight: 700; }
-.rank-second   { background: transparent; color: #dde5f2; font-size: 15px; }
-.rank-third    { background: transparent; color: #d4956a; font-size: 15px; }
-.rank-top10    { background: transparent; color: var(--tier-platinum); }
-.rank-top30    { background: transparent; color: var(--tier-diamond); }
-.rank-top60    { background: transparent; color: var(--tier-omega); }
-.rank-rest     { background: transparent; color: var(--fg-2); }
+.rank-first  { background: transparent; color: var(--aurum); text-shadow: 0 0 12px rgba(245,210,122,0.32); font-size: 16px; font-weight: 700; }
+.rank-top30  { background: transparent; color: var(--tier-omega); }
+.rank-rest   { background: transparent; color: var(--fg-2); }
 
 /* Tier pill (table version with icon images) */
 .tier-pill {
+  position: relative;
   height: 24px;
   min-width: 100px;
   gap: 5px;
@@ -1330,6 +1332,10 @@ tbody tr:last-child td { border-bottom: 0; }
   font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: 0.04em;
+}
+.tier-pill > * {
+  position: relative;
+  z-index: 1;
 }
 .tier-icon {
   display: inline-block;
@@ -1359,9 +1365,79 @@ tbody tr:last-child td { border-bottom: 0; }
 .tier-ultima   { background: rgba(248, 113, 113, 0.10); color: var(--tier-ultima); }
 .tier-unknown  { background: rgba(154, 163, 184, 0.06); color: var(--fg-3); }
 
+.tier-pill.tier-aura.tier-bronze,   .tier-pill.tier-glow.tier-bronze,   .tier-pill.tier-border.tier-bronze   { border: 1px solid rgba(224, 160, 111, 0.55); }
+.tier-pill.tier-aura.tier-silver,   .tier-pill.tier-glow.tier-silver,   .tier-pill.tier-border.tier-silver   { border: 1px solid rgba(214, 221, 230, 0.55); }
+.tier-pill.tier-aura.tier-gold,     .tier-pill.tier-glow.tier-gold,     .tier-pill.tier-border.tier-gold     { border: 1px solid rgba(233, 200, 118, 0.55); }
+.tier-pill.tier-aura.tier-platinum, .tier-pill.tier-glow.tier-platinum, .tier-pill.tier-border.tier-platinum { border: 1px solid rgba(177, 230, 224, 0.55); }
+.tier-pill.tier-aura.tier-diamond,  .tier-pill.tier-glow.tier-diamond,  .tier-pill.tier-border.tier-diamond  { border: 1px solid rgba(185, 220, 255, 0.55); }
 .tier-pill.tier-crystal { border: 1px solid rgba(96, 165, 250, 0.55); }
 .tier-pill.tier-omega   { border: 1px solid rgba(192, 132, 252, 0.55); }
 .tier-pill.tier-ultima  { border: 1px solid rgba(248, 113, 113, 0.55); }
+
+
+.tier-aura, .tier-glow {
+  --tier-aura-color: var(--tier-crystal);
+  isolation: isolate;
+  overflow: visible;
+  border-color: color-mix(in srgb, var(--tier-aura-color) 72%, transparent) !important;
+  background:
+    radial-gradient(70% 160% at 50% 0%, color-mix(in srgb, var(--tier-aura-color) 18%, transparent), transparent 64%),
+    color-mix(in srgb, var(--tier-aura-color) 8%, transparent);
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--tier-aura-color) 22%, transparent),
+    inset 0 0 10px color-mix(in srgb, var(--tier-aura-color) 7%, transparent);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--tier-aura-color) 48%, transparent);
+}
+/* opacity-only animation: GPU compositor path, no repaint per frame */
+.tier-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    0 0 18px 2px color-mix(in srgb, var(--tier-aura-color) 38%, transparent),
+    inset 0 0 12px color-mix(in srgb, var(--tier-aura-color) 10%, transparent);
+  opacity: 0.18;
+  animation: tierGlowPulse 3s ease-in-out infinite;
+  will-change: opacity;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes tierGlowPulse {
+  0%, 100% { opacity: 0.14; }
+  50%       { opacity: 0.62; }
+}
+.tier-aura.tier-bronze,  .tier-glow.tier-bronze,
+.tier-aura[data-tier="Bronze"],  .tier-glow[data-tier="Bronze"]   { --tier-aura-color: var(--tier-bronze); }
+.tier-aura.tier-silver,  .tier-glow.tier-silver,
+.tier-aura[data-tier="Silver"],  .tier-glow[data-tier="Silver"]   { --tier-aura-color: var(--tier-silver); }
+.tier-aura.tier-gold,    .tier-glow.tier-gold,
+.tier-aura[data-tier="Gold"],    .tier-glow[data-tier="Gold"]     { --tier-aura-color: var(--tier-gold); }
+.tier-aura.tier-platinum,.tier-glow.tier-platinum,
+.tier-aura[data-tier="Platinum"],.tier-glow[data-tier="Platinum"] { --tier-aura-color: var(--tier-platinum); }
+.tier-aura.tier-diamond, .tier-glow.tier-diamond,
+.tier-aura[data-tier="Diamond"], .tier-glow[data-tier="Diamond"]  { --tier-aura-color: var(--tier-diamond); }
+.tier-aura.tier-crystal, .tier-glow.tier-crystal,
+.tier-aura[data-tier="Crystal"], .tier-glow[data-tier="Crystal"]  { --tier-aura-color: var(--tier-crystal); }
+.tier-aura.tier-omega,   .tier-glow.tier-omega,
+.tier-aura[data-tier="Omega"],   .tier-glow[data-tier="Omega"]    { --tier-aura-color: var(--tier-omega); }
+.tier-aura.tier-ultima,  .tier-glow.tier-ultima,
+.tier-aura[data-tier="Ultima"],  .tier-glow[data-tier="Ultima"]   { --tier-aura-color: var(--tier-ultima); }
+.tier-aura-canvas {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 0;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0.92;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tier-aura-canvas {
+    display: none;
+  }
+}
 
 /* Movement chip (table rows) */
 .movement-chip {
@@ -1386,6 +1462,7 @@ tbody tr:last-child td { border-bottom: 0; }
 tr.is-new { box-shadow: inset 3px 0 0 rgba(245, 210, 122, 0.88); }
 tr.is-new td { background: rgba(245, 210, 122, 0.028) !important; }
 tr.is-new:hover td { background: rgba(245, 210, 122, 0.058) !important; }
+
 
 /* Name cell */
 .name-cell { display: inline-flex; align-items: center; gap: 7px; overflow: visible; padding: 6px 0; margin: -6px 0; }
@@ -1678,8 +1755,43 @@ tr.focus-flash td { animation: rowFlash 1.1s ease-out; }
 .details-history-panel { display: flex; flex-direction: column; width: 100%; height: 100%; }
 .details-history-panel .panel-head { padding: 10px 16px; flex: 0 0 auto; }
 .details-history-wrap { flex: 1 1 0; max-height: 400px; overflow: auto; }
-.details-history-wrap table { min-width: 100%; font-size: 12px; }
+.details-history-wrap table { min-width: 720px; font-size: 12px; }
 .details-history-wrap td, .details-history-wrap th { padding: 9px 12px; }
+.details-history-wrap tr.is-merged-history td {
+  background: color-mix(in srgb, var(--accent-soft), transparent 62%);
+}
+.history-identity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 7px;
+  min-width: 130px;
+  max-width: 220px;
+}
+.history-name {
+  color: var(--fg-1);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.history-server {
+  color: var(--fg-3);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.merge-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  border: 1px solid var(--line-vivid);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
 
 .title-row {
   display: flex;

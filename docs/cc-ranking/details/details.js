@@ -124,7 +124,7 @@ async function loadCharacter(characterId) {
   detailsMeta.textContent = `${latest.server_name} · 최신 #${latest.rank} · ${formatSnapshotDate(latest.source_time_text || latest.scraped_at)}`;
   historyCount.textContent = `${history.length}개`;
   characterSummary.innerHTML = summaryHtml(latest, history);
-  historyRows.innerHTML = history.slice().reverse().map(historyRowHtml).join("");
+  historyRows.innerHTML = history.slice().reverse().map((row) => historyRowHtml(row, latest)).join("");
   renderChart(history);
   loadRecommendation().catch(() => updateRecommendCount(null));
 }
@@ -160,7 +160,7 @@ function renderEmpty(message) {
   detailsMeta.textContent = message;
   historyCount.textContent = "-";
   characterSummary.innerHTML = `<p class="empty">${escapeHtml(message)}</p>`;
-  historyRows.innerHTML = `<tr><td class="empty" colspan="6">${escapeHtml(message)}</td></tr>`;
+  historyRows.innerHTML = `<tr><td class="empty" colspan="7">${escapeHtml(message)}</td></tr>`;
   renderChart([]);
 }
 
@@ -180,10 +180,12 @@ function summaryHtml(latest, history) {
   `;
 }
 
-function historyRowHtml(row) {
+function historyRowHtml(row, latest) {
+  const isMergedIdentity = isDifferentIdentity(row, latest);
   return `
-    <tr>
+    <tr class="${isMergedIdentity ? "is-merged-history" : ""}">
       <td>${escapeHtml(formatSnapshotDate(row.source_time_text || row.scraped_at))}</td>
+      <td>${historyIdentityHtml(row, isMergedIdentity)}</td>
       <td><span class="rank-badge ${rankClass(row.rank)}">${escapeHtml(row.rank)}</span></td>
       <td><span class="tier-pill ${tierClass(row.tier_label)}">${tierIconHtml(row)}<span>${escapeHtml(row.tier_label || "-")}</span></span></td>
       <td>${pointsWithDeltaHtml(row)}</td>
@@ -191,6 +193,24 @@ function historyRowHtml(row) {
       <td>${movementBadge(row)}</td>
     </tr>
   `;
+}
+
+function historyIdentityHtml(row, isMergedIdentity) {
+  const name = row.character_name || "-";
+  const server = row.server_name || "-";
+  return `
+    <span class="history-identity">
+      <span class="history-name">${escapeHtml(name)}</span>
+      <span class="history-server">${escapeHtml(server)}</span>
+      ${isMergedIdentity ? '<span class="merge-badge">병합됨</span>' : ""}
+    </span>
+  `;
+}
+
+function isDifferentIdentity(row, latest) {
+  if (!row || !latest) return false;
+  return String(row.character_name || "") !== String(latest.character_name || "")
+    || String(row.server_name || "") !== String(latest.server_name || "");
 }
 
 function movementBadge(entry) {
