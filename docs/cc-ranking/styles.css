@@ -303,8 +303,7 @@ body[data-theme="light"]::-webkit-scrollbar-thumb {
 }
 @media (prefers-reduced-motion: reduce) {
   .skeleton-line,
-  .honor-grid.is-revealing .tile,
-  .tier-glow::after {
+  .honor-grid.is-revealing .tile {
     animation: none !important;
   }
 }
@@ -1369,79 +1368,14 @@ tbody tr:last-child td { border-bottom: 0; }
 .tier-ultima   { background: rgba(248, 113, 113, 0.10); color: var(--tier-ultima); }
 .tier-unknown  { background: rgba(154, 163, 184, 0.06); color: var(--fg-3); }
 
-.tier-pill.tier-aura.tier-bronze,   .tier-pill.tier-glow.tier-bronze,   .tier-pill.tier-border.tier-bronze   { border: 1px solid rgba(224, 160, 111, 0.55); }
-.tier-pill.tier-aura.tier-silver,   .tier-pill.tier-glow.tier-silver,   .tier-pill.tier-border.tier-silver   { border: 1px solid rgba(214, 221, 230, 0.55); }
-.tier-pill.tier-aura.tier-gold,     .tier-pill.tier-glow.tier-gold,     .tier-pill.tier-border.tier-gold     { border: 1px solid rgba(233, 200, 118, 0.55); }
-.tier-pill.tier-aura.tier-platinum, .tier-pill.tier-glow.tier-platinum, .tier-pill.tier-border.tier-platinum { border: 1px solid rgba(177, 230, 224, 0.55); }
-.tier-pill.tier-aura.tier-diamond,  .tier-pill.tier-glow.tier-diamond,  .tier-pill.tier-border.tier-diamond  { border: 1px solid rgba(185, 220, 255, 0.55); }
+.tier-pill.tier-border.tier-bronze   { border: 1px solid rgba(224, 160, 111, 0.55); }
+.tier-pill.tier-border.tier-silver   { border: 1px solid rgba(214, 221, 230, 0.55); }
+.tier-pill.tier-border.tier-gold     { border: 1px solid rgba(233, 200, 118, 0.55); }
+.tier-pill.tier-border.tier-platinum { border: 1px solid rgba(177, 230, 224, 0.55); }
+.tier-pill.tier-border.tier-diamond  { border: 1px solid rgba(185, 220, 255, 0.55); }
 .tier-pill.tier-crystal { border: 1px solid rgba(96, 165, 250, 0.55); }
 .tier-pill.tier-omega   { border: 1px solid rgba(192, 132, 252, 0.55); }
 .tier-pill.tier-ultima  { border: 1px solid rgba(248, 113, 113, 0.55); }
-
-
-.tier-aura, .tier-glow {
-  --tier-aura-color: var(--tier-crystal);
-  isolation: isolate;
-  overflow: visible;
-  border-color: color-mix(in srgb, var(--tier-aura-color) 72%, transparent) !important;
-  background:
-    radial-gradient(70% 160% at 50% 0%, color-mix(in srgb, var(--tier-aura-color) 18%, transparent), transparent 64%),
-    color-mix(in srgb, var(--tier-aura-color) 8%, transparent);
-  box-shadow:
-    0 0 8px color-mix(in srgb, var(--tier-aura-color) 22%, transparent),
-    inset 0 0 10px color-mix(in srgb, var(--tier-aura-color) 7%, transparent);
-  text-shadow: 0 0 8px color-mix(in srgb, var(--tier-aura-color) 48%, transparent);
-}
-/* opacity-only animation: GPU compositor path, no repaint per frame */
-.tier-glow::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow:
-    0 0 18px 2px color-mix(in srgb, var(--tier-aura-color) 38%, transparent),
-    inset 0 0 12px color-mix(in srgb, var(--tier-aura-color) 10%, transparent);
-  opacity: 0.18;
-  animation: tierGlowPulse 3s ease-in-out infinite;
-  will-change: opacity;
-  pointer-events: none;
-  z-index: -1;
-}
-@keyframes tierGlowPulse {
-  0%, 100% { opacity: 0.14; }
-  50%       { opacity: 0.62; }
-}
-.tier-aura.tier-bronze,  .tier-glow.tier-bronze,
-.tier-aura[data-tier="Bronze"],  .tier-glow[data-tier="Bronze"]   { --tier-aura-color: var(--tier-bronze); }
-.tier-aura.tier-silver,  .tier-glow.tier-silver,
-.tier-aura[data-tier="Silver"],  .tier-glow[data-tier="Silver"]   { --tier-aura-color: var(--tier-silver); }
-.tier-aura.tier-gold,    .tier-glow.tier-gold,
-.tier-aura[data-tier="Gold"],    .tier-glow[data-tier="Gold"]     { --tier-aura-color: var(--tier-gold); }
-.tier-aura.tier-platinum,.tier-glow.tier-platinum,
-.tier-aura[data-tier="Platinum"],.tier-glow[data-tier="Platinum"] { --tier-aura-color: var(--tier-platinum); }
-.tier-aura.tier-diamond, .tier-glow.tier-diamond,
-.tier-aura[data-tier="Diamond"], .tier-glow[data-tier="Diamond"]  { --tier-aura-color: var(--tier-diamond); }
-.tier-aura.tier-crystal, .tier-glow.tier-crystal,
-.tier-aura[data-tier="Crystal"], .tier-glow[data-tier="Crystal"]  { --tier-aura-color: var(--tier-crystal); }
-.tier-aura.tier-omega,   .tier-glow.tier-omega,
-.tier-aura[data-tier="Omega"],   .tier-glow[data-tier="Omega"]    { --tier-aura-color: var(--tier-omega); }
-.tier-aura.tier-ultima,  .tier-glow.tier-ultima,
-.tier-aura[data-tier="Ultima"],  .tier-glow[data-tier="Ultima"]   { --tier-aura-color: var(--tier-ultima); }
-.tier-aura-canvas {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 0;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  opacity: 0.92;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tier-aura-canvas {
-    display: none;
-  }
-}
 
 /* Movement chip (table rows) */
 .movement-chip {

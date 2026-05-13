@@ -228,60 +228,9 @@ function tierClass(tier) {
 
 function rankAuraClass(rank) {
   const r = numberValue(rank);
-  if (r <= 10)  return "tier-aura";
-  if (r <= 30)  return "tier-glow";
   if (r <= 100) return "tier-border";
   return "";
 }
-
-
-const tierAuraBadges = new Map();
-let tierAuraRaf = 0;
-const glowSpriteCache = new Map();
-function makeGlowSprite(r, g, b) {
-  const size = 14, half = 7;
-  const sc = document.createElement("canvas");
-  sc.width = size; sc.height = size;
-  const sx = sc.getContext("2d");
-  const grd = sx.createRadialGradient(half, half, 0, half, half, half);
-  grd.addColorStop(0, `rgba(${r}, ${g}, ${b}, 1)`);
-  grd.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
-  sx.beginPath();
-  sx.arc(half, half, half, 0, Math.PI * 2);
-  sx.fillStyle = grd;
-  sx.fill();
-  return sc;
-}
-// 모든 티어 색상 선 캐싱
-const TIER_GLOW_PRESETS = [
-  [224, 160, 111],  // bronze
-  [214, 221, 230],  // silver
-  [233, 200, 118],  // gold
-  [177, 230, 224],  // platinum
-  [185, 220, 255],  // diamond
-  [96,  165, 250],  // crystal
-  [192, 132, 252],  // omega
-  [248, 113, 113],  // ultima
-];
-for (const [r, g, b] of TIER_GLOW_PRESETS) {
-  glowSpriteCache.set(`${r},${g},${b}`, makeGlowSprite(r, g, b));
-}
-function getGlowSprite(r, g, b) {
-  const key = `${r},${g},${b}`;
-  if (glowSpriteCache.has(key)) return glowSpriteCache.get(key);
-  const sc = makeGlowSprite(r, g, b);
-  glowSpriteCache.set(key, sc);
-  return sc;
-}
-const tierAuraMotionQuery = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-const tierAuraObserver = typeof IntersectionObserver !== "undefined"
-  ? new IntersectionObserver((entries) => {
-      entries.forEach((e) => {
-        const s = tierAuraBadges.get(e.target);
-        if (s) s.isVisible = e.isIntersecting;
-      });
-    }, { threshold: 0 })
-  : null;
 
 function tierNumber(entryOrTier) {
   const tierCode = typeof entryOrTier === "object" ? entryOrTier.tier_code : "";
@@ -303,184 +252,6 @@ function tierNumber(entryOrTier) {
 function tierIconHtml(entry) {
   const number = tierNumber(entry);
   return number ? `<span class="tier-icon tier-icon-${number}" aria-hidden="true"></span>` : "";
-}
-
-function syncTierAuraCanvases(root = document) {
-  if (tierAuraMotionQuery?.matches) return;
-  root.querySelectorAll(".tier-aura").forEach((badge) => {
-    if (tierAuraBadges.has(badge)) return;
-    const canvasEl = document.createElement("canvas");
-    canvasEl.className = "tier-aura-canvas";
-    canvasEl.setAttribute("aria-hidden", "true");
-    badge.prepend(canvasEl);
-    tierAuraBadges.set(badge, {
-      canvas: canvasEl,
-      ctx: canvasEl.getContext("2d"),
-      particles: [],
-      width: 0, height: 0, dpr: 1,
-      cx: 0, cy: 0, rx: 0, ry: 0,
-      color: null,
-      isVisible: false,
-    });
-    tierAuraObserver?.observe(badge);
-  });
-  if (!tierAuraRaf && tierAuraBadges.size > 0) {
-    tierAuraRaf = window.requestAnimationFrame(drawTierAuras);
-  }
-}
-
-function drawTierAuras() {
-  tierAuraRaf = 0;
-  tierAuraBadges.forEach((state, badge) => {
-    if (!badge.isConnected) {
-      tierAuraObserver?.unobserve(badge);
-      tierAuraBadges.delete(badge);
-      return;
-    }
-    if (!state.isVisible) return;
-    resizeTierAuraCanvas(state, badge);
-    drawTierAuraBadge(state, badge);
-  });
-  if (tierAuraBadges.size > 0 && !tierAuraMotionQuery?.matches) {
-    tierAuraRaf = window.requestAnimationFrame(drawTierAuras);
-  }
-}
-
-function resizeTierAuraCanvas(state, badge) {
-  const width = Math.ceil(Math.max(136, badge.offsetWidth + 72));
-  const height = Math.ceil(Math.max(64, badge.offsetHeight + 44));
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  if (state.width === width && state.height === height && state.dpr === dpr) return;
-  state.width = width;
-  state.height = height;
-  state.dpr = dpr;
-  state.cx = width / 2;
-  state.cy = height / 2;
-  state.rx = Math.max(38, badge.offsetWidth / 2);
-  state.ry = Math.max(12, badge.offsetHeight / 2);
-  state.canvas.style.width = `${width}px`;
-  state.canvas.style.height = `${height}px`;
-  state.canvas.width = Math.ceil(width * dpr);
-  state.canvas.height = Math.ceil(height * dpr);
-  state.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
-
-function drawTierAuraBadge(state, badge) {
-  const ctx = state.ctx;
-  const { width, height, cx, cy, rx, ry } = state;
-  if (!state.color) state.color = tierAuraParticleColor(badge);
-  const color = state.color;
-  ctx.clearRect(0, 0, width, height);
-
-  const maxParticles = badge.classList.contains("tile-meta-tier") ? 10 : 14;
-  if (state.particles.length < maxParticles && Math.random() < 0.36) {
-    spawnTierAuraParticle(state.particles, color, cx, cy, rx, ry);
-  }
-
-  for (let i = state.particles.length - 1; i >= 0; i--) {
-    const particle = state.particles[i];
-    particle.wobble += particle.wobbleSpeed;
-    particle.vx += Math.sin(particle.wobble) * 0.012 + particle.wander;
-    particle.vx *= 0.982;
-    particle.vy *= 0.992;
-    particle.x += particle.vx;
-    particle.y += particle.vy;
-    const slot = particle.trail.shift();
-    slot.x = particle.x; slot.y = particle.y;
-    particle.trail.push(slot);
-    particle.life += 1;
-    drawTierAuraTendril(ctx, particle);
-    if (particle.life >= particle.maxLife) state.particles.splice(i, 1);
-  }
-}
-
-function tierAuraParticleColor(badge) {
-  const color = window.getComputedStyle(badge).color;
-  const match = color.match(/rgba?\(([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/);
-  if (!match) return [96, 165, 250];
-  return [
-    Number(match[1]) || 96,
-    Number(match[2]) || 165,
-    Number(match[3]) || 250,
-  ];
-}
-
-function spawnTierAuraParticle(particles, color, cx, cy, rx, ry) {
-  const angle = Math.random() * Math.PI * 2;
-  const spread = 0.97 + Math.random() * 0.06;
-  const x = cx + Math.cos(angle) * rx * spread;
-  const y = cy + Math.sin(angle) * ry * spread;
-  const isTop = Math.sin(angle) < 0;
-  const tint = 0.82 + Math.random() * 0.38;
-  const particleColor = color.map((channel) => Math.max(0, Math.min(255, channel * tint)));
-  const trailLength = 12;
-  const [r, g, b] = color;
-  particles.push({
-    x,
-    y,
-    trail: Array.from({ length: trailLength }, () => ({ x, y })),
-    trailLength,
-    vx: (Math.random() - 0.5) * 0.28,
-    vy: isTop ? -(Math.random() * 0.42 + 0.16) : (Math.random() * 0.12 - 0.06),
-    life: 0,
-    maxLife: 48 + Math.random() * 58,
-    color: particleColor,
-    glowSprite: getGlowSprite(r, g, b),
-    wobble: Math.random() * Math.PI * 2,
-    wobbleSpeed: 0.05 + Math.random() * 0.04,
-    wander: (Math.random() - 0.5) * 0.018,
-  });
-}
-
-function drawTierAuraTendril(ctx, particle) {
-  const trail = particle.trail;
-  if (trail.length < 2) return;
-  const t = Math.min(particle.life / particle.maxLife, 1);
-  const alpha = Math.min(t * 5, 1) * Math.pow(1 - t, 1.55) * 0.92;
-  if (!Number.isFinite(alpha) || alpha <= 0) return;
-  const [r, g, b] = particle.color;
-  const rgb = `${r}, ${g}, ${b}`;
-
-  const mid = trail.length >> 1;
-  ctx.save();
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-
-  // tail — faint & thin
-  ctx.beginPath();
-  ctx.moveTo(trail[0].x, trail[0].y);
-  for (let i = 1; i <= mid; i++) {
-    if (i < mid) {
-      ctx.quadraticCurveTo(trail[i].x, trail[i].y,
-        (trail[i].x + trail[i + 1].x) / 2, (trail[i].y + trail[i + 1].y) / 2);
-    } else {
-      ctx.lineTo(trail[i].x, trail[i].y);
-    }
-  }
-  ctx.strokeStyle = `rgba(${rgb}, ${alpha * 0.28})`;
-  ctx.lineWidth = 0.65;
-  ctx.stroke();
-
-  // head — bright & thicker
-  ctx.beginPath();
-  ctx.moveTo(trail[mid].x, trail[mid].y);
-  for (let i = mid + 1; i < trail.length; i++) {
-    if (i < trail.length - 1) {
-      ctx.quadraticCurveTo(trail[i].x, trail[i].y,
-        (trail[i].x + trail[i + 1].x) / 2, (trail[i].y + trail[i + 1].y) / 2);
-    } else {
-      ctx.lineTo(trail[i].x, trail[i].y);
-    }
-  }
-  ctx.strokeStyle = `rgba(${rgb}, ${alpha * 0.88})`;
-  ctx.lineWidth = 1.15;
-  ctx.stroke();
-
-  const head = trail[trail.length - 1];
-  ctx.globalAlpha = alpha * 0.52;
-  ctx.drawImage(particle.glowSprite, head.x - 7, head.y - 7, 14, 14);
-
-  ctx.restore();
 }
 
 function movementBadge(entry) {
@@ -796,7 +567,6 @@ function renderRankingRows() {
     `;
   }).join("");
 
-  syncTierAuraCanvases(rankingRows);
   [...rankingRows.querySelectorAll("tr[data-key]")].forEach((row) => {
     row.querySelector(".character-detail-link")?.addEventListener("click", (event) => {
       event.stopPropagation();
@@ -1897,7 +1667,6 @@ function renderHonorGrid() {
   });
 
   honorGrid.innerHTML = html;
-  syncTierAuraCanvases(honorGrid);
   honorGrid.querySelectorAll(".tile").forEach((tile) => {
     tile.addEventListener("click", () => selectCharacter(tile.dataset.key, { scrollDetail: true }));
   });
