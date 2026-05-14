@@ -1243,8 +1243,13 @@ button:disabled { cursor: progress; opacity: 0.62; }
   touch-action: pan-x pan-y;
   -webkit-overflow-scrolling: touch;
 }
+@media (pointer: coarse) {
+  .table-wrap {
+    touch-action: none;
+  }
+}
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.ranking-panel table { min-width: 580px; }
+.ranking-panel table { min-width: 660px; }
 
 th, td {
   padding: 11px 13px;
@@ -1281,6 +1286,7 @@ th {
 .sortable-th:hover, .sortable-th.is-active { color: var(--fg-1); }
 .sortable-th:focus-visible { outline: 1px solid var(--accent); outline-offset: -4px; }
 .ranking-panel th[data-sort-key="tier"],
+.ranking-panel th[data-sort-key="tier_rank"],
 .ranking-panel th[data-sort-key="movement"] {
   text-align: center;
 }
@@ -1301,7 +1307,7 @@ tbody tr[data-key][data-selected="true"] td:first-child {
 tbody tr:last-child td { border-bottom: 0; }
 
 /* Rank badge */
-.rank-badge, .mini-rank, .tier-pill, .movement-chip, .new-pill {
+.rank-badge, .mini-rank, .tier-pill, .tier-rank-badge, .movement-chip, .new-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1323,6 +1329,28 @@ tbody tr:last-child td { border-bottom: 0; }
 .rank-first  { background: transparent; color: var(--aurum); text-shadow: 0 0 12px rgba(245,210,122,0.32); font-size: 16px; font-weight: 700; }
 .rank-top30  { background: transparent; color: var(--tier-omega); }
 .rank-rest   { background: transparent; color: var(--fg-2); }
+
+.tier-rank-badge {
+  min-width: 46px;
+  height: 24px;
+  gap: 4px;
+  padding: 0 7px 0 5px;
+  color: var(--fg-2);
+  background: rgba(148, 163, 184, 0.08);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.tier-rank-badge .tier-icon {
+  width: 18px;
+  height: 13px;
+}
+.tier-rank-empty {
+  display: inline-block;
+  min-width: 46px;
+  text-align: center;
+  color: var(--fg-3);
+}
 
 /* Tier pill (table version with icon images) */
 .tier-pill {

@@ -15,6 +15,7 @@ const winsFilterInput = document.querySelector("#winsFilterInput");
 const recentDaysInput = document.querySelector("#recentDaysInput");
 const filterReset = document.querySelector("#filterReset");
 const sortHeaders = [...document.querySelectorAll("[data-sort-key]")];
+const tableWrap = document.querySelector(".table-wrap");
 const selectedCharacter = document.querySelector("#selectedCharacter");
 const seasonExtremes = document.querySelector("#seasonExtremes");
 const detailPanel = document.querySelector(".detail-panel");
@@ -79,6 +80,7 @@ const HEART_CLIENT_KEY = "ccRankingProjectHeartClient";
 const UI_FONT_STACK = '"Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 const MONO_FONT_STACK = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
 const OUT_OF_RANK_GRAPH_RANK = 101;
+const OUT_OF_TIER_GRAPH_RANK = 11;
 
 const API_BASE = String(window.CC_API_BASE || "").replace(/\/$/, "");
 const STATIC_DATA_BASE = String(window.CC_STATIC_DATA_BASE || "static/data").replace(/\/$/, "");
@@ -463,6 +465,7 @@ function skeletonRowsHtml(count) {
       <td><span class="skeleton-line ${index % 3 === 0 ? "skeleton-name-wide" : "skeleton-name"}"></span></td>
       <td><span class="skeleton-line skeleton-server"></span></td>
       <td><span class="skeleton-line skeleton-tier"></span></td>
+      <td><span class="skeleton-line skeleton-rank"></span></td>
       <td><span class="skeleton-line skeleton-points"></span></td>
       <td><span class="skeleton-line skeleton-wins"></span></td>
       <td><span class="skeleton-line skeleton-movement"></span></td>
@@ -512,7 +515,7 @@ function renderLatest(payload) {
     entryCount.textContent = "";
     selectedCharacter.innerHTML = "";
     seasonExtremes.innerHTML = "";
-    rankingRows.innerHTML = `<tr><td class="empty" colspan="7">아직 데이터가 없습니다.</td></tr>`;
+    rankingRows.innerHTML = `<tr><td class="empty" colspan="8">아직 데이터가 없습니다.</td></tr>`;
     updateChart([], { animate: false });
     renderHonorGrid();
     return;
@@ -538,7 +541,7 @@ function renderRankingRows() {
     : rankingCountText(latestEntries);
   updateSortHeaders();
   if (entries.length === 0) {
-    rankingRows.innerHTML = `<tr><td class="empty" colspan="7">검색 결과가 없습니다.</td></tr>`;
+    rankingRows.innerHTML = `<tr><td class="empty" colspan="8">검색 결과가 없습니다.</td></tr>`;
     return;
   }
 
@@ -560,6 +563,7 @@ function renderRankingRows() {
         </td>
         <td>${escapeHtml(entry.server_name)}</td>
         <td><span class="tier-pill ${tierClass(entry.tier_label)} ${rankAuraClass(entry.rank)}">${tierIconHtml(entry)}<span>${escapeHtml(entry.tier_label || "-")}</span></span></td>
+        <td>${tierRankCellHtml(entry)}</td>
         <td>${pointsWithDeltaHtml(entry)}</td>
         <td>${winsWithDeltaHtml(entry)}</td>
         <td>${movementBadge(entry)}</td>
@@ -606,6 +610,11 @@ function compareRankingEntries(left, right, key, direction) {
       || compareNumber(pointsSortValue(left), pointsSortValue(right), direction)
       || compareNumber(rankSortValue(left), rankSortValue(right), "asc");
   }
+  if (key === "tier_rank") {
+    return compareNumber(tierSortValue(left), tierSortValue(right), "desc", { missingLast: false })
+      || compareNumber(tierRankSortValue(left), tierRankSortValue(right), direction)
+      || compareNumber(numberValue(left.wins), numberValue(right.wins), "desc");
+  }
   if (key === "points") {
     return compareNumber(pointsSortValue(left), pointsSortValue(right), direction)
       || compareNumber(rankSortValue(left), rankSortValue(right), "asc");
@@ -646,6 +655,10 @@ function rankSortValue(entry) {
 
 function tierSortValue(entry) {
   return tierScore(entry.tier_label);
+}
+
+function tierRankSortValue(entry) {
+  return numberValue(entry.tier_rank);
 }
 
 function pointsSortValue(entry) {
@@ -693,6 +706,12 @@ function rankCellHtml(entry) {
     return '<span class="rank-badge rank-dropped" aria-label="순위권 밖"></span>';
   }
   return `<span class="rank-badge ${rankClass(entry.rank)}">${escapeHtml(entry.rank)}</span>`;
+}
+
+function tierRankCellHtml(entry) {
+  const tierRank = numberValue(entry.tier_rank);
+  if (!Number.isFinite(tierRank)) return '<span class="tier-rank-empty">-</span>';
+  return `<span class="tier-rank-badge">${tierIconHtml(entry)}<span>${escapeHtml(String(tierRank))}</span></span>`;
 }
 
 function filteredRankingEntries() {
@@ -1059,19 +1078,24 @@ function seasonExtremesHtml(history, season) {
 
   const bestRank = seasonHistory.reduce((best, row) => betterTier(row, best) ? row : best, seasonHistory[0]);
   const worstRank = seasonHistory.reduce((worst, row) => worseTier(row, worst) ? row : worst, seasonHistory[0]);
-  const bestRanking = seasonHistory.reduce((best, row) => row.rank < best.rank ? row : best, seasonHistory[0]);
-  const worstRanking = seasonHistory.reduce((worst, row) => row.rank > worst.rank ? row : worst, seasonHistory[0]);
+  const rankedHistory = seasonHistory.filter((row) => Number.isFinite(numberValue(row.rank)));
+  const bestRanking = rankedHistory.reduce((best, row) => row.rank < best.rank ? row : best, rankedHistory[0] || null);
+  const worstRanking = rankedHistory.reduce((worst, row) => row.rank > worst.rank ? row : worst, rankedHistory[0] || null);
+  const bestRankText = bestRanking ? `#${escapeHtml(bestRanking.rank)}` : "100위권 밖";
+  const worstRankText = worstRanking ? `#${escapeHtml(worstRanking.rank)}` : "100위권 밖";
+  const bestRankDate = bestRanking || bestRank;
+  const worstRankDate = worstRanking || worstRank;
 
   return `
     <div class="extreme-card">
       <span>이번 시즌 최고 랭크</span>
       <strong>${tierIconHtml(bestRank)}${escapeHtml(tierWithPoints(bestRank))}</strong>
-      <small>이번 시즌 최고 랭킹 #${escapeHtml(bestRanking.rank)} · ${escapeHtml(formatSnapshotDate(bestRanking.source_time_text || bestRanking.scraped_at))}</small>
+      <small>이번 시즌 최고 랭킹 ${bestRankText} · ${escapeHtml(formatSnapshotDate(bestRankDate.source_time_text || bestRankDate.scraped_at))}</small>
     </div>
     <div class="extreme-card">
       <span>이번 시즌 최저 랭크</span>
       <strong>${tierIconHtml(worstRank)}${escapeHtml(tierWithPoints(worstRank))}</strong>
-      <small>이번 시즌 최저 랭킹 #${escapeHtml(worstRanking.rank)} · ${escapeHtml(formatSnapshotDate(worstRanking.source_time_text || worstRanking.scraped_at))}</small>
+      <small>이번 시즌 최저 랭킹 ${worstRankText} · ${escapeHtml(formatSnapshotDate(worstRankDate.source_time_text || worstRankDate.scraped_at))}</small>
     </div>
   `;
 }
@@ -1083,7 +1107,7 @@ function betterTier(row, best) {
   const rowPoints = pointsValue(row);
   const bestPoints = pointsValue(best);
   if (rowPoints !== bestPoints) return rowPoints > bestPoints;
-  return row.rank < best.rank;
+  return rankingComparableValue(row) < rankingComparableValue(best);
 }
 
 function worseTier(row, worst) {
@@ -1093,7 +1117,15 @@ function worseTier(row, worst) {
   const rowPoints = pointsValue(row);
   const worstPoints = pointsValue(worst);
   if (rowPoints !== worstPoints) return rowPoints < worstPoints;
-  return row.rank > worst.rank;
+  return rankingComparableValue(row) > rankingComparableValue(worst);
+}
+
+function rankingComparableValue(row) {
+  const rank = numberValue(row.rank);
+  if (Number.isFinite(rank)) return rank;
+  const tierRank = numberValue(row.tier_rank);
+  if (Number.isFinite(tierRank)) return 100 + tierRank;
+  return 1000;
 }
 
 function tierWithPoints(entry) {
@@ -1238,11 +1270,14 @@ function renderChart(history) {
   const labels = chartHistory.map(row => formatGraphDate(row.source_time_text || row.scraped_at));
   const missingRankData = chartHistory.map(row => !Number.isFinite(numberValue(row.rank)));
   const rankData = chartHistory.map(row => Number.isFinite(numberValue(row.rank)) ? numberValue(row.rank) : OUT_OF_RANK_GRAPH_RANK);
+  const tierRankData = chartHistory.map(row => Number.isFinite(numberValue(row.tier_rank)) ? numberValue(row.tier_rank) : null);
   const winDeltaData = chartHistory.map(row => Number.isFinite(numberValue(row.win_delta)) ? numberValue(row.win_delta) : null);
   const tierLabels = chartHistory.map(row => row.tier_label);
-  const finiteRanks = chartHistory.map(row => numberValue(row.rank)).filter(value => Number.isFinite(value));
+  const hasOfficialRankData = chartHistory.some(row => Number.isFinite(numberValue(row.rank)));
+  const finiteRanks = rankData.filter(value => Number.isFinite(value));
+  const hasTierRankData = tierRankData.some(value => Number.isFinite(value));
 
-  if (finiteRanks.length === 0) {
+  if (finiteRanks.length === 0 && !hasTierRankData) {
     drawChartPlaceholder();
     return;
   }
@@ -1347,12 +1382,12 @@ function renderChart(history) {
       ctx.font = canvasFont(12);
       ctx.fillStyle = mutedColor;
       ctx.textAlign = "left";
-      ctx.fillText(`best #${minRank}`, left, top - 14);
+      ctx.fillText(hasOfficialRankData ? `best #${minRank}` : "best OUT", left, top - 14);
       
       ctx.textAlign = "center";
-      ctx.fillText(`worst #${maxRank}`, (left + right) / 2, top - 14);
+      ctx.fillText(hasOfficialRankData ? `worst #${maxRank}` : "worst OUT", (left + right) / 2, top - 14);
 
-      const bars = chart.getDatasetMeta(1).data;
+      const bars = chart.getDatasetMeta(2).data;
       ctx.font = canvasFont(10, "bold");
       ctx.fillStyle = styles.getPropertyValue("--chart-bar-text").trim() || "#f7c76a";
       ctx.textAlign = "center";
@@ -1385,6 +1420,23 @@ function renderChart(history) {
           tension: 0,
           fill: 'start',
           yAxisID: 'y',
+          clip: false
+        },
+        {
+          label: 'Tier Rank',
+          data: tierRankData,
+          borderColor: markerColor,
+          backgroundColor: 'transparent',
+          borderWidth: 1.8,
+          borderDash: [5, 4],
+          pointRadius: 2.5,
+          pointHoverRadius: 4,
+          pointBorderWidth: 0,
+          pointBackgroundColor: markerColor,
+          tension: 0,
+          fill: false,
+          yAxisID: 'yTier',
+          spanGaps: true,
           clip: false
         },
         {
@@ -1426,6 +1478,10 @@ function renderChart(history) {
               if (context.datasetIndex === 0) {
                 if (!Number.isFinite(numberValue(row.rank))) return "순위: 100위권 밖 / 데이터 없음";
                 return `순위: #${row.rank} (${row.tier_label})`;
+              }
+              if (context.datasetIndex === 1) {
+                if (!Number.isFinite(numberValue(row.tier_rank))) return "등급별 순위: 데이터 없음";
+                return `등급별 순위: ${row.tier_label || "-"} #${row.tier_rank}`;
               } else {
                 if (!Number.isFinite(numberValue(row.win_delta))) return "일일 승리: 데이터 없음";
                 return `일일 승리: +${row.win_delta || 0}`;
@@ -1451,6 +1507,19 @@ function renderChart(history) {
           max: yMax,
           grid: { color: gridColor, borderDash: [2, 4] },
           ticks: { display: false },
+          border: { display: false }
+        },
+        yTier: {
+          position: 'right',
+          reverse: true,
+          min: 1,
+          max: OUT_OF_TIER_GRAPH_RANK,
+          grid: { display: false },
+          ticks: {
+            color: markerTextColor,
+            font: { size: 10, family: MONO_FONT_STACK },
+            callback: (value) => Number(value) <= 10 ? `T${value}` : "OUT"
+          },
           border: { display: false }
         },
         yWin: {
@@ -1815,6 +1884,7 @@ applyTheme(storedTheme());
 applyProjectHeart(storedProjectHeart());
 updateFilterToggleLabel(false);
 renderDashboardSkeleton();
+installDirectionalTableScroll();
 
 themeToggle.addEventListener("click", () => {
   applyTheme(nextTheme(document.body.dataset.theme), { animate: true });
@@ -1861,6 +1931,56 @@ filterReset.addEventListener("click", () => {
   filterToggle.classList.remove("is-active");
   renderRankingRows();
 });
+
+function installDirectionalTableScroll() {
+  if (!tableWrap || !window.matchMedia("(pointer: coarse)").matches) return;
+
+  let startX = 0;
+  let startY = 0;
+  let startScrollLeft = 0;
+  let startScrollTop = 0;
+  let lockedAxis = "";
+  const threshold = 8;
+
+  tableWrap.addEventListener("touchstart", (event) => {
+    if (event.touches.length !== 1) {
+      lockedAxis = "";
+      return;
+    }
+    const touch = event.touches[0];
+    startX = touch.clientX;
+    startY = touch.clientY;
+    startScrollLeft = tableWrap.scrollLeft;
+    startScrollTop = tableWrap.scrollTop;
+    lockedAxis = "";
+  }, { passive: true });
+
+  tableWrap.addEventListener("touchmove", (event) => {
+    if (event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
+    if (!lockedAxis) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < threshold) return;
+      lockedAxis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+    }
+
+    event.preventDefault();
+    if (lockedAxis === "x") {
+      tableWrap.scrollLeft = startScrollLeft - dx;
+    } else {
+      tableWrap.scrollTop = startScrollTop - dy;
+    }
+  }, { passive: false });
+
+  tableWrap.addEventListener("touchend", () => {
+    lockedAxis = "";
+  }, { passive: true });
+
+  tableWrap.addEventListener("touchcancel", () => {
+    lockedAxis = "";
+  }, { passive: true });
+}
 
 sortHeaders.forEach((header) => {
   const applySort = () => {
