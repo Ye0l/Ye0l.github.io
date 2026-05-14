@@ -13,6 +13,7 @@ const serverFilterInput = document.querySelector("#serverFilterInput");
 const nameFilterInput = document.querySelector("#nameFilterInput");
 const winsFilterInput = document.querySelector("#winsFilterInput");
 const recentDaysInput = document.querySelector("#recentDaysInput");
+const newUserFilterInput = document.querySelector("#newUserFilterInput");
 const filterReset = document.querySelector("#filterReset");
 const sortHeaders = [...document.querySelectorAll("[data-sort-key]")];
 const tableWrap = document.querySelector(".table-wrap");
@@ -32,6 +33,11 @@ const honorRotateToggle = document.querySelector("#honorRotateToggle");
 const kpiSnapshots = document.querySelector("#kpiSnapshots");
 const kpiNewEntries = document.querySelector("#kpiNewEntries");
 const kpiWinGain = document.querySelector("#kpiWinGain");
+const tierHeatmap = document.querySelector("#tierHeatmap");
+const tierHeatmapLabels = document.querySelector("#tierHeatmapLabels");
+const tierHeatmapMeta = document.querySelector("#tierHeatmapMeta");
+const tierHeatmapPrev = document.querySelector("#tierHeatmapPrev");
+const tierHeatmapNext = document.querySelector("#tierHeatmapNext");
 const currentMapName = document.querySelector("#currentMapName");
 const currentMapTime = document.querySelector("#currentMapTime");
 const nextMapName = document.querySelector("#nextMapName");
@@ -44,7 +50,24 @@ const jumpTop = document.querySelector("#jumpTop");
 const jumpBottom = document.querySelector("#jumpBottom");
 const canvas = document.querySelector("#rankChart");
 const ctx = canvas.getContext("2d");
+const tierHeatmapCtx = tierHeatmap?.getContext("2d");
+const detailOverlay = document.querySelector("#detailOverlay");
+const detailBackBtn = document.querySelector("#detailBackBtn");
+const detailOverlayTitle = document.querySelector("#detailOverlayTitle");
+const detailOverlaySeasonBadge = document.querySelector("#detailOverlaySeasonBadge");
+const detailOverlayMeta = document.querySelector("#detailOverlayMeta");
+const detailOverlaySummary = document.querySelector("#detailOverlaySummary");
+const detailOverlayHistoryCount = document.querySelector("#detailOverlayHistoryCount");
+const detailOverlayHistoryRows = document.querySelector("#detailOverlayHistoryRows");
+const detailOverlayCanvas = document.querySelector("#detailOverlayChart");
+const detailOverlayCtx = detailOverlayCanvas?.getContext("2d");
+const detailRecommendBtn = document.querySelector("#detailRecommendBtn");
+const detailRecommendCount = document.querySelector("#detailRecommendCount");
 let chartInstance = null;
+let tierHeatmapChartInstance = null;
+let currentTierHeatmapData = null;
+let tierHeatmapSelectedDate = "";
+
 
 let selectedKey = null;
 let snapshots = [];
@@ -53,6 +76,7 @@ let currentHistory = [];
 let latestEntries = [];
 let rankingSort = { key: "rank", direction: "asc" };
 let honorMode = 'rank';
+let honorExitTimer = null;
 let honorRotateTimer = null;
 let honorCountdownTimer = null;
 let honorRotateDueAt = 0;
@@ -62,11 +86,16 @@ let honorGridHovering = false;
 const HONOR_MODES = ['rank', 'wins', 'rise'];
 const HONOR_ROTATE_MS = 10000;
 let chartTransitionTimer = null;
+let rowRenderVersion = 0;
 let characterRequestToken = 0;
 let themeSwitchTimer = null;
 let staticHistoryData = null;
 let staticHistoryLoading = false;
+let heatmapRequestToken = 0;
+let heatmapWindowStart = null;
+let snapshotTransitionTimer = null;
 const SKELETON_ROW_COUNT = 12;
+const SNAPSHOT_TRANSITION_MS = 160;
 
 const THEMES = ["dark", "light"];
 const THEME_ICONS = {
@@ -81,6 +110,18 @@ const UI_FONT_STACK = '"Pretendard", ui-sans-serif, system-ui, -apple-system, Bl
 const MONO_FONT_STACK = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
 const OUT_OF_RANK_GRAPH_RANK = 101;
 const OUT_OF_TIER_GRAPH_RANK = 11;
+const HEATMAP_WINDOW_SIZE = 30;
+const HEATMAP_ROWS = [
+  { key: "ultima", label: "Ultima", group: "티어", source: "tier" },
+  { key: "omega", label: "Omega", group: "티어", source: "tier" },
+  { key: "crystal", label: "Crystal", group: "티어", source: "tier" },
+  { key: "diamond", label: "Diamond", group: "티어", source: "tier" },
+  { key: "platinum", label: "Platinum", group: "티어", source: "tier" },
+  { key: "gold", label: "Gold", group: "티어", source: "tier" },
+  { key: "silver", label: "Silver", group: "티어", source: "tier" },
+  { key: "bronze", label: "Bronze", group: "티어", source: "tier" },
+  { key: "in100", label: "In-100", source: "overall" },
+];
 
 const API_BASE = String(window.CC_API_BASE || "").replace(/\/$/, "");
 const STATIC_DATA_BASE = String(window.CC_STATIC_DATA_BASE || "static/data").replace(/\/$/, "");
@@ -165,6 +206,9 @@ async function staticApi(path) {
   const data = await loadStaticData();
   if (url.pathname === "/api/snapshots" || url.pathname === "/api/v1/snapshots") {
     return { snapshots: data.snapshots || [] };
+  }
+  if (url.pathname === "/api/season-periods") {
+    return { season_periods: data.season_period ? [data.season_period] : data.season_periods || [] };
   }
   if (url.pathname === "/api/latest") {
     const snapshot = latestStaticSnapshot(data);
@@ -295,6 +339,9 @@ function applyTheme(theme, options = {}) {
     writeCookie("ccRankingTheme", nextTheme);
   }
   updateChart(currentHistory);
+  if (currentTierHeatmapData) {
+    renderTierHeatmapChart(currentTierHeatmapData);
+  }
 }
 
 function nextTheme(theme) {
@@ -403,7 +450,7 @@ function renderDashboardSkeleton() {
   document.body.classList.add("is-loading");
   seasonBadge.textContent = "-";
   snapshotMeta.innerHTML = '<span class="skeleton-line skeleton-meta"></span>';
-  totalMeta.innerHTML = '<span class="skeleton-line skeleton-total"></span>';
+  if (totalMeta) totalMeta.innerHTML = '<span class="skeleton-line skeleton-total"></span>';
   entryCount.innerHTML = '<span class="skeleton-line skeleton-count"></span>';
   snapshotSelect.innerHTML = "<option>불러오는 중</option>";
   snapshotSelect.disabled = true;
@@ -473,8 +520,10 @@ function skeletonRowsHtml(count) {
   `).join("");
 }
 
-function renderLatest(payload) {
+function renderLatest(payload, options = {}) {
+  const smoothTransition = Boolean(options.smoothTransition);
   document.body.classList.remove("is-loading");
+  document.body.classList.remove("is-snapshot-loading");
   canvas.classList.remove("chart-loading");
   const snapshot = payload.snapshot;
   let entries = payload.entries || [];
@@ -511,11 +560,12 @@ function renderLatest(payload) {
     endCharacterHistoryLoading();
     seasonBadge.textContent = "-";
     snapshotMeta.textContent = "저장된 스냅샷이 없습니다.";
-    totalMeta.textContent = "-";
+    if (totalMeta) totalMeta.textContent = "-";
     entryCount.textContent = "";
     selectedCharacter.innerHTML = "";
     seasonExtremes.innerHTML = "";
     rankingRows.innerHTML = `<tr><td class="empty" colspan="8">아직 데이터가 없습니다.</td></tr>`;
+    renderTierHeatmap(null, entries, { snapshots: [], entries_by_snapshot: {} });
     updateChart([], { animate: false });
     renderHonorGrid();
     return;
@@ -523,63 +573,80 @@ function renderLatest(payload) {
 
   seasonBadge.textContent = snapshot.season ? `${snapshot.season}` : "-";
   snapshotMeta.textContent = snapshot.source_time_text || snapshot.scraped_at || "-";
-  totalMeta.textContent = rankingCountText(entries);
+  if (totalMeta) totalMeta.textContent = rankingCountText(entries);
   entryCount.textContent = rankingCountText(entries);
   renderRankingRows();
-  renderHonorGrid();
+  renderHonorGrid({ animate: !smoothTransition });
   scheduleHonorRotate();
   updateKpis(snapshot, entries);
+  scheduleTierHeatmapRender(snapshot, entries, { preserveExisting: smoothTransition });
   if (currentHistory.length === 0) {
     updateChart([], { animate: false });
   }
 }
 
 function renderRankingRows() {
+  const version = ++rowRenderVersion;
   const entries = filteredRankingEntries();
   entryCount.textContent = hasActiveRankingFilters()
     ? `${entries.length} / ${rankingCountText(latestEntries)}`
     : rankingCountText(latestEntries);
   updateSortHeaders();
-  if (entries.length === 0) {
-    rankingRows.innerHTML = `<tr><td class="empty" colspan="8">검색 결과가 없습니다.</td></tr>`;
-    return;
+
+  const commit = () => {
+    if (version !== rowRenderVersion) return;
+    rankingRows.classList.remove("rows-fading");
+    if (entries.length === 0) {
+      rankingRows.innerHTML = `<tr><td class="empty" colspan="8">검색 결과가 없습니다.</td></tr>`;
+      return;
+    }
+    rankingRows.innerHTML = entries.map((entry) => {
+      const isNew = entry.movement_direction === "new";
+      const isDropped = Boolean(entry.is_dropped);
+      const rowClass = [
+        isNew ? "is-new" : "",
+        isDropped ? "is-dropped" : "",
+      ].filter(Boolean).join(" ");
+      return `
+        <tr class="${rowClass}" data-key="${escapeHtml(entry.character_key)}">
+          <td>${rankCellHtml(entry)}</td>
+          <td>
+            <span class="name-cell">
+              <a class="character-detail-link" href="details/?id=${encodeURIComponent(characterIdForEntry(entry))}">${escapeHtml(entry.character_name)}</a>
+              ${isNew ? '<span class="new-pill">NEW</span>' : ""}
+            </span>
+          </td>
+          <td>${escapeHtml(entry.server_name)}</td>
+          <td><span class="tier-pill ${tierClass(entry.tier_label)} ${rankAuraClass(entry.rank)}">${tierIconHtml(entry)}<span>${escapeHtml(entry.tier_label || "-")}</span></span></td>
+          <td>${tierRankCellHtml(entry)}</td>
+          <td>${pointsWithDeltaHtml(entry)}</td>
+          <td>${winsWithDeltaHtml(entry)}</td>
+          <td>${movementBadge(entry)}</td>
+        </tr>
+      `;
+    }).join("");
+    [...rankingRows.querySelectorAll("tr[data-key]")].forEach((row) => {
+      row.querySelector(".character-detail-link")?.addEventListener("click", (event) => {
+        event.stopPropagation();
+        event.preventDefault();
+        const url = new URL(event.currentTarget.href);
+        const characterId = url.searchParams.get("id");
+        if (characterId) openDetailOverlay(characterId);
+      });
+      row.addEventListener("click", () => {
+        selectCharacter(row.dataset.key, { scrollRanking: false, scrollDetail: true });
+      });
+    });
+    updateRankingSelection(selectedKey);
+  };
+
+  const hasRealRows = rankingRows.querySelector("tr[data-key]") !== null;
+  if (hasRealRows) {
+    rankingRows.classList.add("rows-fading");
+    window.setTimeout(commit, 115);
+  } else {
+    commit();
   }
-
-  rankingRows.innerHTML = entries.map((entry) => {
-    const isNew = entry.movement_direction === "new";
-    const isDropped = Boolean(entry.is_dropped);
-    const rowClass = [
-      isNew ? "is-new" : "",
-      isDropped ? "is-dropped" : "",
-    ].filter(Boolean).join(" ");
-    return `
-      <tr class="${rowClass}" data-key="${escapeHtml(entry.character_key)}">
-        <td>${rankCellHtml(entry)}</td>
-        <td>
-          <span class="name-cell">
-            <a class="character-detail-link" href="details/?id=${encodeURIComponent(characterIdForEntry(entry))}">${escapeHtml(entry.character_name)}</a>
-            ${isNew ? '<span class="new-pill">NEW</span>' : ""}
-          </span>
-        </td>
-        <td>${escapeHtml(entry.server_name)}</td>
-        <td><span class="tier-pill ${tierClass(entry.tier_label)} ${rankAuraClass(entry.rank)}">${tierIconHtml(entry)}<span>${escapeHtml(entry.tier_label || "-")}</span></span></td>
-        <td>${tierRankCellHtml(entry)}</td>
-        <td>${pointsWithDeltaHtml(entry)}</td>
-        <td>${winsWithDeltaHtml(entry)}</td>
-        <td>${movementBadge(entry)}</td>
-      </tr>
-    `;
-  }).join("");
-
-  [...rankingRows.querySelectorAll("tr[data-key]")].forEach((row) => {
-    row.querySelector(".character-detail-link")?.addEventListener("click", (event) => {
-      event.stopPropagation();
-    });
-    row.addEventListener("click", () => {
-      selectCharacter(row.dataset.key, { scrollRanking: false, scrollDetail: true });
-    });
-  });
-  updateRankingSelection(selectedKey);
 }
 
 function sortedRankingEntries(entries) {
@@ -697,8 +764,8 @@ function rankingCountText(entries) {
   return droppedCount > 0 ? `${officialCount}명 + 순위권 밖 ${droppedCount}명` : `${officialCount}명`;
 }
 
-function officialTop100Entries(entries) {
-  return entries.filter((entry) => !entry.is_dropped && numberValue(entry.rank) <= 100);
+function officialCollectedEntries(entries) {
+  return entries.filter((entry) => !entry.is_dropped);
 }
 
 function rankCellHtml(entry) {
@@ -732,6 +799,7 @@ function rankingFilterValues() {
     name: nameFilterInput.value.trim().toLowerCase(),
     minWins: Number.isFinite(minWins) ? minWins : null,
     recentDays: Number.isFinite(recentDays) && recentDays > 0 ? recentDays : null,
+    newOnly: newUserFilterInput.checked,
   };
 }
 
@@ -760,7 +828,8 @@ function hasActiveAdvancedFilters(filters = rankingFilterValues()) {
     filters.server
     || filters.name
     || filters.minWins != null
-    || filters.recentDays,
+    || filters.recentDays
+    || filters.newOnly
   );
 }
 
@@ -775,6 +844,7 @@ function matchesRankingFilters(entry, query, filters) {
   if (query && !characterName.includes(query)) return false;
   if (filters.server && serverName !== filters.server) return false;
   if (filters.name && !characterName.includes(filters.name)) return false;
+  if (filters.newOnly && entry.movement_direction !== "new") return false;
   if (filters.minWins == null) return true;
   if (filters.recentDays && !staticHistoryData) return true;
   const wins = filters.recentDays
@@ -974,14 +1044,55 @@ function formatSnapshotDate(value) {
   return text.split(/\s+/)[0] || "-";
 }
 
-async function loadSnapshot(snapshotId) {
-  renderSnapshotSkeleton();
-  renderLatest(await api(`/api/snapshot?id=${encodeURIComponent(snapshotId)}`));
-  setCurrentSnapshot(Number(snapshotId));
-  await selectDefaultCharacter();
-  const url = new URL(window.location.href);
-  url.searchParams.set("snapshot", snapshotId);
-  window.history.replaceState({}, "", url);
+async function loadSnapshot(snapshotId, options = {}) {
+  const smoothTransition = options.smoothTransition !== false;
+  const direction = snapshotTransitionDirection(snapshotId);
+  if (smoothTransition) {
+    beginSnapshotTransition(direction);
+  } else {
+    renderSnapshotSkeleton();
+  }
+  try {
+    const payloadPromise = api(`/api/snapshot?id=${encodeURIComponent(snapshotId)}`);
+    const payload = smoothTransition
+      ? await Promise.all([payloadPromise, wait(SNAPSHOT_TRANSITION_MS)]).then(([result]) => result)
+      : await payloadPromise;
+    renderLatest(payload, { smoothTransition });
+    setCurrentSnapshot(Number(snapshotId));
+    await selectDefaultCharacter();
+    const url = new URL(window.location.href);
+    url.searchParams.set("snapshot", snapshotId);
+    window.history.replaceState({}, "", url);
+  } finally {
+    if (smoothTransition) endSnapshotTransition();
+    else document.body.classList.remove("is-snapshot-loading");
+  }
+}
+
+function snapshotTransitionDirection(snapshotId) {
+  const nextIndex = snapshots.findIndex((snapshot) => String(snapshot.id) === String(snapshotId));
+  if (currentSnapshotIndex < 0 || nextIndex < 0 || nextIndex === currentSnapshotIndex) return 1;
+  return nextIndex > currentSnapshotIndex ? -1 : 1;
+}
+
+function beginSnapshotTransition(direction) {
+  window.clearTimeout(snapshotTransitionTimer);
+  document.body.style.setProperty("--snapshot-slide-dir", String(direction < 0 ? -1 : 1));
+  document.body.classList.remove("snapshot-slide-in");
+  document.body.classList.add("is-snapshot-loading", "snapshot-slide-out");
+}
+
+function endSnapshotTransition() {
+  document.body.classList.remove("snapshot-slide-out");
+  document.body.classList.add("snapshot-slide-in");
+  window.clearTimeout(snapshotTransitionTimer);
+  snapshotTransitionTimer = window.setTimeout(() => {
+    document.body.classList.remove("is-snapshot-loading", "snapshot-slide-in");
+  }, SNAPSHOT_TRANSITION_MS + 40);
+}
+
+function wait(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 async function selectDefaultCharacter() {
@@ -1242,10 +1353,20 @@ function prefersReducedMotion() {
   return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-function renderChart(history) {
-  if (chartInstance) {
-    chartInstance.destroy();
-    chartInstance = null;
+let detailChartInstance = null;
+
+function renderDetailChart(history) {
+  renderChart(history, { forDetail: true });
+}
+
+function renderChart(history, opts = {}) {
+  const chartCtx = opts.forDetail ? detailOverlayCtx : ctx;
+  const chartCanvas = opts.forDetail ? detailOverlayCanvas : canvas;
+  if (!chartCtx || !chartCanvas) return;
+  if (opts.forDetail) {
+    if (detailChartInstance) { detailChartInstance.destroy(); detailChartInstance = null; }
+  } else {
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
   }
 
   const styles = getComputedStyle(document.body);
@@ -1262,7 +1383,7 @@ function renderChart(history) {
   const markerTextColor = styles.getPropertyValue("--chart-marker-text").trim() || "#ffd4df";
 
   if (history.length === 0) {
-    drawChartPlaceholder();
+    drawChartPlaceholder(opts);
     return;
   }
 
@@ -1278,7 +1399,7 @@ function renderChart(history) {
   const hasTierRankData = tierRankData.some(value => Number.isFinite(value));
 
   if (finiteRanks.length === 0 && !hasTierRankData) {
-    drawChartPlaceholder();
+    drawChartPlaceholder(opts);
     return;
   }
 
@@ -1402,7 +1523,7 @@ function renderChart(history) {
     }
   };
 
-  chartInstance = new Chart(ctx, {
+  const newInstance = new Chart(chartCtx, {
     type: 'line',
     data: {
       labels: labels,
@@ -1532,6 +1653,7 @@ function renderChart(history) {
     },
     plugins: [gradientPlugin, customPlugin]
   });
+  if (opts.forDetail) { detailChartInstance = newInstance; } else { chartInstance = newInstance; }
 }
 
 function chartHistoryWithAllSnapshotDates(history) {
@@ -1567,13 +1689,15 @@ function previousKnownTier(tierLabels, index) {
   return "";
 }
 
-function drawChartPlaceholder() {
+function drawChartPlaceholder(opts = {}) {
+  const chartCtx = opts.forDetail ? detailOverlayCtx : ctx;
+  if (!chartCtx) return;
   const styles = getComputedStyle(document.body);
   const previewColor = styles.getPropertyValue("--chart-preview").trim() || "rgba(102, 227, 211, 0.48)";
   const pointColor = styles.getPropertyValue("--chart-point").trim() || "rgba(247, 199, 106, 0.74)";
   const mutedColor = styles.getPropertyValue("--chart-muted").trim() || "#93a4b8";
 
-  chartInstance = new Chart(ctx, {
+  const instance = new Chart(chartCtx, {
     type: 'line',
     data: {
       labels: ['', '', '', ''],
@@ -1609,11 +1733,12 @@ function drawChartPlaceholder() {
         ctx.fillStyle = mutedColor;
         ctx.font = canvasFont(13);
         ctx.textAlign = "left";
-        ctx.fillText("캐릭터를 선택하면 이 영역에 순위 추이가 표시됩니다.", 24, height + top - 24);
+        if (!opts.forDetail) ctx.fillText("캐릭터를 선택하면 이 영역에 순위 추이가 표시됩니다.", 24, height + top - 24);
         ctx.restore();
       }
     }]
   });
+  if (opts.forDetail) { detailChartInstance = instance; } else { chartInstance = instance; }
 }
 
 function normalizeTierLabel(tier) {
@@ -1630,7 +1755,8 @@ function honorMoveChip(entry) {
   return '<span class="move" data-dir="flat">—</span>';
 }
 
-function renderHonorGrid() {
+function renderHonorGrid(options = {}) {
+  const animate = options.animate !== false;
   if (!honorGrid) return;
 
   if (honorTabs) {
@@ -1639,6 +1765,24 @@ function renderHonorGrid() {
     });
   }
 
+  if (honorGrid.classList.contains('is-exiting')) return;
+
+  const existingTiles = [...honorGrid.querySelectorAll('.tile')];
+  if (animate && existingTiles.length > 0 && !prefersReducedMotion()) {
+    honorGrid.classList.remove('is-revealing');
+    honorGrid.classList.add('is-exiting');
+    clearTimeout(honorExitTimer);
+    honorExitTimer = setTimeout(() => {
+      honorGrid.classList.remove('is-exiting');
+      renderHonorGridContent(animate);
+    }, 270);
+    return;
+  }
+  renderHonorGridContent(animate);
+}
+
+function renderHonorGridContent(animate) {
+  if (!honorGrid) return;
   const all = latestEntries.filter((e) => !e.is_dropped);
   let top10;
   if (honorMode === 'wins') {
@@ -1687,7 +1831,10 @@ function renderHonorGrid() {
   }
 
   const rankOrInfo = honorMode !== 'rank'
-    ? ` · <span style="opacity:0.55">Rank #${escapeHtml(String(hero.rank))}</span>` : '';
+    ? hero.rank != null
+      ? ` · <span style="opacity:0.55">Rank #${escapeHtml(String(hero.rank))}</span>`
+      : ` · <span style="opacity:0.40">100위권 밖</span>`
+    : '';
   let html = `
     <div class="tile is-hero" data-rank-display="${escapeHtml(heroWatermark)}" data-key="${escapeHtml(hero.character_key)}">
       <div class="tile-hero-tier-icon">${tierIconHtml(hero)}</div>
@@ -1708,7 +1855,9 @@ function renderHonorGrid() {
       ? `<span class="tile-meta-tier tier ${rankAuraClass(e.rank)}" data-tier="${escapeHtml(normalizeTierLabel(e.tier_label))}">${tierIconHtml(e)}<span>${escapeHtml(e.tier_label)}</span></span>`
       : '';
     const serverMeta = `<span class="tile-meta-server">@${escapeHtml(e.server_name)}</span>`;
-    const rankMeta = `<span class="tile-meta-rank">#${escapeHtml(String(e.rank))}</span>`;
+    const rankMeta = e.rank != null
+      ? `<span class="tile-meta-rank">#${escapeHtml(String(e.rank))}</span>`
+      : `<span class="tile-meta-rank" style="opacity:0.45">100위권 밖</span>`;
     if (honorMode === 'wins') {
       tileWatermark = String(e.win_delta ?? '-');
       tileRankLine = `<span class="hash">+</span>${escapeHtml(tileWatermark)}<span style="color:var(--fg-3);font-size:9px;margin-left:4px;letter-spacing:.06em">WINS</span>`;
@@ -1718,8 +1867,10 @@ function renderHonorGrid() {
       tileRankLine = `<span class="hash">↑</span>${escapeHtml(tileWatermark)}`;
       tileServer = `${rankMeta}${tierBadge}`;
     } else {
-      tileWatermark = String(e.rank);
-      tileRankLine = `<span class="hash">#</span>${escapeHtml(String(e.rank).padStart(2, "0"))}`;
+      tileWatermark = e.rank != null ? String(e.rank) : '-';
+      tileRankLine = e.rank != null
+        ? `<span class="hash">#</span>${escapeHtml(String(e.rank).padStart(2, "0"))}`
+        : `<span style="opacity:0.45;font-size:11px;letter-spacing:.04em">100위권 밖</span>`;
       tileServer = `${rankMeta}${tierBadge}`;
     }
     html += `
@@ -1739,7 +1890,11 @@ function renderHonorGrid() {
   honorGrid.querySelectorAll(".tile").forEach((tile) => {
     tile.addEventListener("click", () => selectCharacter(tile.dataset.key, { scrollDetail: true }));
   });
-  revealHonorTiles();
+  if (animate) {
+    revealHonorTiles();
+  } else {
+    honorGrid.classList.remove("is-revealing");
+  }
   updateHonorGridSelection(selectedKey);
 }
 
@@ -1844,19 +1999,580 @@ function updateKpis(snapshot, entries) {
     }
   }
   if (entries && entries.length > 0) {
-    const officialTop100 = officialTop100Entries(entries);
+    const officialEntries = officialCollectedEntries(entries);
     if (kpiNewEntries) {
-      const newCount = officialTop100.filter((entry) => entry.movement_direction === "new").length;
+      const newCount = officialEntries.filter((entry) => entry.movement_direction === "new").length;
       kpiNewEntries.childNodes[0].textContent = newCount.toLocaleString("ko-KR");
     }
     if (kpiWinGain) {
-      const deltas = officialTop100
+      const deltas = officialEntries
         .map((entry) => numberValue(entry.win_delta))
         .filter((value) => Number.isFinite(value) && value > 0);
       const winGain = deltas.reduce((total, value) => total + value, 0);
       kpiWinGain.childNodes[0].textContent = deltas.length > 0 ? `+${winGain.toLocaleString("ko-KR")}` : "-";
     }
   }
+}
+
+function scheduleTierHeatmapRender(snapshot, entries, options = {}) {
+  if (!tierHeatmap) return;
+  const requestToken = ++heatmapRequestToken;
+  if (!options.preserveExisting) {
+    renderTierHeatmap(snapshot, entries, null);
+  } else if (tierHeatmapMeta) {
+    tierHeatmapMeta.textContent = "업데이트 중";
+  }
+  Promise.all([
+    loadStaticData(),
+    api("/api/season-periods").catch(() => ({ season_periods: [] })),
+  ])
+    .then(([data, periodsPayload]) => {
+      if (requestToken !== heatmapRequestToken) return;
+      renderTierHeatmap(snapshot, entries, {
+        ...data,
+        season_periods: periodsPayload.season_periods || data.season_periods || [],
+      });
+    })
+    .catch(() => {
+      if (requestToken !== heatmapRequestToken) return;
+      renderTierHeatmap(snapshot, entries, { snapshots: [], entries_by_snapshot: {} });
+    });
+}
+
+function renderTierHeatmap(snapshot, currentEntries, seasonData) {
+  if (!tierHeatmap || !tierHeatmapCtx) return;
+  if (!snapshot) {
+    destroyTierHeatmapChart();
+    if (tierHeatmapMeta) tierHeatmapMeta.textContent = "-";
+    return;
+  }
+  if (!seasonData) {
+    destroyTierHeatmapChart();
+    if (tierHeatmapMeta) tierHeatmapMeta.textContent = "계산 중";
+    return;
+  }
+
+  const heatmapData = buildTierHeatmapData(snapshot, currentEntries, seasonData);
+  heatmapWindowStart = initialHeatmapWindowStart(heatmapData);
+  if (heatmapData.snapshots.length === 0) {
+    destroyTierHeatmapChart();
+    if (tierHeatmapMeta) tierHeatmapMeta.textContent = "-";
+    return;
+  }
+
+  renderTierHeatmapChart(heatmapData);
+}
+
+function renderTierHeatmapChart(heatmapData) {
+  const nextSelectedDate = heatmapData.snapshots.find((item) => item.isSelected)?.shortDate || "";
+  const previousSelectedDate = tierHeatmapSelectedDate === nextSelectedDate ? "" : tierHeatmapSelectedDate;
+  if (nextSelectedDate && nextSelectedDate !== tierHeatmapSelectedDate) {
+    tierHeatmapSelectedDate = nextSelectedDate;
+  }
+  currentTierHeatmapData = heatmapData;
+  const visibleData = visibleTierHeatmapData(heatmapData);
+  const styles = getComputedStyle(document.body);
+  const gridColor = styles.getPropertyValue("--chart-grid").trim() || "rgba(148, 163, 184, 0.18)";
+  const textColor = styles.getPropertyValue("--chart-text").trim() || "#dbeafe";
+  const mutedColor = styles.getPropertyValue("--chart-muted").trim() || "#93a4b8";
+  const accentColor = styles.getPropertyValue("--accent").trim() || "#66e3d3";
+  const labels = visibleData.snapshots.map((item) => item.shortDate);
+  renderTierHeatmapLabels(styles, textColor);
+  const points = visibleData.snapshots.flatMap((item) => HEATMAP_ROWS.map((row, rowIndex) => {
+    const value = item.values[row.key] || 0;
+    return {
+      x: item.shortDate,
+      y: HEATMAP_ROWS.length - 1 - rowIndex,
+      rowKey: row.key,
+      rowLabel: row.label,
+      source: row.source,
+      fullDate: item.fullDate,
+      snapshotId: item.snapshotId,
+      value,
+      isSelected: item.isSelected,
+      isSeasonStart: Boolean(item.isSeasonStart),
+      intensity: Number(heatmapIntensity(value, visibleData.maxGain)),
+    };
+  }));
+
+  const scrollArea = tierHeatmap.closest('.tier-heatmap-scroll');
+  const availableCanvasWidth = scrollArea ? Math.max(300, scrollArea.clientWidth - 113) : 720;
+  const MIN_CELL_PX = 14;
+  const naturalCellPx = availableCanvasWidth / Math.max(1, labels.length);
+  const canvasWidth = naturalCellPx >= MIN_CELL_PX ? availableCanvasWidth : labels.length * MIN_CELL_PX;
+  const heatmapBody = tierHeatmap.closest('.tier-heatmap-body');
+  if (heatmapBody) heatmapBody.style.width = `${112 + canvasWidth}px`;
+  tierHeatmap.style.removeProperty('minWidth');
+  updateTierHeatmapWindowUi(heatmapData, visibleData);
+  destroyTierHeatmapChart({ preserveData: true });
+  tierHeatmapChartInstance = new Chart(tierHeatmapCtx, {
+    type: "scatter",
+    data: {
+      labels,
+      datasets: [{
+        data: points,
+        pointRadius: 0,
+        pointHitRadius: 12,
+        showLine: false,
+      }],
+    },
+    options: {
+      animation: prefersReducedMotion() ? false : { duration: 220 },
+      responsive: true,
+      maintainAspectRatio: false,
+      parsing: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          enabled: false,
+          external: heatmapExternalTooltip,
+        },
+      },
+      scales: {
+        x: {
+          type: "category",
+          labels,
+          offset: true,
+          grid: { display: false, color: gridColor, drawTicks: false },
+          border: { display: false },
+          ticks: {
+            color: mutedColor,
+            font: { family: MONO_FONT_STACK, size: 10, weight: "600" },
+            maxRotation: 0,
+            autoSkip: true,
+          },
+        },
+        y: {
+          display: false,
+          type: "linear",
+          min: -0.5,
+          max: HEATMAP_ROWS.length - 0.5,
+          grid: { display: false, color: gridColor, drawTicks: false },
+          border: { display: false },
+          ticks: {
+            display: false,
+            font: { family: UI_FONT_STACK, size: 12, weight: "700" },
+            stepSize: 1,
+          },
+        },
+      },
+    },
+    plugins: [tierHeatmapPlugin(styles, accentColor, {
+      previousDate: previousSelectedDate,
+      selectedDate: nextSelectedDate,
+      startedAt: performance.now(),
+    })],
+  });
+}
+
+function moveTierHeatmapSelectionToSnapshot(snapshotId) {
+  if (!currentTierHeatmapData) return;
+  const target = currentTierHeatmapData.snapshots.find((item) => String(item.snapshotId) === String(snapshotId));
+  if (!target || target.shortDate === tierHeatmapSelectedDate) return;
+  const previousDate = tierHeatmapSelectedDate;
+  currentTierHeatmapData = {
+    ...currentTierHeatmapData,
+    snapshots: currentTierHeatmapData.snapshots.map((item) => ({
+      ...item,
+      isSelected: item.fullDate === target.fullDate,
+    })),
+  };
+  tierHeatmapSelectedDate = target.shortDate;
+  if (!tierHeatmapChartInstance) return;
+  const points = tierHeatmapChartInstance.data.datasets[0]?.data || [];
+  points.forEach((point) => { point.isSelected = point.x === target.shortDate; });
+  tierHeatmapChartInstance.$heatmapSelection = { previousDate, selectedDate: target.shortDate, startedAt: performance.now() };
+  tierHeatmapChartInstance.update("none");
+}
+
+function renderTierHeatmapLabels(styles, fallbackColor) {
+  if (!tierHeatmapLabels) return;
+  tierHeatmapLabels.innerHTML = HEATMAP_ROWS.map((row) => {
+    const color = heatmapRowLabelColor(row, styles, fallbackColor);
+    const prefix = row.group ? `<span>${escapeHtml(row.group)}</span>` : "";
+    const extraClass = row.key === "in100" ? " tier-heatmap-label--overall" : "";
+    return `<div class="tier-heatmap-label${extraClass}" style="color:${escapeHtml(color)}">${prefix}<strong>${escapeHtml(row.label)}</strong></div>`;
+  }).join("");
+}
+
+function initialHeatmapWindowStart(heatmapData) {
+  const total = heatmapData.snapshots.length;
+  if (total <= HEATMAP_WINDOW_SIZE) return 0;
+  const selectedIndex = heatmapData.snapshots.findIndex((item) => item.isSelected);
+  const endIndex = selectedIndex >= 0 ? selectedIndex : total - 1;
+  return Math.max(0, Math.min(endIndex - HEATMAP_WINDOW_SIZE + 1, total - HEATMAP_WINDOW_SIZE));
+}
+
+function visibleTierHeatmapData(heatmapData) {
+  const total = heatmapData.snapshots.length;
+  if (heatmapData.hasPeriod) {
+    const maxGain = heatmapData.snapshots.reduce((maxValue, item) => Math.max(maxValue, ...Object.values(item.values)), 0);
+    return { snapshots: heatmapData.snapshots, maxGain, start: 0, total };
+  }
+  const maxStart = Math.max(0, total - HEATMAP_WINDOW_SIZE);
+  const start = Math.max(0, Math.min(heatmapWindowStart ?? initialHeatmapWindowStart(heatmapData), maxStart));
+  heatmapWindowStart = start;
+  const visibleSnapshots = heatmapData.snapshots.slice(start, start + HEATMAP_WINDOW_SIZE);
+  const maxGain = visibleSnapshots.reduce((maxValue, item) => Math.max(maxValue, ...Object.values(item.values)), 0);
+  return { snapshots: visibleSnapshots, maxGain, start, total };
+}
+
+function updateTierHeatmapWindowUi(heatmapData, visibleData) {
+  const total = heatmapData.snapshots.length;
+  const from = visibleData.start + 1;
+  const to = visibleData.start + visibleData.snapshots.length;
+  const totalGain = visibleData.snapshots.reduce((totalValue, item) => (
+    totalValue + Object.values(item.values).reduce((sum, value) => sum + value, 0)
+  ), 0);
+  if (tierHeatmapMeta) {
+    tierHeatmapMeta.textContent = `${from}-${to}/${total} · +${totalGain.toLocaleString("ko-KR")}승`;
+  }
+  if (tierHeatmapPrev) tierHeatmapPrev.disabled = visibleData.start <= 0;
+  if (tierHeatmapNext) tierHeatmapNext.disabled = visibleData.start + visibleData.snapshots.length >= total;
+}
+
+function moveTierHeatmapWindow(delta) {
+  if (!currentTierHeatmapData || currentTierHeatmapData.hasPeriod) return;
+  const maxStart = Math.max(0, currentTierHeatmapData.snapshots.length - HEATMAP_WINDOW_SIZE);
+  heatmapWindowStart = Math.max(0, Math.min((heatmapWindowStart ?? maxStart) + delta, maxStart));
+  renderTierHeatmapChart(currentTierHeatmapData);
+}
+
+function destroyTierHeatmapChart(options = {}) {
+  const tt = document.getElementById('heatmap-tooltip');
+  if (tt) tt.hidden = true;
+  if (!options.preserveData) currentTierHeatmapData = null;
+  if (tierHeatmapChartInstance) {
+    tierHeatmapChartInstance.destroy();
+    tierHeatmapChartInstance = null;
+  }
+}
+
+function tierHeatmapPlugin(styles, accentColor, selection = {}) {
+  const heatColor = styles.getPropertyValue("--chart-line").trim() || accentColor;
+  return {
+    id: "tierWinGainHeatmap",
+    beforeDatasetsDraw(chart) {
+      const dataset = chart.data.datasets[0];
+      const points = dataset?.data || [];
+      const { ctx: chartCtx, chartArea, scales } = chart;
+      if (!points.length || !chartArea || !scales.x || !scales.y) return;
+      const cellWidth = chartArea.width / Math.max(1, chart.data.labels.length);
+      const cellHeight = chartArea.height / Math.max(1, HEATMAP_ROWS.length);
+      const selectedPoint = points.find((point) => point.isSelected);
+      if (selectedPoint) {
+        const activeSelection = chart.$heatmapSelection || selection;
+        const selectedX = scales.x.getPixelForValue(selectedPoint.x);
+        const previousX = activeSelection.previousDate && chart.data.labels.includes(activeSelection.previousDate)
+          ? scales.x.getPixelForValue(activeSelection.previousDate)
+          : selectedX;
+        const progress = selectionProgress(chart, activeSelection.startedAt);
+        const highlightX = previousX + (selectedX - previousX) * progress;
+        chartCtx.save();
+        chartCtx.fillStyle = colorWithAlpha(accentColor, 0.06);
+        chartCtx.strokeStyle = colorWithAlpha(accentColor, 0.72);
+        chartCtx.lineWidth = 1.2;
+        roundedRect(chartCtx, highlightX - cellWidth / 2 + 0.5, chartArea.top + 0.5, cellWidth - 1, chartArea.height - 1, 5);
+        chartCtx.fill();
+        chartCtx.stroke();
+        chartCtx.restore();
+      }
+      points.forEach((point) => {
+        const x = scales.x.getPixelForValue(point.x);
+        const y = scales.y.getPixelForValue(point.y);
+        const intensity = point.intensity || 0;
+        const alpha = intensity > 0 ? 0.10 + intensity * 0.68 : 0.04;
+        chartCtx.save();
+        chartCtx.fillStyle = colorWithAlpha(heatColor, alpha);
+        chartCtx.fillRect(x - cellWidth / 2, y - cellHeight / 2, cellWidth, cellHeight);
+        if (point.value > 0 && cellWidth >= 32 && cellHeight >= 20) {
+          chartCtx.fillStyle = colorWithAlpha(styles.getPropertyValue("--fg-1").trim() || "#fff", Math.min(1, 0.42 + intensity));
+          chartCtx.font = `700 10px ${MONO_FONT_STACK}`;
+          chartCtx.textAlign = "center";
+          chartCtx.textBaseline = "middle";
+          chartCtx.fillText(point.value.toLocaleString("ko-KR"), x, y);
+        }
+        chartCtx.restore();
+      });
+
+      // Separator between tier rows and In-100
+      const separatorY = Math.round(scales.y.getPixelForValue(0.5));
+      chartCtx.save();
+      chartCtx.strokeStyle = colorWithAlpha(accentColor, 0.28);
+      chartCtx.lineWidth = 1;
+      chartCtx.setLineDash([3, 4]);
+      chartCtx.beginPath();
+      chartCtx.moveTo(chartArea.left, separatorY);
+      chartCtx.lineTo(chartArea.right, separatorY);
+      chartCtx.stroke();
+      chartCtx.restore();
+
+      // Season start marker
+      const seasonStartPoint = points.find((p) => p.isSeasonStart);
+      if (seasonStartPoint) {
+        const sx = Math.round(scales.x.getPixelForValue(seasonStartPoint.x) - cellWidth / 2);
+        chartCtx.save();
+        chartCtx.strokeStyle = colorWithAlpha(accentColor, 0.55);
+        chartCtx.lineWidth = 1.5;
+        chartCtx.setLineDash([2, 3]);
+        chartCtx.beginPath();
+        chartCtx.moveTo(sx, chartArea.top);
+        chartCtx.lineTo(sx, chartArea.bottom);
+        chartCtx.stroke();
+        chartCtx.setLineDash([]);
+        chartCtx.font = `600 9px ${MONO_FONT_STACK}`;
+        chartCtx.fillStyle = colorWithAlpha(accentColor, 0.75);
+        chartCtx.textAlign = 'left';
+        chartCtx.textBaseline = 'top';
+        chartCtx.fillText('시즌 시작', sx + 3, chartArea.top + 3);
+        chartCtx.restore();
+      }
+    },
+    afterEvent(chart, args) {
+      const event = args.event;
+      const { chartArea } = chart;
+      const points = chart.data.datasets[0]?.data || [];
+      if (!chartArea || !points.length) return;
+      const clearActive = () => {
+        if (chart.$heatmapActiveIndex == null) return;
+        chart.$heatmapActiveIndex = null;
+        chart.setActiveElements([]);
+        chart.tooltip?.setActiveElements([], { x: 0, y: 0 });
+        chart.update("none");
+      };
+      if (event.type === "mouseout") {
+        clearActive();
+        return;
+      }
+      const x = event.x;
+      const y = event.y;
+      if (x < chartArea.left || x > chartArea.right || y < chartArea.top || y > chartArea.bottom) {
+        clearActive();
+        return;
+      }
+      const columnCount = Math.max(1, chart.data.labels.length);
+      const cellWidth = chartArea.width / columnCount;
+      const cellHeight = chartArea.height / Math.max(1, HEATMAP_ROWS.length);
+      const column = Math.min(columnCount - 1, Math.max(0, Math.floor((x - chartArea.left) / cellWidth)));
+      const row = Math.min(HEATMAP_ROWS.length - 1, Math.max(0, Math.floor((y - chartArea.top) / cellHeight)));
+      const dataIndex = column * HEATMAP_ROWS.length + row;
+      const point = points[dataIndex];
+      if (event.type === "click") {
+        if (point?.snapshotId && !document.body.classList.contains("is-snapshot-loading")) {
+          moveTierHeatmapSelectionToSnapshot(point.snapshotId);
+          loadSnapshot(point.snapshotId).catch((error) => {
+            snapshotMeta.textContent = error.message;
+          });
+        }
+        return;
+      }
+      if (chart.$heatmapActiveIndex === dataIndex) return;
+      chart.$heatmapActiveIndex = dataIndex;
+      const tooltipX = chart.scales.x.getPixelForValue(point.x);
+      const tooltipY = chart.scales.y.getPixelForValue(point.y);
+      chart.setActiveElements([{ datasetIndex: 0, index: dataIndex }]);
+      chart.tooltip?.setActiveElements([{ datasetIndex: 0, index: dataIndex }], { x: tooltipX, y: tooltipY });
+      chart.update("none");
+    },
+  };
+}
+
+function heatmapExternalTooltip({ chart, tooltip }) {
+  let el = document.getElementById('heatmap-tooltip');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'heatmap-tooltip';
+    el.className = 'heatmap-tooltip';
+    document.body.appendChild(el);
+  }
+  if (!tooltip.dataPoints?.length || tooltip.opacity === 0) {
+    el.hidden = true;
+    return;
+  }
+  const raw = tooltip.dataPoints[0]?.raw;
+  if (!raw) { el.hidden = true; return; }
+
+  const value = raw.value || 0;
+  const isOverall = raw.source === 'overall';
+  const num = isOverall ? '' : tierNumber(raw.rowKey);
+  const iconHtml = num ? `<span class="tier-icon tier-icon-${num}" aria-hidden="true"></span>` : '';
+  const labelText = isOverall ? 'In-100' : `${raw.rowLabel} Top10`;
+  const color = isOverall ? 'var(--accent)' : `var(--tier-${raw.rowKey})`;
+
+  el.innerHTML =
+    `<div class="heatmap-tooltip-date">${escapeHtml(raw.fullDate)}</div>` +
+    `<div class="heatmap-tooltip-body" style="color:${color}">${iconHtml}<span>${escapeHtml(labelText)} +${value.toLocaleString('ko-KR')}승 증가</span></div>`;
+
+  el.hidden = false;
+  const rect = chart.canvas.getBoundingClientRect();
+  const tx = rect.left + tooltip.caretX;
+  const ty = rect.top + tooltip.caretY;
+  const elW = el.offsetWidth;
+  const elH = el.offsetHeight;
+  el.style.top = `${ty > elH + 12 ? ty - elH - 8 : ty + 8}px`;
+  el.style.left = `${Math.max(8, Math.min(tx - elW / 2, window.innerWidth - elW - 8))}px`;
+}
+
+function heatmapRowLabelColor(row, styles, fallback) {
+  if (!row) return fallback;
+  if (row.key === "in100") return styles.getPropertyValue("--accent").trim() || fallback;
+  return styles.getPropertyValue(`--tier-${row.key}`).trim() || fallback;
+}
+
+function selectionProgress(chart, startedAt) {
+  if (prefersReducedMotion() || !startedAt) return 1;
+  const raw = Math.min(1, Math.max(0, (performance.now() - startedAt) / 260));
+  if (raw < 1) {
+    window.requestAnimationFrame(() => { if (chart === tierHeatmapChartInstance) chart.draw(); });
+  }
+  return 1 - Math.pow(1 - raw, 3);
+}
+
+function roundedRect(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + width, y, r);
+  ctx.closePath();
+}
+
+function colorWithAlpha(color, alpha) {
+  const text = String(color || "").trim();
+  const hex = text.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (hex) {
+    const value = hex[1].length === 3
+      ? hex[1].split("").map((part) => part + part).join("")
+      : hex[1];
+    const numeric = Number.parseInt(value, 16);
+    const r = (numeric >> 16) & 255;
+    const g = (numeric >> 8) & 255;
+    const b = numeric & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  const rgb = text.match(/^rgba?\(([^)]+)\)$/i);
+  if (rgb) {
+    const [r, g, b] = rgb[1].split(",").map((part) => Number.parseFloat(part));
+    if ([r, g, b].every(Number.isFinite)) return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  return text;
+}
+
+function buildTierHeatmapData(snapshot, currentEntries, seasonData) {
+  const entriesBySnapshot = seasonData.entries_by_snapshot || {};
+  const currentSnapshotId = String(snapshot.id);
+  const snapshotSource = (seasonData.snapshots && seasonData.snapshots.length > 0) ? seasonData.snapshots : snapshots;
+  const period = seasonPeriodForSnapshot(snapshot, seasonData);
+  const seasonSnapshots = snapshotSource
+    .filter((item) => String(item.season ?? "") === String(snapshot.season ?? ""))
+    .sort((a, b) => entryTimeMs(a) - entryTimeMs(b) || numberValue(a.id) - numberValue(b.id));
+  const sourceSnapshots = seasonSnapshots.length > 0 ? seasonSnapshots : [snapshot];
+  const byDate = new Map();
+  sourceSnapshots.forEach((item) => {
+    const snapshotId = String(item.id);
+    const entries = snapshotId === currentSnapshotId
+      ? currentEntries
+      : entriesBySnapshot[snapshotId] || [];
+    const values = tierWinGainValues(entries);
+    const fullDate = formatSnapshotDate(item.source_time_text || item.scraped_at || item.id);
+    const existing = byDate.get(fullDate);
+      if (existing) {
+        HEATMAP_ROWS.forEach((row) => {
+          existing.values[row.key] += values[row.key] || 0;
+        });
+        existing.isSelected = existing.isSelected || snapshotId === currentSnapshotId;
+        if (!existing.snapshotId || snapshotId === currentSnapshotId) existing.snapshotId = snapshotId;
+      } else {
+      byDate.set(fullDate, {
+        id: snapshotId,
+        snapshotId,
+        isSelected: snapshotId === currentSnapshotId,
+        shortDate: formatHeatmapDate(fullDate),
+        fullDate,
+        values,
+      });
+    }
+  });
+
+  const selectedDate = formatSnapshotDate(snapshot.source_time_text || snapshot.scraped_at || "");
+  const dateKeys = [...byDate.keys()].filter((date) => dateToUtcMs(date) != null);
+  if (!dateKeys.includes(selectedDate) && dateToUtcMs(selectedDate) != null) dateKeys.push(selectedDate);
+  const selectedMs = dateToUtcMs(selectedDate);
+  const dateTimes = dateKeys.map(dateToUtcMs).filter((value) => value != null);
+  if (dateTimes.length === 0) return { snapshots: [], maxGain: 0 };
+  const periodStartMs = dateToUtcMs(period?.start_date);
+  const periodEndMs = dateToUtcMs(period?.end_date);
+  const minDataMs = Math.min(...dateTimes);
+  const maxDataMs = Math.max(...dateTimes);
+  const startMs = periodStartMs ?? Math.min(minDataMs, (selectedMs ?? maxDataMs) - (HEATMAP_WINDOW_SIZE - 1) * 24 * 60 * 60 * 1000);
+  const endMs = periodEndMs ?? Math.max(maxDataMs, selectedMs ?? maxDataMs);
+  const items = [];
+  for (let time = startMs; time <= endMs; time += 24 * 60 * 60 * 1000) {
+    const date = utcDateKey(time);
+    const isSeasonStart = periodStartMs != null && time === periodStartMs;
+    const existing = byDate.get(date);
+    items.push(existing
+      ? { ...existing, isSeasonStart }
+      : { id: date, snapshotId: null, isSelected: date === selectedDate, shortDate: formatHeatmapDate(date), fullDate: date, values: emptyHeatmapValues(), isSeasonStart }
+    );
+  }
+  const maxGain = items.reduce((maxValue, item) => Math.max(maxValue, ...Object.values(item.values)), 0);
+  return { snapshots: items, maxGain, hasPeriod: Boolean(periodStartMs != null && periodEndMs != null) };
+}
+
+function seasonPeriodForSnapshot(snapshot, seasonData) {
+  if (seasonData.season_period && String(seasonData.season_period.season ?? "") === String(snapshot.season ?? "")) {
+    return seasonData.season_period;
+  }
+  return (seasonData.season_periods || []).find((period) => String(period.season ?? "") === String(snapshot.season ?? "")) || null;
+}
+
+function emptyHeatmapValues() {
+  return Object.fromEntries(HEATMAP_ROWS.map((row) => [row.key, 0]));
+}
+
+function tierWinGainValues(entries) {
+  const values = Object.fromEntries(HEATMAP_ROWS.map((row) => [row.key, 0]));
+  officialCollectedEntries(entries || []).forEach((entry) => {
+    const delta = numberValue(entry.win_delta);
+    if (!Number.isFinite(delta) || delta <= 0) return;
+    if (Number.isFinite(numberValue(entry.rank))) values.in100 += delta;
+    const tier = normalizeTier(entry.tier_label);
+    if (Number.isFinite(numberValue(entry.tier_rank)) && tier in values) values[tier] += delta;
+  });
+  return values;
+}
+
+function heatmapIntensity(value, maxGain) {
+  if (!Number.isFinite(value) || value <= 0 || !Number.isFinite(maxGain) || maxGain <= 0) return "0";
+  return Math.max(0.14, Math.sqrt(value / maxGain)).toFixed(3);
+}
+
+function formatHeatmapDate(value) {
+  const date = formatSnapshotDate(value);
+  const match = date.match(/^\d{4}-(\d{1,2})-(\d{1,2})$/);
+  if (!match) return date;
+  return `${match[1]}/${match[2]}`;
+}
+
+function dateToUtcMs(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (![year, month, day].every(Number.isFinite)) return null;
+  return Date.UTC(year, month - 1, day);
+}
+
+function utcDateKey(time) {
+  const date = new Date(time);
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function formatGraphDate(value) {
@@ -1911,10 +2627,10 @@ filterToggle.addEventListener("click", () => {
   const nextExpanded = !expanded;
   filterToggle.setAttribute("aria-expanded", String(nextExpanded));
   updateFilterToggleLabel(nextExpanded);
-  rankingFilters.hidden = expanded;
+  rankingFilters.classList.toggle("is-open", nextExpanded);
 });
 
-[serverFilterInput, nameFilterInput, winsFilterInput, recentDaysInput].forEach((input) => {
+[serverFilterInput, nameFilterInput, winsFilterInput, recentDaysInput, newUserFilterInput].forEach((input) => {
   const eventName = input.tagName === "SELECT" ? "change" : "input";
   input.addEventListener(eventName, () => {
     filterToggle.classList.toggle("is-active", hasActiveAdvancedFilters());
@@ -1928,6 +2644,7 @@ filterReset.addEventListener("click", () => {
   nameFilterInput.value = "";
   winsFilterInput.value = "";
   recentDaysInput.value = "";
+  newUserFilterInput.checked = false;
   filterToggle.classList.remove("is-active");
   renderRankingRows();
 });
@@ -2022,6 +2739,14 @@ nextSnapshot.addEventListener("click", () => {
   }
 });
 
+if (tierHeatmapPrev) {
+  tierHeatmapPrev.addEventListener("click", () => moveTierHeatmapWindow(-1));
+}
+
+if (tierHeatmapNext) {
+  tierHeatmapNext.addEventListener("click", () => moveTierHeatmapWindow(1));
+}
+
 if (honorTabs) {
   honorTabs.querySelectorAll('.honor-tab').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -2063,8 +2788,13 @@ if (honorRotateToggle) {
 
 loadSnapshots()
   .then(() => {
-    const initialSnapshot = new URLSearchParams(window.location.search).get("snapshot");
+    const params = new URLSearchParams(window.location.search);
+    const initialSnapshot = params.get("snapshot");
     return initialSnapshot ? loadSnapshot(initialSnapshot) : loadLatest();
+  })
+  .then(() => {
+    const initialDetail = new URLSearchParams(window.location.search).get("detail");
+    if (initialDetail) openDetailOverlay(initialDetail, { replace: true });
   })
   .catch((error) => {
     snapshotMeta.textContent = error.message;
@@ -2074,6 +2804,255 @@ loadMapRotation();
 window.setInterval(loadMapRotation, 60 * 1000);
 loadProjectHeartCount().catch(() => updateProjectHeartCount(null));
 
+document.addEventListener("click", (e) => {
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+  const link = e.target.closest(".detail-open-link");
+  if (!link) return;
+  e.preventDefault();
+  const url = new URL(link.href);
+  const characterId = url.searchParams.get("id");
+  if (characterId) openDetailOverlay(characterId);
+});
+
 document.addEventListener("contextmenu", (event) => event.preventDefault());
 document.addEventListener("dragstart", (event) => event.preventDefault());
 document.addEventListener("selectstart", (event) => event.preventDefault());
+
+(function initNavScrollLag() {
+  const nav = document.querySelector(".site-nav");
+  if (!nav) return;
+  const MAX = 10;
+  const PUSH = 0.3;
+  const DECAY = 0.82;
+  let offset = 0;
+  let lastY = window.scrollY;
+  let rafId = null;
+  function tick() {
+    offset *= DECAY;
+    nav.style.transform = `translateX(-50%) translateY(${offset.toFixed(2)}px)`;
+    if (Math.abs(offset) > 0.15) {
+      rafId = requestAnimationFrame(tick);
+    } else {
+      offset = 0;
+      nav.style.transform = "translateX(-50%)";
+      rafId = null;
+    }
+  }
+  window.addEventListener("scroll", () => {
+    const y = window.scrollY;
+    offset = Math.max(-MAX, Math.min(MAX, offset - (y - lastY) * PUSH));
+    lastY = y;
+    if (!rafId) rafId = requestAnimationFrame(tick);
+  }, { passive: true });
+}());
+
+// ─── Detail overlay (SPA) ────────────────────────────────────
+
+const RECOMMEND_CLIENT_KEY = "ccRankingRecommendClient";
+const RECOMMEND_STORAGE_PREFIX = "ccRankingRecommendChar_";
+
+const detailState = {
+  characterKey: null,
+  characterId: null,
+  history: [],
+  closing: false,
+};
+
+function openDetailOverlay(characterId, { replace = false } = {}) {
+  if (!detailOverlay) return;
+  detailState.characterId = characterId;
+  detailState.history = [];
+  detailState.closing = false;
+  detailOverlayTitle.textContent = "Character Details";
+  detailOverlaySeasonBadge.textContent = "Season -";
+  detailOverlayMeta.textContent = "캐릭터 기록을 불러오는 중";
+  detailOverlayHistoryCount.textContent = "-";
+  detailOverlayHistoryRows.innerHTML = "";
+  if (detailChartInstance) { detailChartInstance.destroy(); detailChartInstance = null; }
+  detailOverlay.hidden = false;
+  requestAnimationFrame(() => detailOverlay.classList.add("is-open"));
+  const detailUrl = `?detail=${encodeURIComponent(characterId)}`;
+  if (replace) {
+    window.history.replaceState({ detailId: characterId }, "", detailUrl);
+  } else {
+    window.history.pushState({ detailId: characterId }, "", detailUrl);
+  }
+  document.body.style.overflow = "hidden";
+  loadDetailCharacter(characterId).catch((err) => {
+    detailOverlayMeta.textContent = err.message;
+  });
+}
+
+function closeDetailOverlay() {
+  if (!detailOverlay || detailState.closing) return;
+  detailState.closing = true;
+  detailOverlay.classList.remove("is-open");
+  detailOverlay.classList.add("is-closing");
+  document.body.style.overflow = "";
+  const url = new URL(window.location.href);
+  url.searchParams.delete("detail");
+  window.history.pushState({}, "", url);
+  setTimeout(() => {
+    detailOverlay.classList.remove("is-closing");
+    detailOverlay.hidden = true;
+    detailState.closing = false;
+    if (detailChartInstance) { detailChartInstance.destroy(); detailChartInstance = null; }
+  }, 290);
+}
+
+async function loadDetailCharacter(characterId) {
+  const [history, snapshotPayload] = await Promise.all([
+    loadDetailCharacterHistory(characterId),
+    api("/api/snapshots"),
+  ]);
+  if (detailState.characterId !== characterId) return;
+  snapshots = snapshotPayload.snapshots || snapshots;
+  detailState.history = history;
+
+  if (history.length === 0) {
+    detailOverlayMeta.textContent = "해당 캐릭터 기록을 찾을 수 없습니다.";
+    detailOverlayHistoryRows.innerHTML = `<tr><td class="empty" colspan="7">기록 없음</td></tr>`;
+    renderDetailChart([]);
+    return;
+  }
+
+  const latest = history[history.length - 1];
+  detailState.characterKey = latest.character_key || characterKeyFromId(characterId);
+  detailOverlayTitle.textContent = latest.character_name;
+  detailOverlayTitle.className = `details-title tier-${normalizeTier(latest.tier_label)}`;
+  detailOverlaySeasonBadge.textContent = latest.season ? `Season ${latest.season}` : "Season -";
+  detailOverlayMeta.textContent = `${latest.server_name} · 최신 #${latest.rank ?? "100위권 밖"} · ${formatSnapshotDate(latest.source_time_text || latest.scraped_at)}`;
+  detailOverlayHistoryCount.textContent = `${history.length}개`;
+  detailOverlaySummary.innerHTML = detailSummaryHtml(latest, history);
+  detailOverlayHistoryRows.innerHTML = history.slice().reverse().map((row) => detailHistoryRowHtml(row, latest)).join("");
+  renderDetailChart(history);
+  loadDetailRecommendation().catch(() => updateDetailRecommendCount(null));
+}
+
+async function loadDetailCharacterHistory(characterId) {
+  const payload = await api(`/api/history?id=${encodeURIComponent(characterId)}`);
+  const history = payload.history || [];
+  if (history.length > 0 || !String(characterId || "").startsWith("c1_")) return history;
+  const legacyKey = characterKeyFromId(characterId);
+  if (!legacyKey || legacyKey === characterId) return history;
+  const legacyPayload = await api(`/api/history?key=${encodeURIComponent(legacyKey)}`);
+  return legacyPayload.history || [];
+}
+
+function detailSummaryHtml(latest, history) {
+  const seasonHistory = history.filter((row) => row.season === latest.season);
+  const best = seasonHistory.reduce((b, r) => (r.rank != null && (b.rank == null || r.rank < b.rank)) ? r : b, seasonHistory[0]);
+  const worst = seasonHistory.reduce((w, r) => (r.rank != null && (w.rank == null || r.rank > w.rank)) ? r : w, seasonHistory[0]);
+  return `<div class="details-stat-grid">
+    <div><span>최신 순위</span><strong>${best?.rank != null ? `#${escapeHtml(String(latest.rank))}` : "100위권 밖"}</strong></div>
+    <div><span>최신 티어</span><strong>${tierIconHtml(latest)}${escapeHtml(latest.tier_label || "-")}</strong></div>
+    <div><span>최신 평점</span><strong>${pointsWithDeltaHtml(latest)}</strong></div>
+    <div><span>이번 시즌 최고 랭킹</span><strong>${best?.rank != null ? `#${escapeHtml(String(best.rank))}` : "-"}</strong></div>
+    <div><span>이번 시즌 최저 랭킹</span><strong>${worst?.rank != null ? `#${escapeHtml(String(worst.rank))}` : "-"}</strong></div>
+    <div><span>스냅샷</span><strong>${escapeHtml(String(history.length))}개</strong></div>
+  </div>`;
+}
+
+function detailHistoryRowHtml(row, latest) {
+  const isMerged = String(row.character_name || "") !== String(latest.character_name || "") ||
+    String(row.server_name || "") !== String(latest.server_name || "");
+  const name = row.character_name || "-";
+  const server = row.server_name || "-";
+  const identity = `<span class="history-identity">
+    <span class="history-name">${escapeHtml(name)}</span>
+    <span class="history-server">${escapeHtml(server)}</span>
+    ${isMerged ? '<span class="merge-badge">병합됨</span>' : ""}
+  </span>`;
+  const rankDisplay = row.rank != null
+    ? `<span class="rank-badge ${rankClass(row.rank)}">${escapeHtml(String(row.rank))}</span>`
+    : `<span class="rank-badge" style="opacity:0.45">밖</span>`;
+  return `<tr class="${isMerged ? "is-merged-history" : ""}">
+    <td>${escapeHtml(formatSnapshotDate(row.source_time_text || row.scraped_at))}</td>
+    <td>${identity}</td>
+    <td>${rankDisplay}</td>
+    <td><span class="tier-pill tier-${normalizeTier(row.tier_label)}">${tierIconHtml(row)}<span>${escapeHtml(row.tier_label || "-")}</span></span></td>
+    <td>${pointsWithDeltaHtml(row)}</td>
+    <td>${winsWithDeltaHtml(row)}</td>
+    <td>${movementBadge(row)}</td>
+  </tr>`;
+}
+
+function recommendClientId() {
+  try {
+    let v = window.localStorage.getItem(RECOMMEND_CLIENT_KEY);
+    if (!v) { v = makeClientId(); window.localStorage.setItem(RECOMMEND_CLIENT_KEY, v); }
+    return v;
+  } catch {
+    let v = readCookie(RECOMMEND_CLIENT_KEY);
+    if (!v) { v = makeClientId(); writeCookie(RECOMMEND_CLIENT_KEY, v); }
+    return v;
+  }
+}
+
+function storedDetailRecommendation(key) {
+  if (!key) return false;
+  try { return window.localStorage.getItem(RECOMMEND_STORAGE_PREFIX + key) === "1"; }
+  catch { return readCookie(RECOMMEND_STORAGE_PREFIX + key) === "1"; }
+}
+
+function applyDetailRecommendation(isLiked, options = {}) {
+  if (!detailRecommendBtn) return;
+  detailRecommendBtn.classList.toggle("is-liked", isLiked);
+  detailRecommendBtn.setAttribute("aria-pressed", isLiked ? "true" : "false");
+  const storageId = detailState.characterKey || detailState.characterId || "";
+  if (options.persist !== false && storageId) {
+    try { window.localStorage.setItem(RECOMMEND_STORAGE_PREFIX + storageId, isLiked ? "1" : "0"); }
+    catch { writeCookie(RECOMMEND_STORAGE_PREFIX + storageId, isLiked ? "1" : "0"); }
+  }
+}
+
+function updateDetailRecommendCount(count) {
+  if (!detailRecommendCount) return;
+  if (count == null) { detailRecommendCount.textContent = "-"; return; }
+  detailRecommendCount.textContent = Number(count).toLocaleString("ko-KR");
+}
+
+async function loadDetailRecommendation() {
+  const id = detailState.characterKey || detailState.characterId;
+  if (!id) return;
+  const clientId = recommendClientId();
+  const idParam = detailState.characterKey
+    ? `key=${encodeURIComponent(detailState.characterKey)}`
+    : `id=${encodeURIComponent(detailState.characterId)}`;
+  const payload = await api(`/api/recommend?${idParam}&client_id=${encodeURIComponent(clientId)}`);
+  updateDetailRecommendCount(payload.count);
+  applyDetailRecommendation(Boolean(payload.liked), { persist: true });
+}
+
+async function saveDetailRecommendation(isLiked) {
+  const id = detailState.characterKey || detailState.characterId;
+  if (!id) return;
+  const body = { client_id: recommendClientId(), liked: isLiked };
+  if (detailState.characterKey) body.key = detailState.characterKey;
+  else body.id = detailState.characterId;
+  const payload = await api("/api/recommend", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  updateDetailRecommendCount(payload.count);
+  applyDetailRecommendation(Boolean(payload.liked), { persist: true });
+}
+
+detailBackBtn?.addEventListener("click", closeDetailOverlay);
+
+detailRecommendBtn?.addEventListener("click", () => {
+  const isLiked = !detailRecommendBtn.classList.contains("is-liked");
+  applyDetailRecommendation(isLiked);
+  saveDetailRecommendation(isLiked).catch(() => {
+    applyDetailRecommendation(storedDetailRecommendation(detailState.characterKey || detailState.characterId), { persist: false });
+  });
+});
+
+window.addEventListener("popstate", (e) => {
+  if (e.state?.detailId) {
+    openDetailOverlay(e.state.detailId);
+  } else if (!detailOverlay?.hidden) {
+    closeDetailOverlay();
+  }
+});

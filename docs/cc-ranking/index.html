@@ -8,9 +8,34 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=20260511-tier-header-stack">
+    <link rel="stylesheet" href="styles.css?v=20260514-honor-exit">
   </head>
   <body>
+
+  <nav class="site-nav" aria-label="페이지 내비게이션">
+    <div class="site-nav-inner">
+      <a class="site-nav-brand" href="index.html" aria-label="Crystalline Conflict Rankings 홈">
+        <span>CC Rankings</span>
+      </a>
+      <div class="site-nav-links" aria-label="페이지 섹션">
+        <a href="#hall">Hall</a>
+        <a href="#ranking">Ranking</a>
+        <a href="https://www.ff14.co.kr/ranking/crystallineconflict" target="_blank" rel="noopener noreferrer">Official</a>
+      </div>
+      <section class="snapshot-nav" aria-label="스냅샷 이동">
+        <div class="snapshot-control" role="group" aria-label="스냅샷 기준 시점과 이동">
+          <div class="snapshot-select-wrap">
+            <span>Snapshot</span>
+            <select id="snapshotSelect" aria-label="랭킹 기준 시점"></select>
+          </div>
+          <div class="snapshot-stepper" role="group" aria-label="이전/다음 스냅샷">
+            <button id="prevSnapshot" class="nav-button" type="button">이전</button>
+            <button id="nextSnapshot" class="nav-button" type="button">다음</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </nav>
 
   <div class="page">
 
@@ -22,7 +47,6 @@
       </div>
       <div class="top-meta">
         <span class="live-chip">LIVE · S<span id="seasonBadge">-</span></span>
-        <span class="season-chip">PLAYERS&nbsp;<strong id="totalMeta">-</strong></span>
       </div>
       <div class="topbar-actions">
         <button id="themeToggle" class="icon-btn" type="button" aria-label="테마 변경" title="테마 변경">
@@ -42,28 +66,35 @@
       <div class="kpi">
         <span class="kpi-label">신규 진입</span>
         <span class="kpi-value" id="kpiNewEntries">-<span class="unit">명</span></span>
-        <span class="kpi-foot">Top100 신규 진입 유저 수</span>
+        <span class="kpi-foot">현재 표시 공식 랭킹 신규 진입</span>
       </div>
       <div class="kpi">
         <span class="kpi-label">승리 증가</span>
         <span class="kpi-value" id="kpiWinGain">-<span class="unit">승</span></span>
-        <span class="kpi-foot">Top100 합계</span>
+        <span class="kpi-foot">현재 표시 공식 랭킹 합계</span>
       </div>
     </section>
     <p class="kpi-note">
       스냅샷 <strong id="kpiSnapshots">-</strong>개 · <span id="kpiSnapshotFoot">-</span> · 기준 <span id="snapshotMeta">-</span>
     </p>
-
-    <!-- ─── SNAPSHOT NAV ─────────────────────────────────────── -->
-    <section class="snapshot-nav" aria-label="스냅샷 이동">
-      <div class="snapshot-control" role="group" aria-label="스냅샷 기준 시점과 이동">
-        <div class="snapshot-select-wrap">
-          <span>기준 시점</span>
-          <select id="snapshotSelect" aria-label="랭킹 기준 시점"></select>
+    <section class="tier-heatmap" aria-label="티어별 승리 증가 히트맵">
+      <div class="tier-heatmap-head">
+        <div>
+          <h2>Tier Win Gain</h2>
+          <p>ALL Top100과 티어별 Top10의 날짜별 승리 증가 합계</p>
         </div>
-        <div class="snapshot-stepper" role="group" aria-label="이전/다음 스냅샷">
-          <button id="prevSnapshot" class="nav-button" type="button">이전</button>
-          <button id="nextSnapshot" class="nav-button" type="button">다음</button>
+        <div class="tier-heatmap-actions">
+          <button id="tierHeatmapPrev" class="heatmap-step" type="button" aria-label="이전 날짜 보기" title="이전 날짜 보기">이전</button>
+          <span id="tierHeatmapMeta">-</span>
+          <button id="tierHeatmapNext" class="heatmap-step" type="button" aria-label="다음 날짜 보기" title="다음 날짜 보기">다음</button>
+        </div>
+      </div>
+      <div class="tier-heatmap-scroll">
+        <div class="tier-heatmap-body">
+          <div id="tierHeatmapLabels" class="tier-heatmap-labels" aria-hidden="true"></div>
+          <div class="tier-heatmap-canvas-wrap">
+            <canvas id="tierHeatmap" aria-label="날짜별 티어 승리 증가 히트맵"></canvas>
+          </div>
         </div>
       </div>
     </section>
@@ -84,7 +115,7 @@
     </section>
 
     <!-- ─── HONOR GRID (Top-10) ─────────────────────────────── -->
-    <div class="section-head">
+    <div class="section-head" id="hall">
       <h2>Hall of Crystal</h2>
       <div class="honor-tabs" id="honorTabs" role="tablist" aria-label="랭킹 종류">
         <button class="honor-tab" data-mode="rank" role="tab" type="button">상위 랭크</button>
@@ -101,7 +132,7 @@
     </section>
 
     <!-- ─── FULL RANKING ─────────────────────────────────────── -->
-    <div class="section-head" style="margin-top:28px">
+    <div class="section-head" id="ranking" style="margin-top:28px">
       <h2>Full Ranking</h2>
       <span class="section-meta" id="entryCount"></span>
     </div>
@@ -115,7 +146,7 @@
       <button class="icon-btn filter-btn" id="filterToggle" type="button" aria-expanded="false" aria-controls="rankingFilters" aria-label="필터 열기" title="필터 열기">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M3 5h18l-6.8 7.7V18l-4.4 2.6v-7L3 5z"/></svg>
       </button>
-      <div id="rankingFilters" class="ranking-filters" hidden>
+      <div id="rankingFilters" class="ranking-filters">
         <label>
           <span>서버</span>
           <select id="serverFilterInput">
@@ -133,6 +164,13 @@
         <label>
           <span>최근</span>
           <input id="recentDaysInput" type="number" inputmode="numeric" min="1" step="1" placeholder="N일">
+        </label>
+        <label>
+          <span>신규진입</span>
+          <span class="switch-field switch-field-plain">
+            <input id="newUserFilterInput" type="checkbox" aria-label="신규진입만 보기">
+            <span class="switch-track" aria-hidden="true"></span>
+          </span>
         </label>
         <button id="filterReset" class="filter-reset" type="button">초기화</button>
       </div>
@@ -205,8 +243,72 @@
     </button>
   </div>
 
+  <!-- ─── DETAIL OVERLAY ──────────────────────────────────── -->
+  <div id="detailOverlay" class="detail-overlay" aria-modal="true" role="dialog" aria-label="캐릭터 상세" hidden>
+    <div class="page">
+      <header class="topbar">
+        <div class="topbar-actions">
+          <button id="detailBackBtn" class="icon-btn" type="button" aria-label="랭킹으로 돌아가기" title="돌아가기">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+          </button>
+        </div>
+      </header>
+      <main class="details-layout">
+        <header class="details-hero">
+          <div class="details-hero-info">
+            <span class="eyebrow">FFXIV KR PvP Archive</span>
+            <div class="title-row">
+              <h1 id="detailOverlayTitle">Character Details</h1>
+              <span id="detailOverlaySeasonBadge" class="season-badge">Season -</span>
+              <button id="detailRecommendBtn" class="recommend-button" type="button" aria-pressed="false" aria-label="이 플레이어에게 따봉 날리기" title="이 플레이어에게 따봉 날리기">
+                <span class="recommend-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"></path></svg>
+                </span>
+                <span id="detailRecommendCount" class="recommend-count" aria-hidden="true">-</span>
+              </button>
+            </div>
+            <p id="detailOverlayMeta" class="meta-line">캐릭터 기록을 불러오는 중</p>
+          </div>
+          <div id="detailOverlaySummary" class="details-summary">
+            <div class="details-stat-grid" aria-hidden="true">
+              <div><span class="skeleton-line skeleton-banner-label"></span><strong><span class="skeleton-line skeleton-banner-value"></span></strong></div>
+              <div><span class="skeleton-line skeleton-banner-label"></span><strong><span class="skeleton-line skeleton-banner-value"></span></strong></div>
+              <div><span class="skeleton-line skeleton-banner-label"></span><strong><span class="skeleton-line skeleton-banner-value"></span></strong></div>
+              <div><span class="skeleton-line skeleton-banner-label"></span><strong><span class="skeleton-line skeleton-banner-value"></span></strong></div>
+              <div><span class="skeleton-line skeleton-banner-label"></span><strong><span class="skeleton-line skeleton-banner-value"></span></strong></div>
+              <div><span class="skeleton-line skeleton-banner-label"></span><strong><span class="skeleton-line skeleton-banner-value"></span></strong></div>
+            </div>
+          </div>
+        </header>
+        <div class="details-dashboard">
+          <section class="details-graph-panel" aria-label="순위 그래프">
+            <div class="chart-container">
+              <canvas id="detailOverlayChart"></canvas>
+            </div>
+          </section>
+          <section class="panel details-history-panel">
+            <div class="panel-head">
+              <h2>스냅샷 기록</h2>
+              <span id="detailOverlayHistoryCount">-</span>
+            </div>
+            <div class="details-history-wrap">
+              <table>
+                <thead><tr><th>기준일</th><th>닉네임</th><th>순위</th><th>티어</th><th>평점</th><th>승리</th><th>변동</th></tr></thead>
+                <tbody id="detailOverlayHistoryRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </main>
+      <footer class="site-footer">
+        <span>FFXIV KR · PvP Archive · Made by <strong>Caitsith@모그리</strong></span>
+        <a href="mailto:yeol@kstr.dev">yeol@kstr.dev</a>
+      </footer>
+    </div>
+  </div>
+
   <script src="chart.umd.min.js"></script>
   <script src="config.js?v=20260505-perfect-scrollbars"></script>
-  <script src="app.js?v=20260511-tier-aura-all"></script>
+  <script src="app.js?v=20260514-honor-exit"></script>
   </body>
 </html>
