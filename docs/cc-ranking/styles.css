@@ -270,6 +270,13 @@ html,
 body {
   overflow-x: hidden;
 }
+@supports (-webkit-touch-callout: none) {
+  html,
+  body {
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+  }
+}
 h1,
 h2,
 p {
@@ -278,11 +285,17 @@ p {
 html {
   scroll-behavior: smooth;
 }
+@supports (-webkit-touch-callout: none) {
+  html {
+    height: -webkit-fill-available;
+  }
+}
 
 /* ─── Base ───────────────────────────────────────────────── */
 body {
   margin: 0;
   min-width: 320px;
+  min-height: 100vh;
   background: var(--page-bg);
   background-attachment: fixed;
   background-color: var(--bg-deep);
@@ -292,10 +305,15 @@ body {
   -webkit-user-select: none;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  overscroll-behavior-x: none;
   transition:
     background-color 360ms ease,
     color 220ms ease;
+}
+@supports (-webkit-touch-callout: none) {
+  body {
+    min-height: -webkit-fill-available;
+    overscroll-behavior: none;
+  }
 }
 
 a {
@@ -1149,7 +1167,8 @@ h2 {
 }
 .tier-heatmap-scroll {
   overflow-x: auto;
-  overscroll-behavior-x: contain;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 .tier-heatmap-body {
   display: grid;
@@ -2419,12 +2438,12 @@ button:disabled {
   max-height: calc(100vh - 140px);
   overflow: auto;
   overscroll-behavior: contain;
-  touch-action: pan-x pan-y;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
 }
-@media (pointer: coarse) {
+@media (pointer: coarse), (hover: none) {
   .table-wrap {
-    touch-action: none;
+    /* touch-action remains pan-x pan-y to allow axis locking via JS by toggling overflow */
   }
 }
 table {
@@ -3069,6 +3088,7 @@ tr.focus-flash td {
   background-attachment: fixed;
   overflow-y: auto;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   translate: 100% 0;
   visibility: hidden;
   transition:
@@ -3222,6 +3242,8 @@ tr.focus-flash td {
   flex: 1 1 0;
   max-height: 400px;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 .details-history-wrap table {
   min-width: 720px;

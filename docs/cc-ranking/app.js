@@ -2758,10 +2758,8 @@ function installDirectionalTableScroll() {
 
   let startX = 0;
   let startY = 0;
-  let startScrollLeft = 0;
-  let startScrollTop = 0;
   let lockedAxis = "";
-  const threshold = 8;
+  const threshold = 12;
 
   tableWrap.addEventListener("touchstart", (event) => {
     if (event.touches.length !== 1) {
@@ -2771,36 +2769,49 @@ function installDirectionalTableScroll() {
     const touch = event.touches[0];
     startX = touch.clientX;
     startY = touch.clientY;
-    startScrollLeft = tableWrap.scrollLeft;
-    startScrollTop = tableWrap.scrollTop;
     lockedAxis = "";
+    // Reset overflow to allow both for the first move
+    tableWrap.style.overflowX = "auto";
+    tableWrap.style.overflowY = "auto";
   }, { passive: true });
 
   tableWrap.addEventListener("touchmove", (event) => {
-    if (event.touches.length !== 1) return;
+    if (event.touches.length !== 1 || !startX) return;
+
     const touch = event.touches[0];
     const dx = touch.clientX - startX;
     const dy = touch.clientY - startY;
+
     if (!lockedAxis) {
-      if (Math.max(Math.abs(dx), Math.abs(dy)) < threshold) return;
-      lockedAxis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
-    }
+      const adx = Math.abs(dx);
+      const ady = Math.abs(dy);
+      if (adx < threshold && ady < threshold) return;
 
-    event.preventDefault();
-    if (lockedAxis === "x") {
-      tableWrap.scrollLeft = startScrollLeft - dx;
-    } else {
-      tableWrap.scrollTop = startScrollTop - dy;
+      lockedAxis = adx > ady ? "x" : "y";
+      
+      if (lockedAxis === "x") {
+        tableWrap.style.overflowY = "hidden";
+        tableWrap.style.overflowX = "auto";
+      } else {
+        tableWrap.style.overflowX = "hidden";
+        tableWrap.style.overflowY = "auto";
+      }
     }
-  }, { passive: false });
-
-  tableWrap.addEventListener("touchend", () => {
-    lockedAxis = "";
   }, { passive: true });
 
-  tableWrap.addEventListener("touchcancel", () => {
+  const unlock = () => {
     lockedAxis = "";
-  }, { passive: true });
+    startX = 0;
+    startY = 0;
+    // Delay restoring overflow slightly to prevent jitter
+    window.requestAnimationFrame(() => {
+      tableWrap.style.overflowX = "auto";
+      tableWrap.style.overflowY = "auto";
+    });
+  };
+
+  tableWrap.addEventListener("touchend", unlock, { passive: true });
+  tableWrap.addEventListener("touchcancel", unlock, { passive: true });
 }
 
 sortHeaders.forEach((header) => {
