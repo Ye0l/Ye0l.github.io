@@ -48,6 +48,16 @@ const projectHeart = document.querySelector("#projectHeart");
 const projectHeartCount = document.querySelector("#projectHeartCount");
 const jumpTop = document.querySelector("#jumpTop");
 const jumpBottom = document.querySelector("#jumpBottom");
+const officialLink = document.querySelector("#officialLink");
+const confirmModal = document.querySelector("#confirmModal");
+const confirmOk = document.querySelector("#confirmOk");
+const confirmCancel = document.querySelector("#confirmCancel");
+const openSnapshotModal = document.querySelector("#openSnapshotModal");
+const closeSnapshotModal = document.querySelector("#closeSnapshotModal");
+const snapshotModal = document.querySelector("#snapshotModal");
+const snapshotSelectMobile = document.querySelector("#snapshotSelectMobile");
+const prevSnapshotMobile = document.querySelector("#prevSnapshotMobile");
+const nextSnapshotMobile = document.querySelector("#nextSnapshotMobile");
 const canvas = document.querySelector("#rankChart");
 const ctx = canvas.getContext("2d");
 const tierHeatmapCtx = tierHeatmap?.getContext("2d");
@@ -1027,8 +1037,10 @@ async function loadSnapshots() {
   snapshotSelect.innerHTML = snapshots.map((snapshot, index) => `
     <option value="${snapshot.id}">${escapeHtml(formatSnapshotDate(snapshot.source_time_text || snapshot.scraped_at || `Snapshot ${snapshot.id}`))}</option>
   `).join("");
+  if (snapshotSelectMobile) snapshotSelectMobile.innerHTML = snapshotSelect.innerHTML;
   if (snapshots.length === 0) {
     snapshotSelect.innerHTML = `<option>저장된 데이터 없음</option>`;
+    if (snapshotSelectMobile) snapshotSelectMobile.innerHTML = snapshotSelect.innerHTML;
     snapshotSelect.disabled = true;
     prevSnapshot.disabled = true;
     nextSnapshot.disabled = true;
@@ -1291,13 +1303,13 @@ function scrollRankingIntoView(key) {
 }
 
 function scrollDetailIntoView() {
-  const target = chartContainer || detailPanel;
+  const target = document.querySelector("#ranking") || chartContainer || detailPanel;
   if (!target) return;
   window.requestAnimationFrame(() => {
-    target.scrollIntoView({
+    const top = target.getBoundingClientRect().top + window.pageYOffset - 12;
+    window.scrollTo({
+      top,
       behavior: prefersReducedMotion() ? "auto" : "smooth",
-      block: "start",
-      inline: "nearest",
     });
   });
 }
@@ -2620,7 +2632,96 @@ projectHeart.addEventListener("click", () => {
 jumpTop?.addEventListener("click", () => scrollPageToEdge("top"));
 jumpBottom?.addEventListener("click", () => scrollPageToEdge("bottom"));
 
-searchInput.addEventListener("input", () => {
+function openModal(modal) {
+  if (!modal) return;
+  modal.classList.add("is-active");
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function closeModal(modal) {
+  if (!modal) return;
+  modal.classList.remove("is-active");
+  modal.setAttribute("aria-hidden", "true");
+}
+
+officialLink?.addEventListener("click", (event) => {
+  event.preventDefault();
+  openModal(confirmModal);
+});
+
+confirmOk?.addEventListener("click", () => {
+  closeModal(confirmModal);
+  if (officialLink) {
+    window.open(officialLink.href, "_blank", "noopener,noreferrer");
+  }
+});
+
+confirmCancel?.addEventListener("click", () => {
+  closeModal(confirmModal);
+});
+
+confirmModal?.addEventListener("click", (event) => {
+  if (event.target === confirmModal) {
+    closeModal(confirmModal);
+  }
+});
+
+openSnapshotModal?.addEventListener("click", () => {
+  openModal(snapshotModal);
+  syncSnapshotControls(true);
+});
+
+closeSnapshotModal?.addEventListener("click", () => {
+  closeModal(snapshotModal);
+});
+
+snapshotModal?.addEventListener("click", (event) => {
+  if (event.target === snapshotModal) {
+    closeModal(snapshotModal);
+  }
+});
+function syncSnapshotControls(toMobile = true) {
+  if (toMobile && snapshotSelect && snapshotSelectMobile) {
+    snapshotSelectMobile.value = snapshotSelect.value;
+    updateSnapshotModalNav();
+  } else if (!toMobile && snapshotSelect && snapshotSelectMobile) {
+    snapshotSelect.value = snapshotSelectMobile.value;
+    const event = new Event("change");
+    snapshotSelect.dispatchEvent(event);
+  }
+}
+
+function updateSnapshotModalNav() {
+  if (!prevSnapshotMobile || !nextSnapshotMobile) return;
+  prevSnapshotMobile.disabled = currentSnapshotIndex < 0 || currentSnapshotIndex >= snapshots.length - 1;
+  nextSnapshotMobile.disabled = currentSnapshotIndex <= 0;
+}
+
+snapshotSelectMobile?.addEventListener("change", () => {
+  syncSnapshotControls(false);
+});
+
+prevSnapshotMobile?.addEventListener("click", () => {
+  if (currentSnapshotIndex >= 0 && currentSnapshotIndex < snapshots.length - 1) {
+    const nextId = snapshots[currentSnapshotIndex + 1].id;
+    loadSnapshot(nextId).then(() => {
+      syncSnapshotControls(true);
+    }).catch((error) => {
+      snapshotMeta.textContent = error.message;
+    });
+  }
+});
+
+nextSnapshotMobile?.addEventListener("click", () => {
+  if (currentSnapshotIndex > 0) {
+    const prevId = snapshots[currentSnapshotIndex - 1].id;
+    loadSnapshot(prevId).then(() => {
+      syncSnapshotControls(true);
+    }).catch((error) => {
+      snapshotMeta.textContent = error.message;
+    });
+  }
+});searchInput.addEventListener("input", () => {
   window.clearTimeout(searchTimer);
   searchTimer = window.setTimeout(() => renderRankingRows(), 120);
 });

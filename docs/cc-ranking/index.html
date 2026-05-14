@@ -1,314 +1,661 @@
 <!doctype html>
 <html lang="ko">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CC Ranking — Crystalline Conflict</title>
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=20260514-honor-exit">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=20260514-light-theme-modal-fix-v5" />
   </head>
   <body>
-
-  <nav class="site-nav" aria-label="페이지 내비게이션">
-    <div class="site-nav-inner">
-      <a class="site-nav-brand" href="index.html" aria-label="Crystalline Conflict Rankings 홈">
-        <span>CC Rankings</span>
-      </a>
-      <div class="site-nav-links" aria-label="페이지 섹션">
-        <a href="#hall">Hall</a>
-        <a href="#ranking">Ranking</a>
-        <a href="https://www.ff14.co.kr/ranking/crystallineconflict" target="_blank" rel="noopener noreferrer">Official</a>
-      </div>
-      <section class="snapshot-nav" aria-label="스냅샷 이동">
-        <div class="snapshot-control" role="group" aria-label="스냅샷 기준 시점과 이동">
-          <div class="snapshot-select-wrap">
-            <span>Snapshot</span>
-            <select id="snapshotSelect" aria-label="랭킹 기준 시점"></select>
+    <nav class="site-nav" aria-label="페이지 내비게이션">
+      <div class="site-nav-inner">
+        <a class="site-nav-brand" href="index.html" aria-label="Crystalline Conflict Rankings 홈">
+          <span>CC Rankings</span>
+        </a>
+        <div class="site-nav-links" aria-label="페이지 섹션">
+          <div class="nav-group-main">
+            <a href="#hall" title="Hall of Crystal" aria-label="Hall of Crystal">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              <span class="nav-text">Hall</span>
+            </a>
+            <a href="#ranking" title="Ranking" aria-label="Ranking">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+              <span class="nav-text">Ranking</span>
+            </a>
+            <a id="officialLink" href="https://www.ff14.co.kr/ranking/crystallineconflict" target="_blank" rel="noopener noreferrer" title="Official" aria-label="Official">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              <span class="nav-text">Official</span>
+            </a>
+            <button id="openSnapshotModal" class="nav-button mobile-only" type="button" title="스냅샷 선택" aria-label="스냅샷 선택">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </button>
           </div>
-          <div class="snapshot-stepper" role="group" aria-label="이전/다음 스냅샷">
-            <button id="prevSnapshot" class="nav-button" type="button">이전</button>
-            <button id="nextSnapshot" class="nav-button" type="button">다음</button>
-          </div>
-        </div>
-      </section>
-    </div>
-  </nav>
-
-  <div class="page">
-
-    <!-- ─── TOP BAR ─────────────────────────────────────────── -->
-    <header class="topbar">
-      <div class="topbar-copy">
-        <span class="eyebrow">FFXIV KR · PvP Archive</span>
-        <h1>Crystalline <em>Conflict</em></h1>
-      </div>
-      <div class="top-meta">
-        <span class="live-chip">LIVE · S<span id="seasonBadge">-</span></span>
-      </div>
-      <div class="topbar-actions">
-        <button id="themeToggle" class="icon-btn" type="button" aria-label="테마 변경" title="테마 변경">
-          <span id="themeIcon" aria-hidden="true">☾</span>
-        </button>
-        <button id="projectHeart" class="icon-btn heart-icon-btn" type="button" aria-pressed="false" aria-label="프로젝트가 마음에 들었다면 눌러주세요" title="프로젝트가 마음에 들었다면 눌러주세요">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-          </svg>
-          <span id="projectHeartCount" class="heart-count" aria-hidden="true">-</span>
-        </button>
-      </div>
-    </header>
-
-    <!-- ─── KPI STRIP ───────────────────────────────────────── -->
-    <section class="kpis" aria-label="랭킹 요약">
-      <div class="kpi">
-        <span class="kpi-label">신규 진입</span>
-        <span class="kpi-value" id="kpiNewEntries">-<span class="unit">명</span></span>
-        <span class="kpi-foot">현재 표시 공식 랭킹 신규 진입</span>
-      </div>
-      <div class="kpi">
-        <span class="kpi-label">승리 증가</span>
-        <span class="kpi-value" id="kpiWinGain">-<span class="unit">승</span></span>
-        <span class="kpi-foot">현재 표시 공식 랭킹 합계</span>
-      </div>
-    </section>
-    <p class="kpi-note">
-      스냅샷 <strong id="kpiSnapshots">-</strong>개 · <span id="kpiSnapshotFoot">-</span> · 기준 <span id="snapshotMeta">-</span>
-    </p>
-    <section class="tier-heatmap" aria-label="티어별 승리 증가 히트맵">
-      <div class="tier-heatmap-head">
-        <div>
-          <h2>Tier Win Gain</h2>
-          <p>ALL Top100과 티어별 Top10의 날짜별 승리 증가 합계</p>
-        </div>
-        <div class="tier-heatmap-actions">
-          <button id="tierHeatmapPrev" class="heatmap-step" type="button" aria-label="이전 날짜 보기" title="이전 날짜 보기">이전</button>
-          <span id="tierHeatmapMeta">-</span>
-          <button id="tierHeatmapNext" class="heatmap-step" type="button" aria-label="다음 날짜 보기" title="다음 날짜 보기">다음</button>
-        </div>
-      </div>
-      <div class="tier-heatmap-scroll">
-        <div class="tier-heatmap-body">
-          <div id="tierHeatmapLabels" class="tier-heatmap-labels" aria-hidden="true"></div>
-          <div class="tier-heatmap-canvas-wrap">
-            <canvas id="tierHeatmap" aria-label="날짜별 티어 승리 증가 히트맵"></canvas>
+          <div class="nav-group-jump mobile-only">
+            <button id="jumpTop" class="nav-button jump-btn" type="button" aria-label="맨 위로 이동" title="맨 위로 이동">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+            </button>
+            <button id="jumpBottom" class="nav-button jump-btn" type="button" aria-label="맨 아래로 이동" title="맨 아래로 이동">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
           </div>
         </div>
-      </div>
-    </section>
-
-    <!-- ─── MAP ROTATION ─────────────────────────────────────── -->
-    <section class="map-rotation" style="display: none;" aria-label="현재 맵 로테이션">
-      <div>
-        <span class="map-label">현재 맵</span>
-        <strong id="currentMapName">불러오는 중</strong>
-        <span id="currentMapTime">-</span>
-      </div>
-      <div>
-        <span class="map-label">다음 맵</span>
-        <strong id="nextMapName">-</strong>
-        <span id="nextMapTime">-</span>
-      </div>
-      <a href="https://cc.shilin.net/" target="_blank" rel="noopener noreferrer">source</a>
-    </section>
-
-    <!-- ─── HONOR GRID (Top-10) ─────────────────────────────── -->
-    <div class="section-head" id="hall">
-      <h2>Hall of Crystal</h2>
-      <div class="honor-tabs" id="honorTabs" role="tablist" aria-label="랭킹 종류">
-        <button class="honor-tab" data-mode="rank" role="tab" type="button">상위 랭크</button>
-        <button class="honor-tab" data-mode="wins" role="tab" type="button">최다 승리</button>
-        <button class="honor-tab" data-mode="rise" role="tab" type="button">최다 상승</button>
-      </div>
-      <div class="honor-rotate" aria-label="Hall of Crystal 자동 전환">
-        <span class="honor-progress" id="honorMeta" aria-hidden="true"><span></span></span>
-        <button class="honor-rotate-toggle" id="honorRotateToggle" type="button" data-state="pause" aria-pressed="false" aria-label="자동 전환 일시정지" title="자동 전환 일시정지"></button>
-      </div>
-    </div>
-    <section class="honor-grid" id="honorGrid" aria-label="상위 10인">
-      <!-- JS populates this -->
-    </section>
-
-    <!-- ─── FULL RANKING ─────────────────────────────────────── -->
-    <div class="section-head" id="ranking" style="margin-top:28px">
-      <h2>Full Ranking</h2>
-      <span class="section-meta" id="entryCount"></span>
-    </div>
-
-    <!-- ─── FILTER BAR ────────────────────────────────────────── -->
-    <div class="filter-bar">
-      <div class="search-wrap grow">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input class="f-input" id="searchInput" type="search" placeholder="캐릭터명 검색" autocomplete="off">
-      </div>
-      <button class="icon-btn filter-btn" id="filterToggle" type="button" aria-expanded="false" aria-controls="rankingFilters" aria-label="필터 열기" title="필터 열기">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M3 5h18l-6.8 7.7V18l-4.4 2.6v-7L3 5z"/></svg>
-      </button>
-      <div id="rankingFilters" class="ranking-filters">
-        <label>
-          <span>서버</span>
-          <select id="serverFilterInput">
-            <option value="">전체 서버</option>
-          </select>
-        </label>
-        <label>
-          <span>닉네임</span>
-          <input id="nameFilterInput" type="text" inputmode="search" autocomplete="off" placeholder="캐릭터명">
-        </label>
-        <label>
-          <span>승수</span>
-          <input id="winsFilterInput" type="number" inputmode="numeric" min="0" step="1" placeholder="최소">
-        </label>
-        <label>
-          <span>최근</span>
-          <input id="recentDaysInput" type="number" inputmode="numeric" min="1" step="1" placeholder="N일">
-        </label>
-        <label>
-          <span>신규진입</span>
-          <span class="switch-field switch-field-plain">
-            <input id="newUserFilterInput" type="checkbox" aria-label="신규진입만 보기">
-            <span class="switch-track" aria-hidden="true"></span>
-          </span>
-        </label>
-        <button id="filterReset" class="filter-reset" type="button">초기화</button>
-      </div>
-    </div>
-
-    <!-- ─── TABLE + DETAIL SPLIT ────────────────────────────── -->
-    <main class="layout">
-      <div class="ranking-column">
-        <section class="panel ranking-panel">
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th class="sortable-th" data-sort-key="rank" tabindex="0" aria-sort="ascending">Rank</th>
-                  <th class="sortable-th" data-sort-key="character" tabindex="0">Character</th>
-                  <th class="sortable-th" data-sort-key="server" tabindex="0">Server</th>
-                  <th class="sortable-th" data-sort-key="tier" tabindex="0">Tier</th>
-                  <th class="sortable-th" data-sort-key="tier_rank" tabindex="0">Tier Rank</th>
-                  <th class="sortable-th" data-sort-key="points" tabindex="0" style="text-align:right">Points</th>
-                  <th class="sortable-th" data-sort-key="wins" tabindex="0" style="text-align:right">Wins</th>
-                  <th class="sortable-th" data-sort-key="movement" tabindex="0">Move</th>
-                </tr>
-              </thead>
-              <tbody id="rankingRows"></tbody>
-            </table>
+        <section class="snapshot-nav desktop-only" aria-label="스냅샷 이동">
+          <div class="snapshot-control" role="group" aria-label="스냅샷 기준 시점과 이동">
+            <div class="snapshot-select-wrap">
+              <span>Snapshot</span>
+              <select id="snapshotSelect" aria-label="랭킹 기준 시점"></select>
+            </div>
+            <div class="snapshot-stepper" role="group" aria-label="이전/다음 스냅샷">
+              <button id="prevSnapshot" class="nav-button" type="button">이전</button>
+              <button id="nextSnapshot" class="nav-button" type="button">다음</button>
+            </div>
           </div>
         </section>
       </div>
+      </nav>
 
-      <aside class="panel detail-panel">
-        <div class="detail">
-          <div class="detail-head">
-            <span class="detail-eyebrow"><span class="dot"></span>Selected · Rank Trace</span>
-            <span class="detail-name" id="detailName">캐릭터를 선택하세요</span>
-            <div class="detail-sub" id="selectedCharacter"></div>
-          </div>
-          <div class="stat-grid">
-            <div class="cell"><div class="l">Points</div><div class="v" id="detailPoints">-</div></div>
-            <div class="cell"><div class="l">Wins</div><div class="v" id="detailWins">-</div></div>
-            <div class="cell"><div class="l">+Δ Today</div><div class="v" id="detailDelta">-</div></div>
-          </div>
-          <div class="chart-container">
-            <canvas id="rankChart"></canvas>
-          </div>
-          <div class="season-extremes" id="seasonExtremes" aria-label="이번 시즌 최고 최저 기록"></div>
+      <!-- ─── SNAPSHOT MODAL ─────────────────────────────────── -->
+      <div id="snapshotModal" class="modal-overlay" aria-hidden="true">
+      <div class="modal-glass">
+        <div class="modal-head">
+          <h3>스냅샷 선택</h3>
+          <button id="closeSnapshotModal" class="icon-btn" type="button" aria-label="닫기">&times;</button>
         </div>
-      </aside>
-    </main>
+        <div class="snapshot-modal-content">
+          <div class="modal-select">
+            <select id="snapshotSelectMobile" aria-label="랭킹 기준 시점"></select>
+          </div>
+          <div class="modal-stepper">
+            <button id="prevSnapshotMobile" class="modal-btn modal-btn--secondary" type="button">이전 스냅샷</button>
+            <button id="nextSnapshotMobile" class="modal-btn modal-btn--secondary" type="button">다음 스냅샷</button>
+          </div>
+        </div>
+      </div>
+      </div>
 
-    <!-- ─── FOOTER ─────────────────────────────────────────── -->
-    <footer class="site-footer" aria-label="제작자 정보">
-      <span>FFXIV KR · PvP Archive · Made by <strong>Caitsith@모그리</strong></span>
-      <a href="mailto:yeol@kstr.dev">yeol@kstr.dev</a>
-    </footer>
-
-  </div>
-
-  <div class="page-jump" aria-label="페이지 빠른 이동">
-    <button id="jumpTop" class="page-jump-btn" type="button" aria-label="맨 위로 이동" title="맨 위로 이동">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M12 19V5"></path>
-        <path d="M5 12l7-7 7 7"></path>
-      </svg>
-    </button>
-    <button id="jumpBottom" class="page-jump-btn" type="button" aria-label="맨 아래로 이동" title="맨 아래로 이동">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M12 5v14"></path>
-        <path d="M19 12l-7 7-7-7"></path>
-      </svg>
-    </button>
-  </div>
-
-  <!-- ─── DETAIL OVERLAY ──────────────────────────────────── -->
-  <div id="detailOverlay" class="detail-overlay" aria-modal="true" role="dialog" aria-label="캐릭터 상세" hidden>
     <div class="page">
+      <!-- ─── TOP BAR ─────────────────────────────────────────── -->
       <header class="topbar">
+        <div class="topbar-copy">
+          <span class="eyebrow">FFXIV KR · PvP Archive</span>
+          <h1>Crystalline <em>Conflict</em></h1>
+        </div>
+        <div class="top-meta">
+          <span class="live-chip">LIVE · S<span id="seasonBadge">-</span></span>
+        </div>
         <div class="topbar-actions">
-          <button id="detailBackBtn" class="icon-btn" type="button" aria-label="랭킹으로 돌아가기" title="돌아가기">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+          <button
+            id="themeToggle"
+            class="icon-btn"
+            type="button"
+            aria-label="테마 변경"
+            title="테마 변경"
+          >
+            <span id="themeIcon" aria-hidden="true">☾</span>
+          </button>
+          <button
+            id="projectHeart"
+            class="icon-btn heart-icon-btn"
+            type="button"
+            aria-pressed="false"
+            aria-label="프로젝트가 마음에 들었다면 눌러주세요"
+            title="프로젝트가 마음에 들었다면 눌러주세요"
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.9"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+              />
+            </svg>
+            <span id="projectHeartCount" class="heart-count" aria-hidden="true"
+              >-</span
+            >
           </button>
         </div>
       </header>
-      <main class="details-layout">
-        <header class="details-hero">
-          <div class="details-hero-info">
-            <span class="eyebrow">FFXIV KR PvP Archive</span>
-            <div class="title-row">
-              <h1 id="detailOverlayTitle">Character Details</h1>
-              <span id="detailOverlaySeasonBadge" class="season-badge">Season -</span>
-              <button id="detailRecommendBtn" class="recommend-button" type="button" aria-pressed="false" aria-label="이 플레이어에게 따봉 날리기" title="이 플레이어에게 따봉 날리기">
-                <span class="recommend-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" focusable="false"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"></path></svg>
-                </span>
-                <span id="detailRecommendCount" class="recommend-count" aria-hidden="true">-</span>
-              </button>
-            </div>
-            <p id="detailOverlayMeta" class="meta-line">캐릭터 기록을 불러오는 중</p>
+
+      <!-- ─── KPI STRIP ───────────────────────────────────────── -->
+      <section class="kpis" aria-label="랭킹 요약">
+        <div class="kpi">
+          <span class="kpi-label">신규 진입</span>
+          <span class="kpi-value" id="kpiNewEntries"
+            >-<span class="unit">명</span></span
+          >
+          <span class="kpi-foot">현재 표시 공식 랭킹 신규 진입</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">승리 증가</span>
+          <span class="kpi-value" id="kpiWinGain"
+            >-<span class="unit">승</span></span
+          >
+          <span class="kpi-foot">현재 표시 공식 랭킹 합계</span>
+        </div>
+      </section>
+      <p class="kpi-note">
+        스냅샷 <strong id="kpiSnapshots">-</strong>개 ·
+        <span id="kpiSnapshotFoot">-</span> · 기준
+        <span id="snapshotMeta">-</span>
+      </p>
+      <section class="tier-heatmap" aria-label="티어별 승리 증가 히트맵">
+        <div class="tier-heatmap-head">
+          <div>
+            <h2>Tier Win Gain</h2>
+            <p>ALL Top100과 티어별 Top10의 날짜별 승리 증가 합계</p>
           </div>
-          <div id="detailOverlaySummary" class="details-summary">
-            <div class="details-stat-grid" aria-hidden="true">
-              <div><span class="skeleton-line skeleton-banner-label"></span><strong><span class="skeleton-line skeleton-banner-value"></span></strong></div>
-              <div><span class="skeleton-line skeleton-banner-label"></span><strong><span class="skeleton-line skeleton-banner-value"></span></strong></div>
-              <div><span class="skeleton-line skeleton-banner-label"></span><strong><span class="skeleton-line skeleton-banner-value"></span></strong></div>
-              <div><span class="skeleton-line skeleton-banner-label"></span><strong><span class="skeleton-line skeleton-banner-value"></span></strong></div>
-              <div><span class="skeleton-line skeleton-banner-label"></span><strong><span class="skeleton-line skeleton-banner-value"></span></strong></div>
-              <div><span class="skeleton-line skeleton-banner-label"></span><strong><span class="skeleton-line skeleton-banner-value"></span></strong></div>
+          <div class="tier-heatmap-actions">
+            <button
+              id="tierHeatmapPrev"
+              class="heatmap-step"
+              type="button"
+              aria-label="이전 날짜 보기"
+              title="이전 날짜 보기"
+            >
+              이전
+            </button>
+            <span id="tierHeatmapMeta">-</span>
+            <button
+              id="tierHeatmapNext"
+              class="heatmap-step"
+              type="button"
+              aria-label="다음 날짜 보기"
+              title="다음 날짜 보기"
+            >
+              다음
+            </button>
+          </div>
+        </div>
+        <div class="tier-heatmap-scroll">
+          <div class="tier-heatmap-body">
+            <div
+              id="tierHeatmapLabels"
+              class="tier-heatmap-labels"
+              aria-hidden="true"
+            ></div>
+            <div class="tier-heatmap-canvas-wrap">
+              <canvas
+                id="tierHeatmap"
+                aria-label="날짜별 티어 승리 증가 히트맵"
+              ></canvas>
             </div>
           </div>
-        </header>
-        <div class="details-dashboard">
-          <section class="details-graph-panel" aria-label="순위 그래프">
-            <div class="chart-container">
-              <canvas id="detailOverlayChart"></canvas>
-            </div>
-          </section>
-          <section class="panel details-history-panel">
-            <div class="panel-head">
-              <h2>스냅샷 기록</h2>
-              <span id="detailOverlayHistoryCount">-</span>
-            </div>
-            <div class="details-history-wrap">
+        </div>
+      </section>
+
+      <!-- ─── MAP ROTATION ─────────────────────────────────────── -->
+      <section
+        class="map-rotation"
+        style="display: none"
+        aria-label="현재 맵 로테이션"
+      >
+        <div>
+          <span class="map-label">현재 맵</span>
+          <strong id="currentMapName">불러오는 중</strong>
+          <span id="currentMapTime">-</span>
+        </div>
+        <div>
+          <span class="map-label">다음 맵</span>
+          <strong id="nextMapName">-</strong>
+          <span id="nextMapTime">-</span>
+        </div>
+        <a
+          href="https://cc.shilin.net/"
+          target="_blank"
+          rel="noopener noreferrer"
+          >source</a
+        >
+      </section>
+
+      <!-- ─── HONOR GRID (Top-10) ─────────────────────────────── -->
+      <div class="section-head" id="hall">
+        <h2>Hall of Crystal</h2>
+        <div
+          class="honor-tabs"
+          id="honorTabs"
+          role="tablist"
+          aria-label="랭킹 종류"
+        >
+          <button class="honor-tab" data-mode="rank" role="tab" type="button">
+            상위 랭크
+          </button>
+          <button class="honor-tab" data-mode="wins" role="tab" type="button">
+            최다 승리
+          </button>
+          <button class="honor-tab" data-mode="rise" role="tab" type="button">
+            최다 상승
+          </button>
+        </div>
+        <div class="honor-rotate" aria-label="Hall of Crystal 자동 전환">
+          <span class="honor-progress" id="honorMeta" aria-hidden="true"
+            ><span></span
+          ></span>
+          <button
+            class="honor-rotate-toggle"
+            id="honorRotateToggle"
+            type="button"
+            data-state="pause"
+            aria-pressed="false"
+            aria-label="자동 전환 일시정지"
+            title="자동 전환 일시정지"
+          ></button>
+        </div>
+      </div>
+      <section class="honor-grid" id="honorGrid" aria-label="상위 10인">
+        <!-- JS populates this -->
+      </section>
+
+      <!-- ─── FULL RANKING ─────────────────────────────────────── -->
+      <div class="section-head" id="ranking" style="margin-top: 28px">
+        <h2>Full Ranking</h2>
+        <span class="section-meta" id="entryCount"></span>
+      </div>
+
+      <!-- ─── FILTER BAR ────────────────────────────────────────── -->
+      <div class="filter-bar">
+        <div class="search-wrap grow">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="M21 21l-4.35-4.35" />
+          </svg>
+          <input
+            class="f-input"
+            id="searchInput"
+            type="search"
+            placeholder="캐릭터명 검색"
+            autocomplete="off"
+          />
+        </div>
+        <button
+          class="icon-btn filter-btn"
+          id="filterToggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="rankingFilters"
+          aria-label="필터 열기"
+          title="필터 열기"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="14"
+            height="14"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path d="M3 5h18l-6.8 7.7V18l-4.4 2.6v-7L3 5z" />
+          </svg>
+        </button>
+        <div id="rankingFilters" class="ranking-filters">
+          <label>
+            <span>서버</span>
+            <select id="serverFilterInput">
+              <option value="">전체 서버</option>
+            </select>
+          </label>
+          <label>
+            <span>닉네임</span>
+            <input
+              id="nameFilterInput"
+              type="text"
+              inputmode="search"
+              autocomplete="off"
+              placeholder="캐릭터명"
+            />
+          </label>
+          <label>
+            <span>승수</span>
+            <input
+              id="winsFilterInput"
+              type="number"
+              inputmode="numeric"
+              min="0"
+              step="1"
+              placeholder="최소"
+            />
+          </label>
+          <label>
+            <span>최근</span>
+            <input
+              id="recentDaysInput"
+              type="number"
+              inputmode="numeric"
+              min="1"
+              step="1"
+              placeholder="N일"
+            />
+          </label>
+          <label>
+            <span>신규진입</span>
+            <span class="switch-field switch-field-plain">
+              <input
+                id="newUserFilterInput"
+                type="checkbox"
+                aria-label="신규진입만 보기"
+              />
+              <span class="switch-track" aria-hidden="true"></span>
+            </span>
+          </label>
+          <button id="filterReset" class="filter-reset" type="button">
+            초기화
+          </button>
+        </div>
+      </div>
+
+      <!-- ─── TABLE + DETAIL SPLIT ────────────────────────────── -->
+      <main class="layout">
+        <div class="ranking-column">
+          <section class="panel ranking-panel">
+            <div class="table-wrap">
               <table>
-                <thead><tr><th>기준일</th><th>닉네임</th><th>순위</th><th>티어</th><th>평점</th><th>승리</th><th>변동</th></tr></thead>
-                <tbody id="detailOverlayHistoryRows"></tbody>
+                <thead>
+                  <tr>
+                    <th
+                      class="sortable-th"
+                      data-sort-key="rank"
+                      tabindex="0"
+                      aria-sort="ascending"
+                    >
+                      Rank
+                    </th>
+                    <th
+                      class="sortable-th"
+                      data-sort-key="character"
+                      tabindex="0"
+                    >
+                      Character
+                    </th>
+                    <th class="sortable-th" data-sort-key="server" tabindex="0">
+                      Server
+                    </th>
+                    <th class="sortable-th" data-sort-key="tier" tabindex="0">
+                      Tier
+                    </th>
+                    <th
+                      class="sortable-th"
+                      data-sort-key="tier_rank"
+                      tabindex="0"
+                    >
+                      Tier Rank
+                    </th>
+                    <th
+                      class="sortable-th"
+                      data-sort-key="points"
+                      tabindex="0"
+                      style="text-align: right"
+                    >
+                      Points
+                    </th>
+                    <th
+                      class="sortable-th"
+                      data-sort-key="wins"
+                      tabindex="0"
+                      style="text-align: right"
+                    >
+                      Wins
+                    </th>
+                    <th
+                      class="sortable-th"
+                      data-sort-key="movement"
+                      tabindex="0"
+                    >
+                      Move
+                    </th>
+                  </tr>
+                </thead>
+                <tbody id="rankingRows"></tbody>
               </table>
             </div>
           </section>
         </div>
+
+        <aside class="panel detail-panel">
+          <div class="detail">
+            <div class="detail-head">
+              <span class="detail-eyebrow"
+                ><span class="dot"></span>Selected · Rank Trace</span
+              >
+              <span class="detail-name" id="detailName"
+                >캐릭터를 선택하세요</span
+              >
+              <div class="detail-sub" id="selectedCharacter"></div>
+            </div>
+            <div class="stat-grid">
+              <div class="cell">
+                <div class="l">Points</div>
+                <div class="v" id="detailPoints">-</div>
+              </div>
+              <div class="cell">
+                <div class="l">Wins</div>
+                <div class="v" id="detailWins">-</div>
+              </div>
+              <div class="cell">
+                <div class="l">+Δ Today</div>
+                <div class="v" id="detailDelta">-</div>
+              </div>
+            </div>
+            <div class="chart-container">
+              <canvas id="rankChart"></canvas>
+            </div>
+            <div
+              class="season-extremes"
+              id="seasonExtremes"
+              aria-label="이번 시즌 최고 최저 기록"
+            ></div>
+          </div>
+        </aside>
       </main>
-      <footer class="site-footer">
-        <span>FFXIV KR · PvP Archive · Made by <strong>Caitsith@모그리</strong></span>
+
+      <!-- ─── FOOTER ─────────────────────────────────────────── -->
+      <footer class="site-footer" aria-label="제작자 정보">
+        <span
+          >FFXIV KR · PvP Archive · Made by
+          <strong>Caitsith@모그리</strong></span
+        >
         <a href="mailto:yeol@kstr.dev">yeol@kstr.dev</a>
       </footer>
     </div>
-  </div>
 
-  <script src="chart.umd.min.js"></script>
-  <script src="config.js?v=20260505-perfect-scrollbars"></script>
-  <script src="app.js?v=20260514-honor-exit"></script>
+    <!-- ─── DETAIL OVERLAY ──────────────────────────────────── -->
+    <div
+      id="detailOverlay"
+      class="detail-overlay"
+      aria-modal="true"
+      role="dialog"
+      aria-label="캐릭터 상세"
+      hidden
+    >
+      <div class="page">
+        <header class="topbar">
+          <div class="topbar-actions">
+            <button
+              id="detailBackBtn"
+              class="icon-btn"
+              type="button"
+              aria-label="랭킹으로 돌아가기"
+              title="돌아가기"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M19 12H5" />
+                <path d="M12 19l-7-7 7-7" />
+              </svg>
+            </button>
+          </div>
+        </header>
+        <main class="details-layout">
+          <header class="details-hero">
+            <div class="details-hero-info">
+              <span class="eyebrow">FFXIV KR PvP Archive</span>
+              <div class="title-row">
+                <h1 id="detailOverlayTitle">Character Details</h1>
+                <span id="detailOverlaySeasonBadge" class="season-badge"
+                  >Season -</span
+                >
+                <button
+                  id="detailRecommendBtn"
+                  class="recommend-button"
+                  type="button"
+                  aria-pressed="false"
+                  aria-label="이 플레이어에게 따봉 날리기"
+                  title="이 플레이어에게 따봉 날리기"
+                >
+                  <span class="recommend-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                      <path
+                        d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"
+                      ></path>
+                    </svg>
+                  </span>
+                  <span
+                    id="detailRecommendCount"
+                    class="recommend-count"
+                    aria-hidden="true"
+                    >-</span
+                  >
+                </button>
+              </div>
+              <p id="detailOverlayMeta" class="meta-line">
+                캐릭터 기록을 불러오는 중
+              </p>
+            </div>
+            <div id="detailOverlaySummary" class="details-summary">
+              <div class="details-stat-grid" aria-hidden="true">
+                <div>
+                  <span class="skeleton-line skeleton-banner-label"></span
+                  ><strong
+                    ><span class="skeleton-line skeleton-banner-value"></span
+                  ></strong>
+                </div>
+                <div>
+                  <span class="skeleton-line skeleton-banner-label"></span
+                  ><strong
+                    ><span class="skeleton-line skeleton-banner-value"></span
+                  ></strong>
+                </div>
+                <div>
+                  <span class="skeleton-line skeleton-banner-label"></span
+                  ><strong
+                    ><span class="skeleton-line skeleton-banner-value"></span
+                  ></strong>
+                </div>
+                <div>
+                  <span class="skeleton-line skeleton-banner-label"></span
+                  ><strong
+                    ><span class="skeleton-line skeleton-banner-value"></span
+                  ></strong>
+                </div>
+                <div>
+                  <span class="skeleton-line skeleton-banner-label"></span
+                  ><strong
+                    ><span class="skeleton-line skeleton-banner-value"></span
+                  ></strong>
+                </div>
+                <div>
+                  <span class="skeleton-line skeleton-banner-label"></span
+                  ><strong
+                    ><span class="skeleton-line skeleton-banner-value"></span
+                  ></strong>
+                </div>
+              </div>
+            </div>
+          </header>
+          <div class="details-dashboard">
+            <section class="details-graph-panel" aria-label="순위 그래프">
+              <div class="chart-container">
+                <canvas id="detailOverlayChart"></canvas>
+              </div>
+            </section>
+            <section class="panel details-history-panel">
+              <div class="panel-head">
+                <h2>스냅샷 기록</h2>
+                <span id="detailOverlayHistoryCount">-</span>
+              </div>
+              <div class="details-history-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>기준일</th>
+                      <th>닉네임</th>
+                      <th>순위</th>
+                      <th>티어</th>
+                      <th>평점</th>
+                      <th>승리</th>
+                      <th>변동</th>
+                    </tr>
+                  </thead>
+                  <tbody id="detailOverlayHistoryRows"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </main>
+        <footer class="site-footer">
+          <span
+            >FFXIV KR · PvP Archive · Made by
+            <strong>Caitsith@모그리</strong></span
+          >
+          <a href="mailto:yeol@kstr.dev">yeol@kstr.dev</a>
+        </footer>
+      </div>
+    </div>
+
+    <script src="chart.umd.min.js"></script>
+
+    <!-- ─── CONFIRMATION MODAL ─────────────────────────────── -->
+    <div id="confirmModal" class="modal-overlay" aria-hidden="true">
+      <div class="modal-glass">
+        <h3>공식 홈페이지 이동</h3>
+        <p>공식 랭킹 페이지로 이동하시겠습니까?<br />(새 창으로 열림)</p>
+        <div class="modal-actions">
+          <button
+            id="confirmCancel"
+            class="modal-btn modal-btn--cancel"
+            type="button"
+          >
+            취소
+          </button>
+          <button
+            id="confirmOk"
+            class="modal-btn modal-btn--confirm"
+            type="button"
+          >
+            이동하기
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="config.js?v=20260514-light-theme-modal-fix-v5"></script>
+    <script src="app.js?v=20260514-light-theme-modal-fix-v5"></script>
   </body>
 </html>
