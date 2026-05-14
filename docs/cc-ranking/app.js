@@ -2023,14 +2023,14 @@ function scheduleTierHeatmapRender(snapshot, entries, options = {}) {
     tierHeatmapMeta.textContent = "업데이트 중";
   }
   Promise.all([
-    loadStaticData(),
+    api(`/api/heatmap?season=${encodeURIComponent(snapshot.season || "")}`).catch(() => ({ snapshots: [], entries_by_snapshot: {} })),
     api("/api/season-periods").catch(() => ({ season_periods: [] })),
   ])
-    .then(([data, periodsPayload]) => {
+    .then(([heatmapData, periodsPayload]) => {
       if (requestToken !== heatmapRequestToken) return;
       renderTierHeatmap(snapshot, entries, {
-        ...data,
-        season_periods: periodsPayload.season_periods || data.season_periods || [],
+        ...heatmapData,
+        season_periods: periodsPayload.season_periods || heatmapData.season_periods || [],
       });
     })
     .catch(() => {
@@ -2468,14 +2468,17 @@ function buildTierHeatmapData(snapshot, currentEntries, seasonData) {
   const seasonSnapshots = snapshotSource
     .filter((item) => String(item.season ?? "") === String(snapshot.season ?? ""))
     .sort((a, b) => entryTimeMs(a) - entryTimeMs(b) || numberValue(a.id) - numberValue(b.id));
-  const sourceSnapshots = seasonSnapshots.length > 0 ? seasonSnapshots : [snapshot];
+  const currentInSource = seasonSnapshots.some((item) => String(item.id) === currentSnapshotId);
+  const sourceSnapshots = seasonSnapshots.length > 0
+    ? (currentInSource ? seasonSnapshots : [...seasonSnapshots, snapshot].sort((a, b) => entryTimeMs(a) - entryTimeMs(b) || numberValue(a.id) - numberValue(b.id)))
+    : [snapshot];
   const byDate = new Map();
   sourceSnapshots.forEach((item) => {
     const snapshotId = String(item.id);
     const entries = snapshotId === currentSnapshotId
       ? currentEntries
       : entriesBySnapshot[snapshotId] || [];
-    const values = tierWinGainValues(entries);
+    const values = (entries && !Array.isArray(entries)) ? entries : tierWinGainValues(entries);
     const fullDate = formatSnapshotDate(item.source_time_text || item.scraped_at || item.id);
     const existing = byDate.get(fullDate);
       if (existing) {
