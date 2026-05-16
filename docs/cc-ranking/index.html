@@ -8,14 +8,16 @@
     />
     <title>CC Ranking — Crystalline Conflict</title>
     <link rel="icon" type="image/svg+xml" href="/cc-ranking/assets/favicon-CrpnDPlO.svg" />
+    <link rel="manifest" href="/cc-ranking/manifest.webmanifest" />
+    <meta name="theme-color" content="#0b1020" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <script type="module" crossorigin src="/cc-ranking/assets/index-BHsaxNHE.js"></script>
-    <link rel="stylesheet" crossorigin href="/cc-ranking/assets/index-DjslY4mu.css">
+    <script type="module" crossorigin src="/cc-ranking/assets/index-QCKAy8pf.js"></script>
+    <link rel="stylesheet" crossorigin href="/cc-ranking/assets/index-CNZcsWu6.css">
   </head>
   <body>
     <nav class="site-nav" aria-label="페이지 내비게이션">
@@ -237,6 +239,14 @@
         </div>
         <div class="top-meta">
           <span class="live-chip">LIVE · S<span id="seasonBadge">-</span></span>
+          <button
+            id="installPwaButton"
+            class="install-pwa-chip"
+            type="button"
+            hidden
+          >
+            Install PWA
+          </button>
         </div>
         <div class="topbar-actions">
           <button
@@ -292,6 +302,25 @@
             >-<span class="unit">승</span></span
           >
           <span class="kpi-foot">현재 표시 공식 랭킹 합계</span>
+        </div>
+      </section>
+      <section class="rank-cuts" aria-label="랭크 달성 조건">
+        <div class="rank-cut">
+          <span class="kpi-label">1위 점수</span>
+          <span class="rank-cut-value" id="kpiRank1Cut"
+            >-<span class="unit">점</span></span
+          >
+          <span class="rank-cut-foot" id="kpiRank1CutFoot">현재 1위 기준</span>
+        </div>
+        <div class="rank-cut">
+          <span class="kpi-label">30위 컷</span>
+          <span class="rank-cut-value" id="kpiRank30Cut">-</span>
+          <span class="rank-cut-foot" id="kpiRank30CutFoot">30위 달성 조건</span>
+        </div>
+        <div class="rank-cut">
+          <span class="kpi-label">100위 컷</span>
+          <span class="rank-cut-value" id="kpiRank100Cut">-</span>
+          <span class="rank-cut-foot" id="kpiRank100CutFoot">100위 달성 조건</span>
         </div>
       </section>
       <p class="kpi-note">
@@ -822,6 +851,35 @@
             이동하기
           </button>
         </div>
+      </div>
+    </div>
+
+    <div id="installPwaModal" class="modal-overlay" aria-hidden="true">
+      <div class="modal-glass pwa-modal">
+        <h3>앱처럼 설치하기</h3>
+        <p>
+          홈 화면이나 작업 표시줄에서 바로 열 수 있습니다. 설치 후에도 같은
+          랭킹 데이터와 정적 fallback을 사용합니다.
+        </p>
+        <div class="modal-actions">
+          <button
+            id="installPwaCancel"
+            class="modal-btn modal-btn--cancel"
+            type="button"
+          >
+            닫기
+          </button>
+          <button
+            id="installPwaConfirm"
+            class="modal-btn modal-btn--confirm"
+            type="button"
+          >
+            설치
+          </button>
+        </div>
+        <small id="installPwaHint" class="pwa-modal-hint"
+          >브라우저가 설치를 지원하면 설치 창이 열립니다.</small
+        >
       </div>
     </div>
 
