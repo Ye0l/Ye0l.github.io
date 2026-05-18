@@ -16,8 +16,8 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <script type="module" crossorigin src="/cc-ranking/assets/index-DBvZCjZS.js"></script>
-    <link rel="stylesheet" crossorigin href="/cc-ranking/assets/index-CNZcsWu6.css">
+    <script type="module" crossorigin src="/cc-ranking/assets/index-C3w1_OjZ.js"></script>
+    <link rel="stylesheet" crossorigin href="/cc-ranking/assets/index-DOO1lZg-.css">
   </head>
   <body>
     <nav class="site-nav" aria-label="페이지 내비게이션">
@@ -68,6 +68,29 @@
                 <path d="M6 20v-4" />
               </svg>
               <span class="nav-text">Ranking</span>
+            </a>
+            <a
+              href="?magazine=1"
+              id="magazineLink"
+              title="Magazine"
+              aria-label="Magazine"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
+                <path d="M18 14h-8" />
+                <path d="M15 18h-5" />
+                <path d="M10 6h8v4h-8V6Z" />
+              </svg>
+              <span class="nav-text">Magazine</span>
             </a>
             <a
               id="officialLink"
@@ -681,6 +704,60 @@
         <span>Built by <strong>Caitsith@모그리</strong> · <a href="mailto:yeol@kstr.dev">yeol@kstr.dev</a></span>
         <span>UI &amp; UX Direction by <strong>고참@모그리</strong></span>
       </footer>
+    </div>
+
+    <!-- ─── MAGAZINE OVERLAY ──────────────────────────────────── -->
+    <div
+      id="magazineOverlay"
+      class="detail-overlay"
+      aria-modal="true"
+      role="dialog"
+      aria-label="매거진"
+      hidden
+    >
+      <div class="page">
+        <main class="details-layout">
+          <header class="details-hero">
+            <div class="details-hero-info">
+              <span class="eyebrow">FFXIV KR PvP Archive</span>
+              <div class="title-row">
+                <button
+                  id="magazineBackBtn"
+                  class="icon-btn"
+                  type="button"
+                  aria-label="랭킹으로 돌아가기"
+                  title="돌아가기"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M19 12H5" />
+                    <path d="M12 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <h1>Ranking Magazine</h1>
+              </div>
+            </div>
+          </header>
+          <div id="magazineContent">
+            <div class="cc-magazine">
+              <div class="cc-magazine__empty">매거진을 불러오는 중</div>
+            </div>
+          </div>
+        </main>
+        <footer class="site-footer">
+          <span>Built by <strong>Caitsith@모그리</strong> · <a href="mailto:yeol@kstr.dev">yeol@kstr.dev</a></span>
+          <span>UI &amp; UX Direction by <strong>고참@모그리</strong></span>
+        </footer>
+      </div>
     </div>
 
     <!-- ─── DETAIL OVERLAY ──────────────────────────────────── -->
