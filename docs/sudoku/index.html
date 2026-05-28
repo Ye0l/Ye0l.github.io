@@ -12,8 +12,8 @@
   <meta name="description" content="스도쿠 & 킬러 스도쿠 퍼즐 게임" />
   <link rel="apple-touch-icon" href="/sudoku/icons/icon-192.png" />
   <title>Sudoku</title>
-  <script type="module" crossorigin src="/sudoku/assets/index-CU8GQ6Ds.js"></script>
-  <link rel="stylesheet" crossorigin href="/sudoku/assets/index-DOERdmaH.css">
+  <script type="module" crossorigin src="/sudoku/assets/index-C6F8hULY.js"></script>
+  <link rel="stylesheet" crossorigin href="/sudoku/assets/index-BYwv8Gpk.css">
 <link rel="manifest" href="/sudoku/manifest.webmanifest"></head>
 <body>
   <div id="app">
@@ -236,15 +236,15 @@
 
       <!-- Number pad -->
       <div class="numpad">
-        <button class="num-btn" data-num="1">1<span class="num-count">9</span></button>
-        <button class="num-btn" data-num="2">2<span class="num-count">9</span></button>
-        <button class="num-btn" data-num="3">3<span class="num-count">9</span></button>
-        <button class="num-btn" data-num="4">4<span class="num-count">9</span></button>
-        <button class="num-btn" data-num="5">5<span class="num-count">9</span></button>
-        <button class="num-btn" data-num="6">6<span class="num-count">9</span></button>
-        <button class="num-btn" data-num="7">7<span class="num-count">9</span></button>
-        <button class="num-btn" data-num="8">8<span class="num-count">9</span></button>
-        <button class="num-btn" data-num="9">9<span class="num-count">9</span></button>
+        <button class="num-btn" data-num="1"><span class="num-btn-content"><span class="num-main">1</span><span class="num-count">9</span></span><span class="num-btn-bottom-spacer"></span></button>
+        <button class="num-btn" data-num="2"><span class="num-btn-content"><span class="num-main">2</span><span class="num-count">9</span></span><span class="num-btn-bottom-spacer"></span></button>
+        <button class="num-btn" data-num="3"><span class="num-btn-content"><span class="num-main">3</span><span class="num-count">9</span></span><span class="num-btn-bottom-spacer"></span></button>
+        <button class="num-btn" data-num="4"><span class="num-btn-content"><span class="num-main">4</span><span class="num-count">9</span></span><span class="num-btn-bottom-spacer"></span></button>
+        <button class="num-btn" data-num="5"><span class="num-btn-content"><span class="num-main">5</span><span class="num-count">9</span></span><span class="num-btn-bottom-spacer"></span></button>
+        <button class="num-btn" data-num="6"><span class="num-btn-content"><span class="num-main">6</span><span class="num-count">9</span></span><span class="num-btn-bottom-spacer"></span></button>
+        <button class="num-btn" data-num="7"><span class="num-btn-content"><span class="num-main">7</span><span class="num-count">9</span></span><span class="num-btn-bottom-spacer"></span></button>
+        <button class="num-btn" data-num="8"><span class="num-btn-content"><span class="num-main">8</span><span class="num-count">9</span></span><span class="num-btn-bottom-spacer"></span></button>
+        <button class="num-btn" data-num="9"><span class="num-btn-content"><span class="num-main">9</span><span class="num-count">9</span></span><span class="num-btn-bottom-spacer"></span></button>
       </div>
 
       <!-- Mobile portrait calc overlay (managed by JS) -->
@@ -336,6 +336,17 @@
           </div>
           <label class="toggle">
             <input type="checkbox" id="toggle-highlights" checked />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="settings-item">
+          <div class="settings-icon">힌</div>
+          <div class="settings-label">
+            <h4>힌트 버튼</h4>
+            <p>게임 화면에 힌트 버튼 표시</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="toggle-hint-button" checked />
             <span class="toggle-slider"></span>
           </label>
         </div>
