@@ -12,8 +12,8 @@
   <meta name="description" content="스도쿠 & 킬러 스도쿠 퍼즐 게임" />
   <link rel="apple-touch-icon" href="/sudoku/icons/icon-192.png" />
   <title>Sudoku</title>
-  <script type="module" crossorigin src="/sudoku/assets/index-BWvSc0HY.js"></script>
-  <link rel="stylesheet" crossorigin href="/sudoku/assets/index-CtpC44sk.css">
+  <script type="module" crossorigin src="/sudoku/assets/index-BfXb_DKA.js"></script>
+  <link rel="stylesheet" crossorigin href="/sudoku/assets/index-CWyPi8D9.css">
 <link rel="manifest" href="/sudoku/manifest.webmanifest"></head>
 <body>
   <div id="app">
@@ -453,17 +453,46 @@
           </div>
         </div>
 
+        <!-- Sync -->
+        <div class="section-label" style="margin-top:12px;">동기화</div>
+        <div class="settings-item settings-item-stacked">
+          <div class="settings-icon">🔑</div>
+          <div class="settings-label">
+            <h4>동기화 ID</h4>
+            <p>기기 간 동기화에 사용되는 고유 ID</p>
+          </div>
+          <button id="copy-user-id" class="user-id-copy-btn" title="복사">
+            <span id="user-id-display" class="user-id-text">—</span>
+            <svg class="user-id-copy-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="settings-item">
+          <div class="settings-icon">☁️</div>
+          <div class="settings-label">
+            <h4>클라우드 동기화</h4>
+            <p id="sync-status-text">마지막 동기화: 없음</p>
+          </div>
+          <button id="sync-btn" class="sync-btn">
+            <svg id="sync-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 2v6h-6"/>
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+              <path d="M3 22v-6h6"/>
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+            </svg>
+            동기화
+          </button>
+        </div>
+
         <!-- About -->
         <div class="section-label" style="margin-top:12px;">정보</div>
-        <div class="settings-item">
-          <div class="settings-icon">ℹ️</div>
-          <div class="settings-label">
-            <h4>버전</h4>
-            <p id="app-version">Sudoku PWA</p>
-          </div>
-        </div>
       </div>
     </div>
+
+    <!-- Toast notification -->
+    <div id="toast" class="toast" aria-live="polite"></div>
 
     <!-- Confirm bottom sheet (reusable) -->
     <div id="confirm-backdrop" class="confirm-backdrop">
