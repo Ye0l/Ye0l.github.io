@@ -1,4 +1,4 @@
-const CACHE_NAME = "cc-rankings-v20260517-pwa-install";
+const CACHE_NAME = "cc-rankings-v20260802-magazine-snapshot";
 const APP_SHELL = [
   "./",
   "./index.html",
