@@ -10,8 +10,8 @@
     <link rel="icon" type="image/svg+xml" href="/cc-ranking/assets/favicon-CrpnDPlO.svg" />
     <link rel="manifest" href="/cc-ranking/manifest.webmanifest" />
     <meta name="theme-color" content="#0a0d12" />
-    <script type="module" crossorigin src="/cc-ranking/assets/index-DWBSz5p5.js"></script>
-    <link rel="stylesheet" crossorigin href="/cc-ranking/assets/index-D94ufleh.css">
+    <script type="module" crossorigin src="/cc-ranking/assets/index-8emXv_Hj.js"></script>
+    <link rel="stylesheet" crossorigin href="/cc-ranking/assets/index-Bvh7bi80.css">
   </head>
   <body>
     <nav class="site-nav" aria-label="페이지 내비게이션">
@@ -201,6 +201,9 @@
               <button id="nextSnapshot" class="nav-button" type="button">
                 다음
               </button>
+              <button id="latestSnapshot" class="nav-button" type="button">
+                최신
+              </button>
             </div>
           </div>
         </section>
@@ -242,6 +245,13 @@
               type="button"
             >
               다음 스냅샷
+            </button>
+            <button
+              id="latestSnapshotMobile"
+              class="modal-btn modal-btn--secondary"
+              type="button"
+            >
+              최신 스냅샷
             </button>
           </div>
         </div>
@@ -409,6 +419,7 @@
       </section>
 
       <!-- ─── FULL RANKING ─────────────────────────────────────── -->
+      <div class="section-rail">
       <div class="section-head" id="ranking">
         <h2>Full Ranking</h2>
         <span class="section-meta" id="entryCount"></span>
@@ -547,6 +558,7 @@
           Ultima
         </button>
       </div>
+      </div>
 
       <!-- ─── TABLE + DETAIL SPLIT ────────────────────────────── -->
       <main class="layout">
@@ -605,6 +617,7 @@
                 <tbody id="rankingRows"></tbody>
               </table>
             </div>
+            <button id="rankingMore" class="ranking-more" type="button" hidden></button>
           </section>
         </div>
 
