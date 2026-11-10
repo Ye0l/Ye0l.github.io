@@ -6,8 +6,8 @@
   "start_url": "/cc-ranking/",
   "scope": "/cc-ranking/",
   "display": "standalone",
-  "background_color": "#0b1020",
-  "theme_color": "#0b1020",
+  "background_color": "#0a0d12",
+  "theme_color": "#0a0d12",
   "icons": [
     {
       "src": "favicon.svg",

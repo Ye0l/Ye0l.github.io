@@ -9,15 +9,9 @@
     <title>CC Ranking — Crystalline Conflict</title>
     <link rel="icon" type="image/svg+xml" href="/cc-ranking/assets/favicon-CrpnDPlO.svg" />
     <link rel="manifest" href="/cc-ranking/manifest.webmanifest" />
-    <meta name="theme-color" content="#0b1020" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <script type="module" crossorigin src="/cc-ranking/assets/index-CyPPszYK.js"></script>
-    <link rel="stylesheet" crossorigin href="/cc-ranking/assets/index-C1KqIVHg.css">
+    <meta name="theme-color" content="#0a0d12" />
+    <script type="module" crossorigin src="/cc-ranking/assets/index-DWBSz5p5.js"></script>
+    <link rel="stylesheet" crossorigin href="/cc-ranking/assets/index-D94ufleh.css">
   </head>
   <body>
     <nav class="site-nav" aria-label="페이지 내비게이션">
@@ -312,20 +306,19 @@
       </header>
 
       <!-- ─── KPI STRIP ───────────────────────────────────────── -->
+      <div class="summary">
       <section class="kpis" aria-label="랭킹 요약">
         <div class="kpi">
           <span class="kpi-label">신규 진입</span>
           <span class="kpi-value" id="kpiNewEntries"
             >-<span class="unit">명</span></span
           >
-          <span class="kpi-foot">현재 표시 공식 랭킹 신규 진입</span>
         </div>
         <div class="kpi">
           <span class="kpi-label">승리 증가</span>
           <span class="kpi-value" id="kpiWinGain"
             >-<span class="unit">승</span></span
           >
-          <span class="kpi-foot">현재 표시 공식 랭킹 합계</span>
         </div>
       </section>
       <section class="rank-cuts" aria-label="랭크 달성 조건">
@@ -347,6 +340,7 @@
           <span class="rank-cut-foot" id="kpiRank100CutFoot">100위 달성 조건</span>
         </div>
       </section>
+      </div>
       <p class="kpi-note">
         스냅샷 <strong id="kpiSnapshots">-</strong>개 ·
         <span id="kpiSnapshotFoot">-</span> · 기준
@@ -388,10 +382,10 @@
           <button class="honor-tab" data-mode="rank" role="tab" type="button">
             상위 랭크
           </button>
-          <button class="honor-tab" data-mode="wins" role="tab" type="button">
+          <button class="honor-tab" data-mode="wins" data-empty-label="오늘 승리 증가 없음" role="tab" type="button">
             최다 승리
           </button>
-          <button class="honor-tab" data-mode="rise" role="tab" type="button">
+          <button class="honor-tab" data-mode="rise" data-empty-label="오늘 순위 상승 없음" role="tab" type="button">
             최다 상승
           </button>
         </div>
@@ -415,7 +409,7 @@
       </section>
 
       <!-- ─── FULL RANKING ─────────────────────────────────────── -->
-      <div class="section-head" id="ranking" style="margin-top: 28px">
+      <div class="section-head" id="ranking">
         <h2>Full Ranking</h2>
         <span class="section-meta" id="entryCount"></span>
       </div>
@@ -652,7 +646,7 @@
       </main>
 
       <!-- ─── 시즌 통계 ────────────────────────────────────────── -->
-      <div class="section-head" style="margin-top: 40px">
+      <div class="section-head">
         <h2>시즌 통계</h2>
       </div>
       <section class="tier-heatmap" aria-label="티어별 승리 증가 히트맵">
@@ -749,9 +743,7 @@
             </div>
           </header>
           <div id="magazineContent">
-            <div class="cc-magazine">
-              <div class="cc-magazine__empty">매거진을 불러오는 중</div>
-            </div>
+
           </div>
         </main>
         <footer class="site-footer">

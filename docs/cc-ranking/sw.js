@@ -1,4 +1,4 @@
-const CACHE_NAME = "cc-rankings-v20260802-magazine-snapshot";
+const CACHE_NAME = "cc-rankings-v20261110-season-refresh";
 const APP_SHELL = [
   "./",
   "./index.html",
