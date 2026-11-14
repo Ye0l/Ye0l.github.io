@@ -10,8 +10,8 @@
     <link rel="icon" type="image/svg+xml" href="/cc-ranking/assets/favicon-CrpnDPlO.svg" />
     <link rel="manifest" href="/cc-ranking/manifest.webmanifest" />
     <meta name="theme-color" content="#0a0d12" />
-    <script type="module" crossorigin src="/cc-ranking/assets/index-BWsgeOa_.js"></script>
-    <link rel="stylesheet" crossorigin href="/cc-ranking/assets/index-y_lB57Nz.css">
+    <script type="module" crossorigin src="/cc-ranking/assets/index-Z4OR8k5n.js"></script>
+    <link rel="stylesheet" crossorigin href="/cc-ranking/assets/index-B0NXPNox.css">
   </head>
   <body>
     <nav class="site-nav" aria-label="페이지 내비게이션">
@@ -265,31 +265,37 @@
           <span class="eyebrow">FFXIV KR · PvP Archive</span>
           <h1>Crystalline <em>Conflict</em></h1>
         </div>
-        <div class="top-meta">
-          <span class="live-chip">LIVE · S<span id="seasonBadge">-</span><select id="seasonSelect" class="live-chip-select" aria-label="시즌 선택" hidden></select></span>
-          <span id="seasonDay" class="season-day" hidden></span>
+        <div class="header-bar" role="group" aria-label="시즌과 설정">
+          <span class="header-seg header-season">
+            <span class="header-season-dot" aria-hidden="true"></span>
+            <span class="header-season-text">S<span id="seasonBadge">-</span><span id="seasonDay" class="season-day" hidden></span></span>
+            <svg class="header-season-caret" width="8" height="8" viewBox="0 0 8 8" aria-hidden="true"><path d="M1 2.5 4 5.5 7 2.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+            <select id="seasonSelect" class="header-season-select" aria-label="시즌 선택" hidden></select>
+          </span>
           <button
             id="installPwaButton"
-            class="install-pwa-chip"
+            class="header-seg header-icon"
             type="button"
+            aria-label="앱 설치"
+            title="앱 설치"
             hidden
           >
-            앱 설치
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 4v11M7 10.5 12 15.5 17 10.5M5 20h14" />
+            </svg>
           </button>
-        </div>
-        <div class="topbar-actions">
           <button
             id="themeToggle"
-            class="icon-btn"
+            class="header-seg header-icon"
             type="button"
             aria-label="테마 변경"
             title="테마 변경"
           >
-            <span id="themeIcon" aria-hidden="true">☾</span>
+            <span id="themeIcon" aria-hidden="true"></span>
           </button>
           <button
             id="projectHeart"
-            class="icon-btn heart-icon-btn"
+            class="header-seg header-icon heart-icon-btn"
             type="button"
             aria-pressed="false"
             aria-label="프로젝트가 마음에 들었다면 눌러주세요"
@@ -309,9 +315,7 @@
                 d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
               />
             </svg>
-            <span id="projectHeartCount" class="heart-count" aria-hidden="true"
-              >-</span
-            >
+            <span id="projectHeartCount" class="heart-count" aria-hidden="true">-</span>
           </button>
         </div>
       </header>
